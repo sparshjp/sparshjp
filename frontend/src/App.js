@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '@/App.css';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { FileText, TrendingUp, Package, Building, Users, Landmark, MessageSquare, BarChart3, Menu, X } from 'lucide-react';
+import { FileText, TrendingUp, Package, Building, Users, Landmark, MessageSquare, BarChart3, Menu, X, Settings } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import PurchaseToPay from './pages/PurchaseToPay';
 import OrderToCash from './pages/OrderToCash';
@@ -10,6 +10,10 @@ import FixedAssets from './pages/FixedAssets';
 import Payroll from './pages/Payroll';
 import Banking from './pages/Banking';
 import Reports from './pages/Reports';
+import ChartOfAccounts from './pages/ChartOfAccounts';
+import CostCenters from './pages/CostCenters';
+import MasterData from './pages/MasterData';
+import CSVImport from './pages/CSVImport';
 import AIPromptInterface from './components/AIPromptInterface';
 import { Toaster } from './components/ui/sonner';
 
@@ -29,6 +33,7 @@ function Navigation() {
     { path: '/payroll', label: 'Payroll', icon: Users },
     { path: '/banking', label: 'Banking', icon: Landmark },
     { path: '/reports', label: 'Reports', icon: MessageSquare },
+    { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -37,7 +42,7 @@ function Navigation() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <Link to="/" className="heading-font text-xl font-black tracking-tighter text-slate-900" data-testid="app-logo">
-              AI-ERP
+              Kairos Accounting
             </Link>
             <div className="hidden md:flex space-x-1">
               {navItems.map((item) => {
@@ -99,6 +104,34 @@ function Navigation() {
   );
 }
 
+function SettingsRouter() {
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900">Settings</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Link to="/settings/coa" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
+            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">Chart of Accounts</h3>
+            <p className="text-sm text-slate-600">Manage your ledger accounts and categories</p>
+          </Link>
+          <Link to="/settings/cost-centers" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
+            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">Cost Centers</h3>
+            <p className="text-sm text-slate-600">Define departments and project centers</p>
+          </Link>
+          <Link to="/settings/master-data" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
+            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">Master Data</h3>
+            <p className="text-sm text-slate-600">Vendors, Clients, and GSTIN lookup</p>
+          </Link>
+          <Link to="/settings/import" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
+            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">CSV Import</h3>
+            <p className="text-sm text-slate-600">Bulk import transactions from Excel/CSV</p>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <div className="App">
@@ -113,6 +146,11 @@ function App() {
           <Route path="/payroll" element={<Payroll />} />
           <Route path="/banking" element={<Banking />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<SettingsRouter />} />
+          <Route path="/settings/coa" element={<ChartOfAccounts />} />
+          <Route path="/settings/cost-centers" element={<CostCenters />} />
+          <Route path="/settings/master-data" element={<MasterData />} />
+          <Route path="/settings/import" element={<CSVImport />} />
         </Routes>
         <AIPromptInterface />
         <Toaster position="top-right" />
