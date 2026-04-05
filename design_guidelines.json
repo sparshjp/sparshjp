@@ -1,0 +1,147 @@
+{
+  "theme_and_archetype": {
+    "theme": "Light",
+    "archetype": "4 (Swiss & High-Contrast)",
+    "description": "Authority, Clarity, Truth. A 'Zero-Touch' AI-native ERP for India Localization (GST, TDS). The design must feel like a precision instrument—objective, rigid, and functional. Purely data-driven with zero visual clutter. Color exists solely to guide action or indicate status.",
+    "emotional_tone": ["Authoritative", "Precise", "Effortless", "Trustworthy"]
+  },
+  "color_palette": {
+    "background": {
+      "primary": "#FFFFFF",
+      "secondary": "#FAFAFA",
+      "tertiary": "#F4F4F5",
+      "tailwind": "bg-white dark:bg-slate-950"
+    },
+    "surface": {
+      "card": "#FFFFFF",
+      "elevated": "#F8FAFC",
+      "glass": "rgba(255, 255, 255, 0.8)",
+      "tailwind": "bg-white border-slate-200"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#475569",
+      "muted": "#94A3B8",
+      "tailwind": "text-slate-900"
+    },
+    "accents": {
+      "primary": "#002FA7",
+      "primary_hover": "#002480",
+      "danger": "#FF3B30",
+      "warning": "#FFCC00",
+      "success": "#10B981"
+    },
+    "rules": [
+      "The 'Tinted Grey' Rule: Never use pure black/grey. Greys must be slightly tinted with blue (slate/gray in Tailwind) for a crisp, clinical feel.",
+      "95% of the UI should be monochrome. Color exists only to guide action (Klein Blue for AI/CTAs, Red for mismatches).",
+      "High Contrast: Ensure text over any background passes WCAG AA."
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "heading": "'Cabinet Grotesk', sans-serif",
+      "body": "'IBM Plex Sans', sans-serif",
+      "monospace": "'JetBrains Mono', monospace"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl tracking-tighter font-black",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl tracking-tight font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-slate-500",
+      "overline": "text-xs tracking-[0.2em] uppercase font-bold text-slate-500"
+    },
+    "rules": [
+      "No generic sans for headings. Use Cabinet Grotesk for dramatic, structural headers.",
+      "All financial data (Amounts, GSTINs, Trx IDs) MUST use JetBrains Mono for tabular alignment.",
+      "Never center text by default. Use left-alignment for dense financial data."
+    ]
+  },
+  "spacing_and_layout": {
+    "spacing_scale": "p-1, p-2, p-4, p-6, p-8, p-12, p-16",
+    "grid_strategy": {
+      "name": "The 'Control Room' Grid",
+      "description": "Dense, high-data correlation grid. Strict hierarchy with tight gaps (gap-4 or gap-6).",
+      "layout": "grid-cols-1 md:grid-cols-4 lg:grid-cols-12",
+      "rules": [
+        "Every pixel must be utilized. Use h-full on children.",
+        "Generous Spacing Philosophy for macro-sections: Use 2-3x more spacing (e.g., p-8) around main containers to prevent claustrophobia.",
+        "Mobile-first: Always start with grid-cols-1."
+      ]
+    }
+  },
+  "surfaces_and_borders": {
+    "cards": "Flat background, 1px subtle border (border-slate-200), NO shadow. Hover state adds -translate-y-[1px] and shadow-sm.",
+    "glassmorphism": "Used ONLY for sticky headers or AI prompt overlays. bg-white/80, backdrop-blur-xl, 1px delicate inner stroke (border-white/40), shadow-sm.",
+    "grid_borders": "For dense ledgers and tables, expose the skeleton. Use border-collapse with border-r and border-b on cells.",
+    "tracing_beam": "Apply to the main AI Prompt Interface box. A glowing gradient line that travels around the border to signal 'AI is listening/processing'."
+  },
+  "components": {
+    "buttons": {
+      "style": "Sharp edges (rounded-none or max rounded-sm).",
+      "primary": "bg-[#002FA7] text-white hover:bg-[#002480] hover:text-white transition-all",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+    },
+    "inputs": {
+      "style": "Shadcn based. Square or slightly rounded (rounded-sm). 1px border. Focus state must use high contrast ring (focus:ring-2 focus:ring-[#002FA7])."
+    },
+    "ai_prompt_interface": {
+      "description": "The hero interaction model of the app. A large, dominant text area at the bottom or center of the screen.",
+      "visuals": "Uses the Tracing Beam border effect. Monospace typography for the prompt input. Prominent 'Post/Generate' CTA."
+    },
+    "ocr_document_view": {
+      "description": "Side-by-side or overlay bento grid. Left side: High-res image with zoom. Right side: Extracted fields matching the attachment.",
+      "visuals": "Data points highlighted with Warning Yellow if unverified, Success Green once verified."
+    },
+    "tables_and_ledgers": {
+      "style": "Cardless, dense layout. Use JetBrains Mono for figures. Highlight unmatched bank reco items with pale red background (bg-red-50) and Signal Red text."
+    },
+    "charts": {
+      "style": "Recharts. Monochrome bars/lines with International Klein Blue as the primary data color. Signal Red for negative cash flow."
+    }
+  },
+  "media": {
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1770816305998-57eec25ac2d5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwxfHx3aGl0ZSUyMGFic3RyYWN0JTIwYXJjaGl0ZWN0dXJlJTIwbGluZXMlMjBjbGVhbnxlbnwwfHx8fDE3NzU0MjY4MzJ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "White abstract architecture lines. Use as a subtle, low-opacity background for login screens or empty states."
+      },
+      {
+        "category": "ai_bot_avatar",
+        "url": "https://images.unsplash.com/photo-1724184809305-517886d40bbb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2OTV8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwZnV0dXJpc3RpYyUyMGdlb21ldHJpYyUyMGxvZ28lMjBibHVlfGVufDB8fHx8MTc3NTQyNjgzMnww&ixlib=rb-4.1.0&q=85",
+        "description": "Minimalist blue geometric shape. Use as the avatar/icon for the Conversational Reporting Bot."
+      },
+      {
+        "category": "ocr_sample_receipt",
+        "url": "https://images.pexels.com/photos/7680324/pexels-photo-7680324.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Sample receipt for testing/showcasing the P2P Document Upload & OCR functionality."
+      },
+      {
+        "category": "ocr_sample_invoice",
+        "url": "https://images.unsplash.com/photo-1765868017186-18a3fc4c2942?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHwxfHxpbnZvaWNlJTIwZG9jdW1lbnQlMjBwYXBlcnxlbnwwfHx8fDE3NzU0MjY4Mjd8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Sample formal invoice document for showcasing Order-to-Cash and Accruals OCR parsing."
+      }
+    ],
+    "icons_library": "@phosphor-icons/react",
+    "icons_rationale": "Perfect for dense dashboards and developer/financial tools. Gives a crisp, technical look."
+  },
+  "interactions_and_motion": {
+    "hover_states": "All interactive elements MUST have explicit hover states. Avoid relying on inherited opacity. Instead, shift background colors (e.g., hover:bg-slate-100 hover:text-slate-900).",
+    "animations": "Minimalist. Use framer-motion for micro-interactions only (e.g., the AI Tracing Beam border, staggered fade-ins for ledger rows).",
+    "accessibility": "Disable/reduce animations if prefers-reduced-motion is true. Focus states must have a 2px high-contrast ring."
+  },
+  "testing_and_attributes": {
+    "data_testid": "MANDATORY on all buttons, links, form inputs, menus, and AI prompt areas. Convention: kebab-case, role-based. Example: data-testid='ai-prompt-input', data-testid='post-journal-button'."
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the 'Zero-Touch' UI philosophy. The AI Prompt is the primary input method. Avoid traditional CRUD forms where possible.",
+    "Implement the 'Control Room' grid for all financial dashboards to ensure maximum data density without clutter.",
+    "Use JetBrains Mono for all numeric values, tables, and transaction IDs.",
+    "Use Shadcn UI extensively but strip away the default 'Vercel' look by applying sharp borders (rounded-none or sm) and flat backgrounds.",
+    "Integrate the provided image URLs strictly for their designated categories. Never use placeholder services.",
+    "Install the following dependencies: @phosphor-icons/react, framer-motion, recharts.",
+    "Ensure the AI Conversational Reporting Bot highlights the 'ai_bot_avatar' as its visual identity."
+  ]
+}
