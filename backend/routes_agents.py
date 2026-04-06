@@ -63,6 +63,27 @@ async def _call_claude(system: str, messages: list) -> str:
     combined = "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in messages])
     return await chat.send_message(UserMessage(text=combined))
 
+# Track recent provider failures for smart routing
+_provider_failures = {}  # {"groq": [timestamp, ...], ...}
+_FAILURE_WINDOW = 300  # 5 minutes — skip provider if failed recently
+
+def _should_skip_provider(provider: str) -> bool:
+    """Skip a provider if it has failed 2+ times in the last 5 minutes."""
+    now = datetime.now(timezone.utc).timestamp()
+    failures = _provider_failures.get(provider, [])
+    # Clean old failures
+    recent = [t for t in failures if now - t < _FAILURE_WINDOW]
+    _provider_failures[provider] = recent
+    return len(recent) >= 2
+
+def _record_failure(provider: str):
+    now = datetime.now(timezone.utc).timestamp()
+    _provider_failures.setdefault(provider, []).append(now)
+
+def _clear_failures(provider: str):
+    _provider_failures[provider] = []
+
+
 async def call_llm(system: str, messages: list, preferred: str = "auto") -> tuple:
     if preferred == "claude":
         order = ["claude", "groq", "openrouter"]
@@ -71,23 +92,32 @@ async def call_llm(system: str, messages: list, preferred: str = "auto") -> tupl
     elif preferred == "openrouter":
         order = ["openrouter", "groq", "claude"]
     else:
-        order = ["groq", "openrouter", "claude"]
+        # Smart default: Claude first (most capable, reliable), then Groq, then OpenRouter
+        order = ["claude", "groq", "openrouter"]
     errors = []
     loop = asyncio.get_event_loop()
     for provider in order:
+        # Skip providers that have been failing recently
+        if _should_skip_provider(provider):
+            errors.append(f"{provider}: skipped (recent failures)")
+            continue
         try:
             if provider == "groq" and GROQ_KEY:
                 text = await loop.run_in_executor(None, _call_groq_sync, system, messages)
+                _clear_failures(provider)
                 return text, "groq"
             elif provider == "openrouter" and OPENROUTER_KEY:
                 text = await loop.run_in_executor(None, _call_openrouter_sync, system, messages)
+                _clear_failures(provider)
                 return text, "openrouter"
             elif provider == "claude" and EMERGENT_KEY:
                 text = await _call_claude(system, messages)
+                _clear_failures(provider)
                 return text, "claude"
         except Exception as e:
             err_msg = str(e)[:200]
             logging.warning(f"AI Engine: {provider} failed: {err_msg}")
+            _record_failure(provider)
             errors.append(f"{provider}: {err_msg}")
             continue
     raise Exception(f"All LLM providers failed: {'; '.join(errors)}")
@@ -1633,11 +1663,17 @@ async def get_task_status(task_id: str):
 
 @router.get("/providers")
 async def get_providers():
+    def provider_status(name, key):
+        if not key:
+            return "no_key"
+        if _should_skip_provider(name):
+            return "rate_limited"
+        return "active"
     return {
         "providers": [
-            {"name": "groq", "model": "llama-3.3-70b-versatile", "status": "active" if GROQ_KEY else "no_key", "priority": 1},
-            {"name": "openrouter", "model": "auto (free models)", "status": "active" if OPENROUTER_KEY else "no_key", "priority": 2},
-            {"name": "claude", "model": "claude-sonnet-4-5", "status": "active" if EMERGENT_KEY else "no_key", "priority": 3},
+            {"name": "claude", "model": "claude-sonnet-4-5", "status": provider_status("claude", EMERGENT_KEY), "priority": 1},
+            {"name": "groq", "model": "llama-3.3-70b-versatile", "status": provider_status("groq", GROQ_KEY), "priority": 2},
+            {"name": "openrouter", "model": "auto (free models)", "status": provider_status("openrouter", OPENROUTER_KEY), "priority": 3},
         ],
-        "fallback_order": ["groq", "openrouter", "claude"],
+        "fallback_order": ["claude", "groq", "openrouter"],
     }
