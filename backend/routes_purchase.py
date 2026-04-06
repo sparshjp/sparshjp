@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Optional
 import uuid
 import math
+import audit_trail
 
 router = APIRouter(prefix="/purchase", tags=["purchase"])
 db = None
@@ -95,9 +96,8 @@ async def create_purchase_order(data: dict):
     }
     await db.purchase_orders.insert_one(po)
     del po["_id"]
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_PURCHASE_ORDER, po["id"], po["po_number"], snapshot=po, notes=f"PO created for vendor {po['vendor']}, total {po['grand_total']}")
     return po
-
-@router.get("/orders")
 async def list_purchase_orders(status: Optional[str] = None, limit: int = 100):
     query = {}
     if status:
@@ -111,6 +111,7 @@ async def submit_purchase_order(po_id: str):
     if not po:
         raise HTTPException(status_code=404, detail="PO not found")
     await db.purchase_orders.update_one({"id": po_id}, {"$set": {"status": "Submitted"}})
+    await audit_trail.log_audit(audit_trail.ACTION_SUBMIT, audit_trail.DOC_PURCHASE_ORDER, po_id, po.get("po_number"), changes=[{"field": "status", "old_value": po.get("status"), "new_value": "Submitted"}])
     return {"message": "PO submitted", "id": po_id}
 
 
@@ -187,6 +188,7 @@ async def create_grn_from_po(po_id: str):
             upsert=False
         )
 
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_GRN, grn["id"], grn["grn_number"], snapshot=grn, notes=f"GRN from PO {po['po_number']}, vendor {po['vendor']}")
     return grn
 
 @router.post("/grn")
@@ -315,9 +317,8 @@ async def create_invoice_from_grn(grn_id: str, data: dict = None):
             {"$set": {"invoice_status": "Invoiced", "status": "Completed"}}
         )
 
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_PURCHASE_INVOICE, inv["id"], inv["invoice_number"], snapshot=inv, notes=f"Purchase Invoice from GRN {grn['grn_number']}, vendor {grn['vendor']}")
     return inv
-
-@router.post("/invoices")
 async def create_purchase_invoice_legacy(data: dict):
     """Legacy direct invoice creation for backward compat / AI entry"""
     items = data.get("items", [])
@@ -454,9 +455,8 @@ async def create_payment_for_invoice(invoice_id: str, data: dict = None):
         {"$set": {"amount_paid": new_paid, "status": status, "payment_status": status}}
     )
 
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_VENDOR_PAYMENT, payment["id"], payment["payment_number"], snapshot=payment, notes=f"Payment of {amount} to {inv['vendor']} for invoice {inv['invoice_number']}")
     return payment
-
-@router.post("/payments")
 async def create_vendor_payment_legacy(data: dict):
     """Legacy payment creation"""
     amount = data.get("amount", 0)

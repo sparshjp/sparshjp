@@ -2,6 +2,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from datetime import datetime, timezone
 import json, uuid, os, logging
+import audit_trail
 
 router = APIRouter()
 db = None
@@ -33,9 +34,13 @@ async def get_company_settings():
 
 @router.put("/settings")
 async def update_company_settings(data: dict):
+    old_doc = await db.company_settings.find_one({}, {"_id": 0})
     data.pop("_id", None)
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.company_settings.update_one({}, {"$set": data}, upsert=True)
+    changes = audit_trail.compute_changes(old_doc or {}, data) if old_doc else []
+    action = audit_trail.ACTION_UPDATE if old_doc else audit_trail.ACTION_CREATE
+    await audit_trail.log_audit(action, audit_trail.DOC_COMPANY_SETTINGS, "company_settings", "Company Settings", changes=changes, snapshot=data if not old_doc else None, notes="Company settings updated")
     return {"status": "saved"}
 
 @router.post("/settings/logo")

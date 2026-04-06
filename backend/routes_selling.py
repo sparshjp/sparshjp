@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
+import audit_trail
 
 router = APIRouter(prefix="/selling", tags=["selling"])
 db = None
@@ -151,6 +152,7 @@ async def create_sales_order(data: dict):
 
     await db.selling_sales_orders.insert_one(so)
     del so["_id"]
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_SALES_ORDER, so["id"], so["so_number"], snapshot=so, notes=f"SO created for customer {so['customer']}, total {so['grand_total']}")
     return so
 
 @router.get("/sales-orders")
@@ -166,6 +168,7 @@ async def submit_sales_order(so_id: str):
     if not so:
         raise HTTPException(status_code=404, detail="SO not found")
     await db.selling_sales_orders.update_one({"id": so_id}, {"$set": {"status": "Submitted"}})
+    await audit_trail.log_audit(audit_trail.ACTION_SUBMIT, audit_trail.DOC_SALES_ORDER, so_id, so.get("so_number"), changes=[{"field": "status", "old_value": so.get("status"), "new_value": "Submitted"}])
     return {"message": "SO submitted", "id": so_id}
 
 
@@ -233,6 +236,7 @@ async def create_dn_from_so(so_id: str):
         {"$set": {"delivered_qty": new_delivered, "delivery_status": d_status, "status": "To Invoice"}}
     )
 
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_DELIVERY_NOTE, dn["id"], dn["dn_number"], snapshot=dn, notes=f"Delivery Note from SO {so['so_number']}, customer {so['customer']}")
     return dn
 
 @router.post("/delivery-notes")
@@ -385,6 +389,7 @@ async def create_invoice_from_dn(dn_id: str, data: dict = None):
                 {"$set": {"invoiced_amount": new_invoiced, "billing_status": b_status, "invoice_status": "Invoiced", "status": "Completed"}}
             )
 
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_SALES_INVOICE, inv["id"], inv["invoice_number"], snapshot=inv, notes=f"Sales Invoice from DN {dn['dn_number']}, customer {dn['customer']}, total {grand_total}")
     return inv
 
 @router.post("/invoices")
@@ -547,9 +552,8 @@ async def create_payment_for_invoice(invoice_id: str, data: dict = None):
         {"$set": {"amount_paid": new_paid, "status": status, "payment_status": status}}
     )
 
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_CUSTOMER_RECEIPT, payment["id"], payment["payment_number"], snapshot=payment, notes=f"Receipt of {amount} from {inv['customer']} for invoice {inv['invoice_number']}")
     return payment
-
-@router.post("/payments")
 async def create_customer_payment_legacy(data: dict):
     """Legacy payment creation"""
     amount = data.get("amount", 0)

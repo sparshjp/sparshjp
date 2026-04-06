@@ -544,14 +544,17 @@ async def create_coa(coa: ChartOfAccount):
     coa_dict = coa.model_dump()
     coa_dict["current_balance"] = coa_dict["opening_balance"]
     await db.chart_of_accounts.insert_one(coa_dict)
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_COA, coa_dict.get("ledger_name", ""), coa_dict.get("ledger_name", ""), snapshot=coa_dict, notes=f"Ledger created: {coa_dict.get('ledger_name')} ({coa_dict.get('category')})")
     return coa_dict
 
 # Cost Centers
 @api_router.post("/cost-centers")
 async def create_cost_center(cc: CostCenter):
     """Create cost center"""
-    await db.cost_centers.insert_one(cc.model_dump())
-    return cc.model_dump()
+    cc_dict = cc.model_dump()
+    await db.cost_centers.insert_one(cc_dict)
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_COST_CENTER, cc_dict.get("name", ""), cc_dict.get("name", ""), snapshot=cc_dict, notes=f"Cost Center created: {cc_dict.get('name')}")
+    return cc_dict
 
 @api_router.get("/cost-centers")
 async def get_cost_centers():
@@ -600,6 +603,7 @@ async def create_entity(entity: VendorClient):
     
     await db.entities.insert_one(entity_dict)
     del entity_dict["_id"]
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_ENTITY, entity_dict.get("name", ""), entity_dict.get("name", ""), snapshot=entity_dict, notes=f"{entity_dict.get('entity_type', 'entity').title()} created: {entity_dict.get('name')}")
     return entity_dict
 
 @api_router.get("/entities")
@@ -1089,6 +1093,8 @@ try:
     from routes_statutory import router as stat_router, set_db as stat_set_db
     from routes_manufacturing import router as mfg_router, set_db as mfg_set_db
     from routes_company import router as company_router, set_db as company_set_db, set_key as company_set_key
+    from routes_audit import router as audit_router, set_db as audit_set_db
+    import audit_trail
     from ai_orchestrator import AIOrchestrator
     
     # Initialize AI Orchestrator
@@ -1109,6 +1115,8 @@ try:
     mfg_set_db(db)
     company_set_db(db)
     company_set_key(EMERGENT_KEY)
+    audit_set_db(db)
+    audit_trail.set_db(db)
     
     # Universal AI Prompt Endpoint
     @api_router.post("/ai/universal-prompt")
@@ -1252,6 +1260,7 @@ RULES:
     api_router.include_router(stat_router)
     api_router.include_router(mfg_router)
     api_router.include_router(company_router, prefix="/company")
+    api_router.include_router(audit_router)
     
     logging.info("ERP modules will be integrated")
 except Exception as e:
@@ -1284,6 +1293,7 @@ async def create_manual_journal_entry(data: dict):
     
     await db.manual_journal_entries.insert_one(entry)
     del entry["_id"]
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_MANUAL_JE, entry["id"], entry["id"][:12], snapshot=entry, notes=f"Manual JE: {entry.get('narration', '')[:80]}")
     return entry
 
 @api_router.get("/journal-entries/manual")
@@ -1326,6 +1336,7 @@ async def post_manual_journal_entry(entry_id: str):
         {"id": entry_id},
         {"$set": {"status": "Posted", "posted_at": datetime.now(timezone.utc).isoformat()}}
     )
+    await audit_trail.log_audit(audit_trail.ACTION_POST, audit_trail.DOC_MANUAL_JE, entry_id, entry_id[:12], changes=[{"field": "status", "old_value": "Draft", "new_value": "Posted"}], notes=f"Manual JE posted: {entry.get('narration', '')[:80]}")
     return {"message": "Posted successfully"}
 
 # ==================== ADMIN DATA TABLES ====================

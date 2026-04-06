@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
+import audit_trail
 
 router = APIRouter(prefix="/manufacturing", tags=["manufacturing"])
 db = None
@@ -82,6 +83,7 @@ async def create_work_order(data: dict):
     }
     await db.work_orders.insert_one(wo)
     del wo["_id"]
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_WORK_ORDER, wo["id"], wo["wo_number"], snapshot=wo, notes=f"Work Order for {wo['production_item']}, qty {wo['qty_to_produce']}")
     return wo
 
 @router.get("/work-orders")
@@ -138,6 +140,7 @@ async def start_work_order(wo_id: str):
         {"id": wo_id},
         {"$set": {"status": "In Progress", "actual_start": datetime.now(timezone.utc).isoformat()}}
     )
+    await audit_trail.log_audit(audit_trail.ACTION_UPDATE, audit_trail.DOC_WORK_ORDER, wo_id, wo["wo_number"], changes=[{"field": "status", "old_value": wo["status"], "new_value": "In Progress"}], notes=f"WO started, materials issued for {wo['production_item']}")
     return {"message": "WO started, materials issued", "id": wo_id}
 
 
@@ -204,6 +207,7 @@ async def complete_work_order(wo_id: str, data: dict = None):
             "actual_end": datetime.now(timezone.utc).isoformat()
         }}
     )
+    await audit_trail.log_audit(audit_trail.ACTION_UPDATE, audit_trail.DOC_WORK_ORDER, wo_id, wo["wo_number"], changes=[{"field": "status", "old_value": "In Progress", "new_value": "Completed"}, {"field": "qty_produced", "old_value": 0, "new_value": qty_produced}, {"field": "qty_rejected", "old_value": 0, "new_value": qty_rejected}], notes=f"WO completed: {qty_produced} produced, {qty_rejected} rejected")
     return {"message": f"WO completed. Produced: {qty_produced}, Scrap: {qty_rejected}", "id": wo_id}
 
 
@@ -213,4 +217,5 @@ async def cancel_work_order(wo_id: str):
     if not wo:
         raise HTTPException(status_code=404, detail="WO not found")
     await db.work_orders.update_one({"id": wo_id}, {"$set": {"status": "Cancelled"}})
+    await audit_trail.log_audit(audit_trail.ACTION_CANCEL, audit_trail.DOC_WORK_ORDER, wo_id, wo.get("wo_number"), changes=[{"field": "status", "old_value": wo["status"], "new_value": "Cancelled"}], notes="Work Order cancelled")
     return {"message": "WO cancelled", "id": wo_id}

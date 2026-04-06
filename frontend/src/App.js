@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
-  Scale, IndianRupee, Factory, Building2, Sparkles
+  Scale, IndianRupee, Factory, Building2, Sparkles, Shield
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -30,6 +30,7 @@ import GSTModule from './pages/GSTModule';
 import ManufacturingModule from './pages/ManufacturingModule';
 import CompanySetup from './pages/CompanySetup';
 import ReportingAI from './pages/ReportingAI';
+import AuditTrail from './pages/AuditTrail';
 import UniversalAI from './components/UniversalAI';
 import { KairosIcon } from './components/KairosIcon';
 import { Toaster } from './components/ui/sonner';
@@ -99,6 +100,7 @@ function Sidebar({ isOpen, setIsOpen }) {
         { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
         { path: '/gst-tds', label: 'GST & TDS', icon: Scale },
+        { path: '/audit-trail', label: 'Audit Trail', icon: Shield },
       ]
     },
     {
@@ -253,6 +255,7 @@ function App() {
             <Route path="/gst-tds" element={<GSTModule />} />
             <Route path="/company-setup" element={<CompanySetup />} />
             <Route path="/reporting-ai" element={<ReportingAI />} />
+            <Route path="/audit-trail" element={<AuditTrail />} />
           </Routes>
           </div>
           
