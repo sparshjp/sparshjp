@@ -1,102 +1,162 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { API } from '../App';
-import { BarChart3, TrendingUp, TrendingDown, FileText } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Users, TrendingUp, Package, UserSquare, Sparkles } from 'lucide-react';
 
 function Dashboard() {
-  const [stats, setStats] = useState({
-    drafts: 0,
-    posted: 0,
-    totalEntries: 0
+  const [moduleStats, setModuleStats] = useState({
+    crm: { leads: 0, customers: 0 },
+    sales: { quotations: 0, salesOrders: 0 },
+    stock: { items: 0, lowStock: 0 },
+    hr: { employees: 0, attendance: 0 }
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const draftsRes = await axios.get(`${API}/transactions/drafts`);
-        const postedRes = await axios.get(`${API}/transactions/posted?limit=100`);
-        
-        setStats({
-          drafts: draftsRes.data.length,
-          posted: postedRes.data.length,
-          totalEntries: draftsRes.data.length + postedRes.data.length
-        });
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      }
-    };
-
-    fetchData();
+    fetchModuleStats();
   }, []);
 
-  const chartData = [
-    { name: 'P2P', value: Math.floor(stats.posted * 0.3) },
-    { name: 'O2C', value: Math.floor(stats.posted * 0.25) },
-    { name: 'Inventory', value: Math.floor(stats.posted * 0.15) },
-    { name: 'Assets', value: Math.floor(stats.posted * 0.1) },
-    { name: 'Payroll', value: Math.floor(stats.posted * 0.2) },
+  const fetchModuleStats = async () => {
+    try {
+      const [leadsRes, customersRes, quotsRes, itemsRes, empsRes] = await Promise.all([
+        axios.get(`${API}/crm/leads`).catch(() => ({ data: [] })),
+        axios.get(`${API}/crm/customers`).catch(() => ({ data: [] })),
+        axios.get(`${API}/sales/quotations`).catch(() => ({ data: [] })),
+        axios.get(`${API}/stock/items`).catch(() => ({ data: [] })),
+        axios.get(`${API}/hr/employees`).catch(() => ({ data: [] }))
+      ]);
+
+      setModuleStats({
+        crm: { leads: leadsRes.data.length, customers: customersRes.data.length },
+        sales: { quotations: quotsRes.data.length, salesOrders: 0 },
+        stock: { items: itemsRes.data.length, lowStock: 0 },
+        hr: { employees: empsRes.data.length, attendance: 0 }
+      });
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
+
+  const modules = [
+    {
+      title: 'CRM',
+      icon: Users,
+      color: 'bg-blue-500',
+      link: '/crm',
+      stats: [
+        { label: 'Leads', value: moduleStats.crm.leads },
+        { label: 'Customers', value: moduleStats.crm.customers }
+      ]
+    },
+    {
+      title: 'Sales',
+      icon: TrendingUp,
+      color: 'bg-green-500',
+      link: '/sales',
+      stats: [
+        { label: 'Quotations', value: moduleStats.sales.quotations },
+        { label: 'Sales Orders', value: moduleStats.sales.salesOrders }
+      ]
+    },
+    {
+      title: 'Stock',
+      icon: Package,
+      color: 'bg-purple-500',
+      link: '/stock',
+      stats: [
+        { label: 'Items', value: moduleStats.stock.items },
+        { label: 'Low Stock', value: moduleStats.stock.lowStock }
+      ]
+    },
+    {
+      title: 'HR',
+      icon: UserSquare,
+      color: 'bg-orange-500',
+      link: '/hr',
+      stats: [
+        { label: 'Employees', value: moduleStats.hr.employees },
+        { label: 'Today Attendance', value: moduleStats.hr.attendance }
+      ]
+    }
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
-          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="dashboard-title">Dashboard</h1>
-          <p className="text-slate-500 mt-2">AI-Native ERP System Overview</p>
+          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="dashboard-title">
+            Dashboard
+          </h1>
+          <p className="text-slate-500 mt-2">Welcome to Kairos Accounting - AI-Powered ERP</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="draft-transactions-card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-[#FFCC00]/10 rounded-sm">
-                <FileText className="text-[#FFCC00]" size={24} />
-              </div>
-              <span className="text-xs tracking-widest uppercase font-bold text-slate-500">Draft</span>
+        {/* AI Assistant Banner */}
+        <div className="bg-gradient-to-r from-[#002FA7] to-[#0039CC] p-8 rounded-sm text-white relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="flex items-center space-x-3 mb-3">
+              <Sparkles size={32} className="text-white" />
+              <h2 className="heading-font text-2xl font-bold">Universal AI Assistant</h2>
             </div>
-            <p className="heading-font text-3xl font-bold text-slate-900 mono">{stats.drafts}</p>
-            <p className="text-sm text-slate-500 mt-1">Pending Review</p>
-          </div>
-
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="posted-transactions-card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-[#10B981]/10 rounded-sm">
-                <TrendingUp className="text-[#10B981]" size={24} />
-              </div>
-              <span className="text-xs tracking-widest uppercase font-bold text-slate-500">Posted</span>
+            <p className="text-white/90 mb-4 max-w-2xl">
+              Simply describe what you need in natural language. AI will understand and create the right document in the right module.
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">"Customer ABC wants 100 laptops"</span>
+              <span className="px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">"Mark attendance for all"</span>
+              <span className="px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">"Create PO for Vendor X"</span>
             </div>
-            <p className="heading-font text-3xl font-bold text-slate-900 mono">{stats.posted}</p>
-            <p className="text-sm text-slate-500 mt-1">Completed</p>
           </div>
-
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="total-entries-card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-[#002FA7]/10 rounded-sm">
-                <BarChart3 className="text-[#002FA7]" size={24} />
-              </div>
-              <span className="text-xs tracking-widest uppercase font-bold text-slate-500">Total</span>
-            </div>
-            <p className="heading-font text-3xl font-bold text-slate-900 mono">{stats.totalEntries}</p>
-            <p className="text-sm text-slate-500 mt-1">All Transactions</p>
-          </div>
+          <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
         </div>
 
-        <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="transactions-chart">
-          <h2 className="heading-font text-xl font-bold text-slate-900 mb-6">Transactions by Module</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <XAxis dataKey="name" stroke="#94A3B8" />
-              <YAxis stroke="#94A3B8" />
-              <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0' }} />
-              <Bar dataKey="value" fill="#002FA7" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Module Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {modules.map((module) => {
+            const Icon = module.icon;
+            return (
+              <Link
+                key={module.title}
+                to={module.link}
+                className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-lg transition-all group"
+              >
+                <div className={`${module.color} w-12 h-12 rounded-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                  <Icon size={24} className="text-white" />
+                </div>
+                <h3 className="heading-font text-xl font-bold text-slate-900 mb-3">{module.title}</h3>
+                <div className="space-y-2">
+                  {module.stats.map((stat) => (
+                    <div key={stat.label} className="flex justify-between text-sm">
+                      <span className="text-slate-600">{stat.label}</span>
+                      <span className="mono font-bold text-slate-900">{stat.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </Link>
+            );
+          })}
         </div>
 
-        <div className="bg-gradient-to-r from-[#002FA7] to-[#002480] border border-[#002FA7] p-8 rounded-sm text-white" data-testid="ai-info-banner">
-          <h2 className="heading-font text-2xl font-bold mb-2">Zero-Touch Accounting</h2>
-          <p className="text-white/80 mb-4">Use the AI Prompt button (bottom right) to create transactions using natural language. Upload documents for automatic OCR extraction.</p>
-          <p className="text-xs text-white/60 mono">Prompt → Draft → Verify → Post</p>
+        {/* Quick Actions */}
+        <div className="bg-white border border-slate-200 rounded-sm p-6">
+          <h2 className="heading-font text-xl font-bold text-slate-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-slate-900 text-sm">New Lead</p>
+              <p className="text-xs text-slate-500 mt-1">Capture inquiry</p>
+            </button>
+            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-slate-900 text-sm">Create Quotation</p>
+              <p className="text-xs text-slate-500 mt-1">Sales document</p>
+            </button>
+            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-slate-900 text-sm">Add Stock</p>
+              <p className="text-xs text-slate-500 mt-1">Material receipt</p>
+            </button>
+            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-slate-900 text-sm">Mark Attendance</p>
+              <p className="text-xs text-slate-500 mt-1">HR operation</p>
+            </button>
+          </div>
         </div>
       </div>
     </div>
