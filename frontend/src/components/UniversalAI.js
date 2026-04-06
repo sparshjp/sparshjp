@@ -176,7 +176,7 @@ export default function UniversalAI() {
         <button
           data-testid="ai-fab-button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-[#00C9A7] text-[#0D1B2A] rounded-full shadow-lg shadow-[#00C9A7]/30 flex items-center justify-center hover:bg-[#00B396] transition-all hover:scale-105 z-50"
+          className="fixed bottom-6 right-24 w-14 h-14 bg-[#00C9A7] text-[#0D1B2A] rounded-full shadow-lg shadow-[#00C9A7]/30 flex items-center justify-center hover:bg-[#00B396] transition-all hover:scale-105 z-50"
         >
           <Zap className="w-6 h-6" />
         </button>
