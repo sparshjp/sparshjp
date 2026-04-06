@@ -27,49 +27,36 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 5. **Company Setup Module** - Core ID, contact, financial, statutory, document settings
 6. **Reporting AI** - Conversational data querying with charts & tables (Claude)
 7. **Kairos Branding** - Custom KairosIcon SVG, "Kairos AI ERP" throughout
-8. **Audit Trail (Companies Act 2013)** - Append-only, tamper-proof, field-level change tracking (Apr 2026)
-9. **GST Rules Engine (India Localization)** - Full state-wise tax logic (Apr 2026)
-   - All 36 Indian states/UTs with GST state codes
-   - CGST+SGST for intra-state supply
-   - IGST for inter-state supply
-   - CGST+UTGST for UTs without legislature (Chandigarh, Ladakh, Lakshadweep, A&N Islands, DNH&DD)
-   - HSN/SAC code validation (goods vs services)
-   - Standard GST rate slabs (0, 0.25, 3, 5, 12, 18, 28%)
-   - Auto state extraction from GSTIN
-   - Items enriched with hsn_sac and gst_rate fields
-   - Entities enriched with gst_state_code and state from GSTIN
-   - PO and SO creation auto-computes correct tax_breakdown based on supplier/recipient states
+8. **Audit Trail (Companies Act 2013)** - Append-only, tamper-proof, field-level change tracking
+9. **GST Rules Engine** - All 36 states/UTs, CGST+SGST/IGST/UTGST auto-determination
+10. **AI HSN/SAC Suggest** - Claude-powered item classification with HSN chapter + rate
+11. **GSTR-1 (Outward Supplies)** - B2B, B2C Large, B2C Small, HSN Summary, Doc Summary with state-aware IGST/CGST+SGST split, CSV export
+12. **GSTR-3B (Monthly Summary)** - Sections 3.1 (outward), 3.2 (inter-state), 4 (ITC), 6.1 (payment with cash payable), JSON export
+13. **E-Invoicing** - IRN generation for B2B invoices, NIC-format JSON (v1.1), copy-to-clipboard
+14. **TDS Returns** - Form 26Q, deductee list, CSV export
+15. **Separate GST & TDS sidebar sections** - Clean navigation
 
 ### Key Collections
-- `audit_trail`: Immutable append-only audit log
-- `company_settings`: {state, gst_state_code, ...}
-- `items`: {item_code, item_name, hsn_sac, gst_rate, ...}
-- `entities`: {name, entity_type, gstin, gst_state_code, state, ...}
-- `purchase_orders`, `selling_sales_orders` (now include tax_breakdown, supply_type, vendor/customer_state)
+- `audit_trail`, `company_settings`, `chart_of_accounts`
+- `items` (with hsn_sac, gst_rate), `entities` (with gst_state_code, state)
+- `purchase_orders`, `selling_sales_orders` (with tax_breakdown, supply_type)
+- `purchase_invoices`, `selling_invoices`, `work_orders`
 
 ### Key API Endpoints
-- `/api/gst/states` (GET) - All states/UTs
-- `/api/gst/state/{input}` (GET) - Resolve state
-- `/api/gst/compute-tax` (POST) - Single transaction GST
-- `/api/gst/compute-line-items` (POST) - Multi-item GST
-- `/api/gst/validate-hsn` (POST) - HSN/SAC validation
-- `/api/gst/rate-slabs` (GET) - Standard rate slabs
-- `/api/audit-trail` (GET) - Audit log with filters
-- `/api/audit-trail/export` (GET) - CSV export
+- `/api/gst/states`, `/api/gst/compute-tax`, `/api/gst/compute-line-items`, `/api/gst/suggest-hsn`, `/api/gst/validate-hsn`, `/api/gst/rate-slabs`
+- `/api/statutory/gstr1`, `/api/statutory/gstr3b`, `/api/statutory/e-invoices`, `/api/statutory/e-invoice/{num}/json`, `/api/statutory/tds-return`
+- `/api/audit-trail`, `/api/audit-trail/stats`, `/api/audit-trail/export`
 
 ## Backlog
 
-### P0
-- GST Module UI enhancements (user to specify scope)
-- GSTR-1/3B returns with state-aware tax breakdowns
-
 ### P1
 - Wire Company Setup to downstream docs (FS headers, Invoice PDFs)
-- AP/AR Aging Report (0-30, 30-60, 60-90, 90+ days)
-- Verify Company Logo Upload end-to-end
+- AP/AR Aging Report (0-30, 30-60, 60-90, 90+ day buckets)
+- Company Logo Upload end-to-end verification
 
 ### P2
 - Inventory landed cost calculation
 - Fixed asset automatic depreciation logic
 - Bank reconciliation / statement matching
-- E-Invoice / E-Way Bill format generation
+- E-Way Bill data for goods movement
+- Mobile responsiveness polish
