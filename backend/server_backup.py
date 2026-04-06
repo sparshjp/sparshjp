@@ -900,51 +900,6 @@ async def download_trial_balance_excel(as_of_date: Optional[str] = None):
                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                    headers={"Content-Disposition": f"attachment; filename=trial_balance_{as_of_date}.xlsx"})
 
-# ==================== INTEGRATE NEW ERP MODULES ====================
-# Import route modules
-try:
-    from routes_crm import router as crm_router, set_db as crm_set_db, set_ai_orchestrator as crm_set_ai
-    from routes_sales import router as sales_router, set_db as sales_set_db, set_ai_orchestrator as sales_set_ai
-    from routes_stock import router as stock_router, set_db as stock_set_db, set_ai_orchestrator as stock_set_ai
-    from routes_hr import router as hr_router, set_db as hr_set_db
-    from ai_orchestrator import AIOrchestrator
-    
-    # Initialize AI Orchestrator
-    ai_orch = AIOrchestrator(EMERGENT_KEY)
-    
-    # Set database and AI orchestrator for all modules
-    crm_set_db(db)
-    crm_set_ai(ai_orch)
-    sales_set_db(db)
-    sales_set_ai(ai_orch)
-    stock_set_db(db)
-    stock_set_ai(ai_orch)
-    hr_set_db(db)
-    
-    # Universal AI Prompt Endpoint
-    @api_router.post("/ai/universal-prompt")
-    async def universal_ai_prompt(data: dict):
-        """Universal AI prompt that routes to appropriate module"""
-        try:
-            prompt = data.get("prompt")
-            context = data.get("context", {})
-            
-            result = await ai_orch.process_universal_prompt(prompt, context)
-            return result
-        except Exception as e:
-            logging.error(f"Universal prompt error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
-    
-    # Include routers
-    api_router.include_router(crm_router)
-    api_router.include_router(sales_router)
-    api_router.include_router(stock_router)
-    api_router.include_router(hr_router)
-    
-    logging.info("ERP modules will be integrated")
-except Exception as e:
-    logging.error(f"Failed to integrate ERP modules: {e}")
-
 # Include router
 app.include_router(api_router)
 
