@@ -285,7 +285,7 @@ export default function ReportingAI() {
       </div>
 
       {/* Input bar */}
-      <div className="flex-shrink-0 pt-3 border-t border-[#1B2D42]">
+      <div className="flex-shrink-0 pt-3 pb-2 border-t border-[#1B2D42] relative z-[60]">
         <div className="flex items-center gap-3 bg-[#152236] border border-[#1B2D42] rounded-xl p-2">
           <input
             data-testid="reporting-ai-input"

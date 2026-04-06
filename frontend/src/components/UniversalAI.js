@@ -1,8 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Zap, Send, Loader2, Check, AlertCircle } from 'lucide-react';
 import { SmartFormPopup } from './AISmartEntry';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+const HIDDEN_ROUTES = ['/reporting-ai'];
 
 const INTENT_CONFIG = {
   purchase_order: { label: 'Purchase Order', color: '#F59E0B' },
@@ -16,6 +19,7 @@ const INTENT_CONFIG = {
 
 
 export default function UniversalAI() {
+  const location = useLocation();
   const [prompt, setPrompt] = useState('');
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState(null);
@@ -24,6 +28,9 @@ export default function UniversalAI() {
   const [toast, setToast] = useState(null);
   const [history, setHistory] = useState([]);
   const inputRef = useRef(null);
+
+  // Hide on routes that have their own AI input
+  if (HIDDEN_ROUTES.includes(location.pathname)) return null;
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
