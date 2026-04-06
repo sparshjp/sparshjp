@@ -54,7 +54,7 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 
 ## Key API Endpoints
 - `/api/agents/chat`, `/api/agents/sessions`, `/api/agents/testing/query`, `/api/agents/coding/files`, `/api/agents/coding/read-file`, `/api/agents/coding/write-file`
-- `/api/projects`, `/api/timesheets`, `/api/revenue/*`
+- `/app/backend/benchmark_report.md` — AI Engine vs E1 stress test results
 - `/api/entities`, `/api/stock/items`, `/api/company/settings`
 - `/api/gst/*`, `/api/statutory/*`, `/api/audit-trail`, `/api/aging/*`
 
