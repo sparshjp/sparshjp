@@ -35,6 +35,10 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 13. **E-Invoicing** - IRN generation for B2B invoices, NIC-format JSON (v1.1), copy-to-clipboard
 14. **TDS Returns** - Form 26Q, deductee list, CSV export
 15. **Separate GST & TDS sidebar sections** - Clean navigation
+16. **Master Data Pages** - Separate Vendors, Customers, Items pages with full CRUD forms, GSTIN validation, GST state extraction, AI HSN suggest (Completed 2026-04-06)
+17. **AP/AR Aging Report** - 0-30, 30-60, 60-90, 90+ day buckets with vendor/customer drill-down, expandable invoice details (Completed 2026-04-06)
+18. **Company Logo/Name Wiring** - Company logo and name dynamically render on Dashboard, Financial Statements (BS, P&L, TB headers) (Completed 2026-04-06)
+19. **Legacy Cleanup** - Removed old MasterData.js from Settings, cleaned up App.js routes and imports (Completed 2026-04-06)
 
 ### Key Collections
 - `audit_trail`, `company_settings`, `chart_of_accounts`
@@ -46,17 +50,17 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 - `/api/gst/states`, `/api/gst/compute-tax`, `/api/gst/compute-line-items`, `/api/gst/suggest-hsn`, `/api/gst/validate-hsn`, `/api/gst/rate-slabs`
 - `/api/statutory/gstr1`, `/api/statutory/gstr3b`, `/api/statutory/e-invoices`, `/api/statutory/e-invoice/{num}/json`, `/api/statutory/tds-return`
 - `/api/audit-trail`, `/api/audit-trail/stats`, `/api/audit-trail/export`
+- `/api/entities`, `/api/stock/items`
+- `/api/aging/payables`, `/api/aging/receivables`
+- `/api/company/settings`, `/api/company/settings/logo`
 
 ## Backlog
 
 ### P1
-- Wire Company Setup to downstream docs (FS headers, Invoice PDFs)
-- AP/AR Aging Report (0-30, 30-60, 60-90, 90+ day buckets)
-- Company Logo Upload end-to-end verification
-
-### P2
 - Inventory landed cost calculation
 - Fixed asset automatic depreciation logic
+
+### P2
 - Bank reconciliation / statement matching
 - E-Way Bill data for goods movement
 - Mobile responsiveness polish
