@@ -1297,6 +1297,11 @@ RULES:
     set_agents_config(os.environ.get("EMERGENT_LLM_KEY"), db)
     api_router.include_router(agents_router)
     
+    # Bank Reconciliation
+    from routes_bank_recon import router as bank_recon_router, set_db as set_bank_recon_db
+    set_bank_recon_db(db)
+    api_router.include_router(bank_recon_router)
+    
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

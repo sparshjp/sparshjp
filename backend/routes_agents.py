@@ -409,7 +409,7 @@ async def crawl_url(body: dict):
             title = soup.title.string if soup.title else url
             text = soup.get_text(separator="\n", strip=True)
             # Clean up excessive whitespace
-            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
             text = "\n".join(lines)
             if len(text) > 30000:
                 text = text[:30000] + "\n... [TRUNCATED]"
@@ -505,63 +505,57 @@ async def api_run_test_query(body: dict):
 # UNIFIED CHAT — THE ORCHESTRATOR
 # ══════════════════════════════════════════════════════════
 
-@router.post("/chat")
-async def engine_chat(body: dict):
+# ══════════════════════════════════════════════════════════
+# BACKGROUND TASK ENGINE (bypasses gateway timeout)
+# ══════════════════════════════════════════════════════════
+
+# In-memory task store (tasks are ephemeral — results move to MongoDB sessions)
+_tasks = {}  # task_id -> {status, progress, result, ...}
+
+
+async def _run_engine_task(task_id, mode, message, session_id, context):
+    """Background coroutine that runs the full LLM + tool pipeline."""
     from emergentintegrations.llm.chat import LlmChat, UserMessage
 
-    mode = body.get("agent_type", "auto")
-    message = body.get("message", "")
-    session_id = body.get("session_id", "")
-    context = body.get("context", "")
-
-    if not message:
-        raise HTTPException(status_code=400, detail="Message is required")
-
-    # Use a compact system prompt for faster responses; full prompt is too large for gateway timeout
-    system = ENGINE_SYSTEM_PROMPT
-    if mode == "ba":
-        system += BA_ONLY_SUFFIX
-    elif mode == "dev":
-        system += DEV_ONLY_SUFFIX
-    elif mode == "qa":
-        system += QA_ONLY_SUFFIX
-
-    # Get conversation history
-    history = []
-    if session_id:
-        session = await db.agent_sessions.find_one({"id": session_id}, {"_id": 0})
-        if session:
-            history = session.get("messages", [])
-
-    # Build user message with optional file context
-    full_message = message
-    if context:
-        # Trim context to avoid bloating the request
-        full_message += f"\n\n[ATTACHED CONTEXT]\n{context[:12000]}"
-
     try:
+        _tasks[task_id]["status"] = "thinking"
+        _tasks[task_id]["progress"] = "Analyzing your request..."
+
+        system = ENGINE_SYSTEM_PROMPT
+        if mode == "ba":
+            system += BA_ONLY_SUFFIX
+        elif mode == "dev":
+            system += DEV_ONLY_SUFFIX
+        elif mode == "qa":
+            system += QA_ONLY_SUFFIX
+
+        # Get conversation history
+        history = []
+        if session_id:
+            session = await db.agent_sessions.find_one({"id": session_id}, {"_id": 0})
+            if session:
+                history = session.get("messages", [])
+
+        full_message = message
+        if context:
+            full_message += f"\n\n[ATTACHED CONTEXT]\n{context[:12000]}"
+
         chat = LlmChat(
             api_key=EMERGENT_KEY,
             session_id=f"engine-{session_id or uuid.uuid4()}",
             system_message=system
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
 
-        # Inject conversation history as context in the message itself (avoids multiple LLM round-trips)
+        # Inject history as inline context
         history_context = ""
         if history:
             recent = history[-6:]
-            history_lines = []
-            for h in recent:
-                role = "User" if h["role"] == "user" else "Assistant"
-                content = h["content"][:300]
-                history_lines.append(f"[{role}]: {content}")
-            history_context = "[CONVERSATION HISTORY]\n" + "\n".join(history_lines) + "\n\n"
+            lines = [f"[{'User' if h['role']=='user' else 'Assistant'}]: {h['content'][:300]}" for h in recent]
+            history_context = "[CONVERSATION HISTORY]\n" + "\n".join(lines) + "\n\n"
 
-        # Phase 1: Get initial response from Claude (single LLM call with timeout)
-        response_text = await asyncio.wait_for(
-            chat.send_message(UserMessage(text=history_context + full_message)),
-            timeout=50
-        )
+        # Phase 1: LLM call (no timeout — runs in background)
+        _tasks[task_id]["progress"] = "Generating response..."
+        response_text = await chat.send_message(UserMessage(text=history_context + full_message))
 
         # Phase 2: Parse and execute tool calls
         tool_calls = parse_tool_calls(response_text)
@@ -570,13 +564,25 @@ async def engine_chat(body: dict):
         files_modified = []
 
         if tool_calls:
-            for tc in tool_calls[:6]:
+            _tasks[task_id]["status"] = "executing"
+            for i, tc in enumerate(tool_calls[:8]):
                 tool_name = tc.get("tool", "")
                 tool_args = tc.get("args", {})
+                _tasks[task_id]["progress"] = f"Executing tool {i+1}/{len(tool_calls[:8])}: {tool_name}..."
                 result = await execute_tool(tool_name, tool_args)
                 tool_results.append({"tool": tool_name, "args": tool_args, "result": result})
                 if tool_name == "write_file" and result.get("status") == "ok":
                     files_modified.append(result.get("path", ""))
+
+            # Phase 3: Follow-up LLM call with tool results
+            _tasks[task_id]["progress"] = "Analyzing tool results..."
+            tool_summary = json.dumps(tool_results, indent=2, default=str)
+            if len(tool_summary) > 12000:
+                tool_summary = tool_summary[:12000] + "\n... [TRUNCATED]"
+            followup = await chat.send_message(UserMessage(
+                text=f"[TOOL EXECUTION RESULTS]\n{tool_summary}\n\nBriefly confirm what was done and suggest next steps."
+            ))
+            response_text += f"\n\n---\n\n{followup}"
 
         # Save to session
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -590,31 +596,73 @@ async def engine_chat(body: dict):
                 "$push": {"messages": {"$each": new_messages}},
                 "$set": {"updated_at": timestamp}
             }
-            session = await db.agent_sessions.find_one({"id": session_id}, {"_id": 0})
-            if session and len(session.get("messages", [])) == 0:
+            sess = await db.agent_sessions.find_one({"id": session_id}, {"_id": 0})
+            if sess and len(sess.get("messages", [])) == 0:
                 update["$set"]["title"] = message[:80]
             await db.agent_sessions.update_one({"id": session_id}, update)
 
-        return {
-            "response": response_text,
-            "agent_type": mode,
-            "session_id": session_id,
-            "timestamp": timestamp,
-            "tool_calls_executed": len(tool_calls),
-            "files_modified": files_modified,
-            "questions": questions,
-            "tool_results": tool_results[:10],
-        }
-    except asyncio.TimeoutError:
-        return {
-            "response": "The request took too long to process. Please try a shorter or more specific prompt.",
-            "agent_type": mode,
-            "session_id": session_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "tool_calls_executed": 0,
-            "files_modified": [],
-            "questions": [],
-            "tool_results": [],
+        _tasks[task_id] = {
+            "status": "complete",
+            "progress": "Done",
+            "result": {
+                "response": response_text,
+                "agent_type": mode,
+                "session_id": session_id,
+                "timestamp": timestamp,
+                "tool_calls_executed": len(tool_calls),
+                "files_modified": files_modified,
+                "questions": questions,
+                "tool_results": tool_results[:10],
+            }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Engine error: {str(e)}")
+        _tasks[task_id] = {
+            "status": "error",
+            "progress": str(e),
+            "result": {
+                "response": f"Engine error: {str(e)}",
+                "agent_type": mode,
+                "session_id": session_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "tool_calls_executed": 0,
+                "files_modified": [],
+                "questions": [],
+                "tool_results": [],
+            }
+        }
+
+
+@router.post("/chat")
+async def engine_chat(body: dict):
+    """Start an AI Engine task. Returns task_id for polling."""
+    mode = body.get("agent_type", "auto")
+    message = body.get("message", "")
+    session_id = body.get("session_id", "")
+    context = body.get("context", "")
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    task_id = str(uuid.uuid4())[:12]
+    _tasks[task_id] = {"status": "queued", "progress": "Starting...", "result": None}
+
+    # Fire-and-forget background task
+    asyncio.create_task(_run_engine_task(task_id, mode, message, session_id, context))
+
+    return {"task_id": task_id, "status": "queued"}
+
+
+@router.get("/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """Poll for task completion. Returns status + result when done."""
+    task = _tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if task["status"] in ["complete", "error"]:
+        result = task.get("result", {})
+        # Clean up after delivery
+        _tasks.pop(task_id, None)
+        return {"status": task["status"], "progress": task["progress"], **result}
+
+    return {"status": task["status"], "progress": task["progress"]}

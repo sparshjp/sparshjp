@@ -105,10 +105,12 @@ export default function AIAgentsPage() {
   const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlLoading, setUrlLoading] = useState(false);
+  const [taskProgress, setTaskProgress] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
+  const pollingRef = useRef(null);
 
   useEffect(() => {
     fetch(`${API}/agents/sessions`).then(r => r.json()).then(setSessions).catch(() => {});
@@ -146,6 +148,44 @@ export default function AIAgentsPage() {
     if (activeSession === sid) { setActiveSession(null); setMessages([]); }
   };
 
+  const pollTask = useCallback(async (taskId, sessionId, userMsg, currentAttachments) => {
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/agents/tasks/${taskId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        setTaskProgress(data.progress || '');
+
+        if (data.status === 'complete' || data.status === 'error') {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setTaskProgress('');
+          setLoading(false);
+
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: data.response || `Error: ${data.progress}`,
+            timestamp: data.timestamp || new Date().toISOString(),
+            tool_calls_executed: data.tool_calls_executed || 0,
+            files_modified: data.files_modified || [],
+            questions: data.questions || [],
+            tool_results: data.tool_results || [],
+            agent_type: data.agent_type,
+            error: data.status === 'error',
+          }]);
+
+          setSessions(prev => prev.map(s =>
+            s.id === sessionId ? { ...s, title: (userMsg || currentAttachments?.[0]?.name || '').slice(0, 80), updated_at: data.timestamp } : s
+          ));
+        }
+      } catch {}
+    }, 2000);
+  }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
+
   const sendMessage = async () => {
     if ((!input.trim() && attachments.length === 0) || loading) return;
     let sessionId = activeSession;
@@ -155,6 +195,7 @@ export default function AIAgentsPage() {
     const currentAttachments = [...attachments];
     setInput('');
     setAttachments([]);
+    if (textareaRef.current) { textareaRef.current.style.height = 'auto'; }
     setMessages(prev => [...prev, {
       role: 'user',
       content: userMsg,
@@ -162,6 +203,7 @@ export default function AIAgentsPage() {
       attachments: currentAttachments.map(a => ({ name: a.name, type: a.type, size_kb: a.size_kb })),
     }]);
     setLoading(true);
+    setTaskProgress('Starting...');
 
     try {
       // Build context from all attachments + selected code file
@@ -176,6 +218,7 @@ export default function AIAgentsPage() {
       }
       const context = contextParts.join('\n\n---\n\n');
 
+      // Start the task (returns instantly)
       const res = await fetch(`${API}/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,23 +226,13 @@ export default function AIAgentsPage() {
       });
 
       if (!res.ok) throw new Error(`Engine error: ${res.status}`);
-      const data = await res.json();
+      const { task_id } = await res.json();
 
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: data.response,
-        timestamp: data.timestamp,
-        tool_calls_executed: data.tool_calls_executed || 0,
-        files_modified: data.files_modified || [],
-        questions: data.questions || [],
-        tool_results: data.tool_results || [],
-        agent_type: data.agent_type,
-      }]);
-
-      setSessions(prev => prev.map(s =>
-        s.id === sessionId ? { ...s, title: (userMsg || currentAttachments[0]?.name || '').slice(0, 80), updated_at: data.timestamp } : s
-      ));
+      // Start polling for task completion
+      pollTask(task_id, sessionId, userMsg, currentAttachments);
     } catch (err) {
+      setLoading(false);
+      setTaskProgress('');
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `Error: ${err.message}`,
@@ -207,7 +240,6 @@ export default function AIAgentsPage() {
         error: true,
       }]);
     }
-    setLoading(false);
   };
 
   const handleFileUpload = async (e) => {
@@ -614,7 +646,7 @@ export default function AIAgentsPage() {
               </div>
               <div className="bg-[#0A1628] border border-[#1B2D42] rounded-lg p-3">
                 <div className="flex items-center gap-2 text-xs text-[#4A5B6E]">
-                  <span className="animate-pulse">Engine processing</span>
+                  <span className="animate-pulse">{taskProgress || 'Engine processing...'}</span>
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#152236] border border-[#1B2D42]" style={{ color: currentMode.color }}>
                     {currentMode.label}
                   </span>

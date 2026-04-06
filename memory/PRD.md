@@ -33,6 +33,7 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
     - **UI:** Unified chat with mode selector, file explorer, quick test queries, inline tool result cards, files modified badges
     - **Session management** with persistent conversation history
     - **Full Knowledge Base:** Complete company data (20 employees, 8 projects, 7 clients, 10 vendors, 26 CoA), all API endpoints (16 route modules, 100+ endpoints), complete file structure, design system, code conventions, business rules (GST, TDS, Ind AS 115), MongoDB schemas for all collections
+    - **Background Task Engine** — Async task execution with polling (bypasses K8s gateway timeout). No size/time limits on code generation.
     - **Rich Prompt Box** (ChatGPT-style): File attachments (PDF, Word, Excel, PowerPoint, images, CSV, code), URL crawling (paste any link), multiline auto-expanding textarea, attachment preview chips with remove
 
 ### Accounting & Compliance
