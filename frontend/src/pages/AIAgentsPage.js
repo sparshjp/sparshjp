@@ -172,6 +172,7 @@ export default function AIAgentsPage() {
             questions: data.questions || [],
             tool_results: data.tool_results || [],
             agent_type: data.agent_type,
+            provider: data.provider,
             error: data.status === 'error',
           }]);
 
@@ -598,7 +599,18 @@ export default function AIAgentsPage() {
                       <div className="text-xs text-[#c8d4e0] leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
                     </div>
                   )}
-                  <p className="text-[8px] text-[#4A5B6E] mt-1.5">{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <p className="text-[8px] text-[#4A5B6E]">{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}</p>
+                    {msg.provider && (
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${
+                        msg.provider === 'groq' ? 'text-[#f97316] bg-[#f97316]/10 border-[#f97316]/20'
+                        : msg.provider === 'openrouter' ? 'text-[#06b6d4] bg-[#06b6d4]/10 border-[#06b6d4]/20'
+                        : 'text-[#a78bfa] bg-[#a78bfa]/10 border-[#a78bfa]/20'
+                      }`}>
+                        {msg.provider === 'groq' ? 'Groq / Llama 3.3' : msg.provider === 'openrouter' ? 'OpenRouter' : 'Claude'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Questions */}

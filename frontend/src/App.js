@@ -6,7 +6,7 @@ import {
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
   Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock,
-  FolderKanban
+  FolderKanban, ArrowLeftRight
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -40,6 +40,7 @@ import ProjectsModule from './pages/ProjectsModule';
 import TimesheetsPage from './pages/TimesheetsPage';
 import RevenueRecognition from './pages/RevenueRecognition';
 import TransactionExplorer from './pages/TransactionExplorer';
+import BankReconciliation from './pages/BankReconciliation';
 import AIAgentsPage from './pages/AIAgentsPage';
 import ManufacturingModule from './pages/ManufacturingModule';
 import CompanySetup from './pages/CompanySetup';
@@ -139,6 +140,7 @@ function Sidebar({ isOpen, setIsOpen }) {
         { path: '/revenue-recognition', label: 'Revenue (Ind AS 115)', icon: TrendingUp },
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
         { path: '/aging-report', label: 'AP / AR Aging', icon: Clock },
+        { path: '/bank-reconciliation', label: 'Bank Reconciliation', icon: ArrowLeftRight },
         { path: '/audit-trail', label: 'Audit Trail', icon: Shield },
       ]
     },
@@ -315,6 +317,7 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Route path="/timesheets" element={<TimesheetsPage />} />
             <Route path="/revenue-recognition" element={<RevenueRecognition />} />
             <Route path="/transaction-explorer" element={<TransactionExplorer />} />
+            <Route path="/bank-reconciliation" element={<BankReconciliation />} />
             <Route path="/ai-agents" element={<AIAgentsPage />} />
           </Routes>
         </div>

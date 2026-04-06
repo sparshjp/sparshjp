@@ -10,16 +10,119 @@ import subprocess
 import asyncio
 import httpx
 import tempfile
+import logging
 
 router = APIRouter(prefix="/agents", tags=["AI Engine"])
 
 EMERGENT_KEY = None
+GROQ_KEY = ""
+OPENROUTER_KEY = ""
 db = None
 
 def set_config(key, database):
-    global EMERGENT_KEY, db
+    global EMERGENT_KEY, db, GROQ_KEY, OPENROUTER_KEY
     EMERGENT_KEY = key
     db = database
+    # Read keys here (after dotenv has loaded in server.py)
+    GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
+    OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+
+# ══════════════════════════════════════════════════════════
+# MULTI-PROVIDER LLM CLIENT (Claude → Groq → OpenRouter fallback)
+# ══════════════════════════════════════════════════════════
+
+PROVIDERS = [
+    {"name": "groq", "model": "llama-3.3-70b-versatile"},
+    {"name": "openrouter", "model": "openrouter/auto"},
+    {"name": "claude", "model": "claude-sonnet-4-5-20250929"},
+]
+
+
+def _call_groq_sync(system: str, messages: list) -> str:
+    """Call Groq API with Llama 3.3 70B (sync for executor)."""
+    from groq import Groq
+    client = Groq(api_key=GROQ_KEY)
+    msgs = [{"role": "system", "content": system}]
+    msgs.extend(messages)
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=msgs,
+        max_tokens=8000,
+        temperature=0.3,
+    )
+    return response.choices[0].message.content
+
+
+def _call_openrouter_sync(system: str, messages: list) -> str:
+    """Call OpenRouter API with free model auto-selection (sync for executor)."""
+    from openai import OpenAI
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_KEY,
+        default_headers={"HTTP-Referer": "https://kairos-erp.app", "X-Title": "Kairos AI Engine"},
+    )
+    msgs = [{"role": "system", "content": system}]
+    msgs.extend(messages)
+    response = client.chat.completions.create(
+        model="openrouter/auto",
+        messages=msgs,
+        max_tokens=8000,
+        temperature=0.3,
+    )
+    return response.choices[0].message.content
+
+
+async def _call_claude(system: str, messages: list) -> str:
+    """Call Claude via Emergent LLM Key."""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    chat = LlmChat(
+        api_key=EMERGENT_KEY,
+        session_id=f"engine-{uuid.uuid4()}",
+        system_message=system,
+    ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+    # Combine all messages into a single prompt
+    combined = "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in messages])
+    return await chat.send_message(UserMessage(text=combined))
+
+
+async def call_llm(system: str, messages: list, preferred: str = "auto") -> tuple:
+    """
+    Call LLM with automatic fallback: Groq → OpenRouter → Claude.
+    Returns (response_text, provider_used).
+    """
+    if preferred == "claude":
+        order = ["claude", "groq", "openrouter"]
+    elif preferred == "groq":
+        order = ["groq", "openrouter", "claude"]
+    elif preferred == "openrouter":
+        order = ["openrouter", "groq", "claude"]
+    else:
+        order = ["groq", "openrouter", "claude"]
+
+    errors = []
+    loop = asyncio.get_event_loop()
+
+    for provider in order:
+        try:
+            if provider == "groq" and GROQ_KEY:
+                logging.info("AI Engine: trying Groq (llama-3.3-70b)")
+                text = await loop.run_in_executor(None, _call_groq_sync, system, messages)
+                return text, "groq"
+            elif provider == "openrouter" and OPENROUTER_KEY:
+                logging.info("AI Engine: trying OpenRouter (auto)")
+                text = await loop.run_in_executor(None, _call_openrouter_sync, system, messages)
+                return text, "openrouter"
+            elif provider == "claude" and EMERGENT_KEY:
+                logging.info("AI Engine: trying Claude Sonnet 4.5")
+                text = await _call_claude(system, messages)
+                return text, "claude"
+        except Exception as e:
+            err_msg = str(e)[:200]
+            logging.warning(f"AI Engine: {provider} failed: {err_msg}")
+            errors.append(f"{provider}: {err_msg}")
+            continue
+
+    raise Exception(f"All LLM providers failed: {'; '.join(errors)}")
 
 # ══════════════════════════════════════════════════════════
 # PATH SAFETY
@@ -514,9 +617,7 @@ _tasks = {}  # task_id -> {status, progress, result, ...}
 
 
 async def _run_engine_task(task_id, mode, message, session_id, context):
-    """Background coroutine that runs the full LLM + tool pipeline."""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
-
+    """Background coroutine that runs the full LLM + tool pipeline with multi-provider fallback."""
     try:
         _tasks[task_id]["status"] = "thinking"
         _tasks[task_id]["progress"] = "Analyzing your request..."
@@ -540,22 +641,18 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
         if context:
             full_message += f"\n\n[ATTACHED CONTEXT]\n{context[:12000]}"
 
-        chat = LlmChat(
-            api_key=EMERGENT_KEY,
-            session_id=f"engine-{session_id or uuid.uuid4()}",
-            system_message=system
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-
         # Inject history as inline context
         history_context = ""
         if history:
             recent = history[-6:]
-            lines = [f"[{'User' if h['role']=='user' else 'Assistant'}]: {h['content'][:300]}" for h in recent]
-            history_context = "[CONVERSATION HISTORY]\n" + "\n".join(lines) + "\n\n"
+            hlines = [f"[{'User' if h['role']=='user' else 'Assistant'}]: {h['content'][:300]}" for h in recent]
+            history_context = "[CONVERSATION HISTORY]\n" + "\n".join(hlines) + "\n\n"
 
-        # Phase 1: LLM call (no timeout — runs in background)
+        # Phase 1: LLM call with multi-provider fallback
         _tasks[task_id]["progress"] = "Generating response..."
-        response_text = await chat.send_message(UserMessage(text=history_context + full_message))
+        llm_messages = [{"role": "user", "content": history_context + full_message}]
+        response_text, provider = await call_llm(system, llm_messages)
+        _tasks[task_id]["progress"] = f"Response from {provider}. Processing..."
 
         # Phase 2: Parse and execute tool calls
         tool_calls = parse_tool_calls(response_text)
@@ -575,13 +672,12 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
                     files_modified.append(result.get("path", ""))
 
             # Phase 3: Follow-up LLM call with tool results
-            _tasks[task_id]["progress"] = "Analyzing tool results..."
+            _tasks[task_id]["progress"] = f"Analyzing results via {provider}..."
             tool_summary = json.dumps(tool_results, indent=2, default=str)
             if len(tool_summary) > 12000:
                 tool_summary = tool_summary[:12000] + "\n... [TRUNCATED]"
-            followup = await chat.send_message(UserMessage(
-                text=f"[TOOL EXECUTION RESULTS]\n{tool_summary}\n\nBriefly confirm what was done and suggest next steps."
-            ))
+            followup_msgs = [{"role": "user", "content": f"[TOOL EXECUTION RESULTS]\n{tool_summary}\n\nBriefly confirm what was done and suggest next steps."}]
+            followup, _ = await call_llm(system, followup_msgs, preferred=provider)
             response_text += f"\n\n---\n\n{followup}"
 
         # Save to session
@@ -590,7 +686,8 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
             new_messages = [
                 {"role": "user", "content": message, "timestamp": timestamp},
                 {"role": "assistant", "content": response_text, "agent_type": mode, "timestamp": timestamp,
-                 "tool_calls": len(tool_calls), "files_modified": files_modified, "questions": questions},
+                 "tool_calls": len(tool_calls), "files_modified": files_modified, "questions": questions,
+                 "provider": provider},
             ]
             update = {
                 "$push": {"messages": {"$each": new_messages}},
@@ -613,6 +710,7 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
                 "files_modified": files_modified,
                 "questions": questions,
                 "tool_results": tool_results[:10],
+                "provider": provider,
             }
         }
     except Exception as e:
@@ -666,3 +764,16 @@ async def get_task_status(task_id: str):
         return {"status": task["status"], "progress": task["progress"], **result}
 
     return {"status": task["status"], "progress": task["progress"]}
+
+
+@router.get("/providers")
+async def get_providers():
+    """List available LLM providers and their status."""
+    return {
+        "providers": [
+            {"name": "groq", "model": "llama-3.3-70b-versatile", "status": "active" if GROQ_KEY else "no_key", "priority": 1},
+            {"name": "openrouter", "model": "auto (free models)", "status": "active" if OPENROUTER_KEY else "no_key", "priority": 2},
+            {"name": "claude", "model": "claude-sonnet-4-5", "status": "active" if EMERGENT_KEY else "no_key", "priority": 3},
+        ],
+        "fallback_order": ["groq", "openrouter", "claude"],
+    }

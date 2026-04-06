@@ -136,6 +136,8 @@ async def upload_bank_statement(account: str, file: UploadFile = File(...)):
             "account": account
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -211,6 +213,8 @@ async def get_unmatched_entries(account: str):
             "suggestions": suggestions
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -379,6 +383,8 @@ async def get_reconciliation_summary(account: str):
             "last_bank_statement_date": latest_bank_entry.get('date') if latest_bank_entry else None
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
