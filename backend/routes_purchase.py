@@ -139,6 +139,8 @@ async def create_purchase_order(data: dict):
     del po["_id"]
     await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_PURCHASE_ORDER, po["id"], po["po_number"], snapshot=po, notes=f"PO created for vendor {po['vendor']}, {supply_type}, total {po['grand_total']}")
     return po
+
+@router.get("/orders")
 async def list_purchase_orders(status: Optional[str] = None, limit: int = 100):
     query = {}
     if status:
