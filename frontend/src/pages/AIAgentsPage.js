@@ -5,7 +5,7 @@ import {
   Code, Loader2, FolderOpen, X, Cpu, Wrench, Terminal, Database,
   AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play,
   Paperclip, Globe, Image, Link2, Search, Activity, GitBranch, Package,
-  Brain
+  Brain, Camera, Eye
 } from 'lucide-react';
 
 const MODES = [
@@ -30,6 +30,7 @@ const TOOL_ICONS = {
   delete_lines: Code, get_schema: Database, run_command: Terminal,
   grep_search: Search, check_logs: Activity, install_package: Package,
   run_tests: Play, verify_deployment: CheckCircle2,
+  web_search: Globe, take_screenshot: Camera,
 };
 
 const TOOL_COLORS = {
@@ -39,6 +40,7 @@ const TOOL_COLORS = {
   delete_lines: '#ef4444', get_schema: '#06b6d4', run_command: '#60a5fa',
   grep_search: '#f59e0b', check_logs: '#a78bfa', install_package: '#06b6d4',
   run_tests: '#22c55e', verify_deployment: '#00d4aa',
+  web_search: '#f97316', take_screenshot: '#e879f9',
 };
 
 function ToolResultCard({ result, index }) {
@@ -63,6 +65,8 @@ function ToolResultCard({ result, index }) {
   else if (result.tool === 'create_page') summary = result.args?.page_name || '';
   else if (result.tool === '_auto_restart') summary = result.result?.startup_ok ? 'OK' : 'Failed';
   else if (result.tool === 'verify_deployment') summary = result.result?.summary || `${result.result?.checks?.length || 0} checks`;
+  else if (result.tool === 'web_search') summary = `"${result.args?.query?.slice(0, 40) || ''}" (${result.result?.count || 0} results)`;
+  else if (result.tool === 'take_screenshot') summary = result.args?.url || 'screenshot';
 
   return (
     <div className="border border-[#1B2D42] rounded-lg overflow-hidden bg-[#0D1B2A]" data-testid={`tool-result-${index}`}>
@@ -75,6 +79,23 @@ function ToolResultCard({ result, index }) {
       </button>
       {expanded && (
         <div className="px-3 pb-2 border-t border-[#1B2D42]">
+          {result.tool === 'take_screenshot' && result.result?.path && (
+            <div className="mt-2 mb-2">
+              <img src={`${window.location.origin}/api/agents/screenshots/${result.result.path.split('/').pop()}`}
+                alt="Screenshot" className="rounded border border-[#1B2D42] max-h-64 w-auto" loading="lazy"
+                onError={(e) => { e.target.style.display = 'none'; }} />
+            </div>
+          )}
+          {result.tool === 'web_search' && result.result?.results?.length > 0 && (
+            <div className="mt-2 space-y-1.5">
+              {result.result.results.map((r, ri) => (
+                <div key={ri} className="text-[10px]">
+                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-[#60a5fa] hover:underline font-medium">{r.title}</a>
+                  <p className="text-[#7A8BA0] mt-0.5">{r.snippet}</p>
+                </div>
+              ))}
+            </div>
+          )}
           <pre className="text-[10px] text-[#c8d4e0] font-mono overflow-x-auto mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap">
             {JSON.stringify(result.result, null, 2)}
           </pre>
@@ -506,7 +527,7 @@ export default function AIAgentsPage() {
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v3</span>
               </div>
               <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5 flex items-center gap-1">
-                <GitBranch size={8} /> Parallel Execution &middot; Live Thinking &middot; Auto-Verify
+                <GitBranch size={8} /> 21 Tools &middot; Web Search &middot; Screenshots &middot; Auto-Verify
               </p>
             </div>
           </div>
@@ -621,7 +642,7 @@ export default function AIAgentsPage() {
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Parallel Execution</span>
                 <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">Live Thought Process</span>
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">19 Tools + Auto-Verify</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">21 Tools + Web Search</span>
               </div>
               <div className="flex flex-wrap gap-2 justify-center max-w-xl">
                 {starters.map((s, i) => (
@@ -849,7 +870,7 @@ export default function AIAgentsPage() {
               </div>
             </div>
             <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
-              Parallel execution &middot; 19 tools &middot; scaffold_module &middot; Auto-restart &middot; Live thought process &middot; Deployment verification
+              Parallel execution &middot; 21 tools &middot; Web search &middot; Screenshots &middot; Live thought process &middot; Auto-verify
             </p>
           </div>
         </div>

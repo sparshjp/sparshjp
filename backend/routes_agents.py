@@ -1,6 +1,6 @@
-"""Kairos AI Engine v3 — Speed & Code Generation Upgrade.
+"""Kairos AI Engine v3.1 — Speed, Code Generation & Research Upgrade.
 Parallel tool execution, compound tools (scaffold_module, create_page),
-auto-restart, compressed results, fast-path for simple questions."""
+auto-restart, compressed results, web search, screenshot, fast-path for simple questions."""
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from datetime import datetime, timezone
 import uuid
@@ -12,6 +12,7 @@ import asyncio
 import httpx
 import re
 import logging
+import base64
 
 router = APIRouter(prefix="/agents", tags=["AI Engine"])
 
@@ -174,6 +175,18 @@ Design: Dark theme #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00
    {"tool": "verify_deployment", "args": {"checks": [{"type": "backend_health"}, {"type": "api", "url": "/api/expenses", "method": "GET"}, {"type": "frontend_route", "route": "/expense-management"}, {"type": "file_exists", "path": "/app/backend/routes_expense_management.py"}]}}
    ```
 
+### Research & Visual
+20. **web_search(query, max_results?)** — Search the web using DuckDuckGo. Returns titles, URLs, and snippets. Use for finding documentation, code examples, API references, latest library versions. max_results defaults to 5 (max 10).
+   Example:
+   ```TOOL_CALL
+   {"tool": "web_search", "args": {"query": "FastAPI motor MongoDB async best practices", "max_results": 5}}
+   ```
+21. **take_screenshot(url, full_page?, wait_ms?)** — Capture a screenshot of any URL using headless Chromium. Use to visually verify UI changes after creating/modifying frontend pages. Pass a path like "/expense-management" to screenshot the local frontend. wait_ms defaults to 2000.
+   Example:
+   ```TOOL_CALL
+   {"tool": "take_screenshot", "args": {"url": "/expense-management", "wait_ms": 3000}}
+   ```
+
 ## CODE PATTERNS
 - Route file: `router = APIRouter(prefix="/x")` + `set_db(database)` — NEVER create own motor client
 - IDs: `str(uuid.uuid4())` | Timestamps: `datetime.now(timezone.utc).isoformat()`
@@ -201,6 +214,8 @@ Clarifying question
 RULES:
 - ALL tool calls in ONE response run in PARALLEL. Be aggressive with batching.
 - Prefer scaffold_module + test_api over manual create_file + insert_lines + restart_service + check_logs.
+- Use `web_search` to find documentation, code examples, or library info when you don't know something. Combine with the existing `crawl-url` upload endpoint to read full pages.
+- Use `take_screenshot` after creating/modifying frontend pages to visually verify UI changes.
 - **ALWAYS verify your work before finishing.** After creating/modifying backend modules, use `verify_deployment` to confirm: backend health, API endpoints return expected status, frontend routes are registered, files exist. NEVER say DONE without verification.
 - Maximum """ + str(MAX_ITERATIONS) + """ iterations. Target 1-2 for most tasks, but ALWAYS include a verification step."""
 
@@ -213,7 +228,7 @@ QA_ONLY_SUFFIX = "\n\nMODE: Testing/Validation Only. Run queries, test APIs, che
 # ══════════════════════════════════════════════════════════
 
 WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page"}
-READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment"}
+READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot"}
 
 async def execute_tool(tool_name, args):
     try:
@@ -554,6 +569,80 @@ async def execute_tool(tool_name, args):
                     results.append({"check": "file_exists", "path": path, "exists": exists, "size": size, "status": "pass" if exists else "fail"})
             all_passed = all(r.get("status") == "pass" for r in results)
             return {"status": "ok", "all_passed": all_passed, "checks": results, "summary": f"{sum(1 for r in results if r['status']=='pass')}/{len(results)} checks passed"}
+
+        elif tool_name == "web_search":
+            """Search the web using DuckDuckGo. Returns top results with titles, URLs, and snippets."""
+            query = args.get("query", "")
+            max_results = min(args.get("max_results", 5), 10)
+            if not query:
+                return {"status": "error", "error": "query is required"}
+            try:
+                from ddgs import DDGS
+                raw_results = list(DDGS().text(query, max_results=max_results))
+                results = []
+                for r in raw_results:
+                    results.append({
+                        "title": r.get("title", ""),
+                        "url": r.get("href", ""),
+                        "snippet": r.get("body", "")[:400],
+                    })
+                return {"status": "ok", "query": query, "results": results, "count": len(results)}
+            except Exception as e:
+                return {"status": "error", "error": f"Web search failed: {str(e)}"}
+
+        elif tool_name == "take_screenshot":
+            """Take a screenshot of a URL using Playwright. Returns the image path and a base64 thumbnail."""
+            url = args.get("url", "")
+            full_page = args.get("full_page", False)
+            wait_ms = min(args.get("wait_ms", 2000), 10000)
+            if not url:
+                return {"status": "error", "error": "url is required"}
+            # Default to local frontend if path-only
+            if url.startswith("/"):
+                url = f"http://localhost:3000{url}"
+            elif not url.startswith("http"):
+                url = f"http://localhost:3000/{url}"
+            screenshot_id = str(uuid.uuid4())[:8]
+            screenshot_path = f"/app/backend/uploads/screenshot_{screenshot_id}.png"
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    "python3", "-c", f"""
+import asyncio
+from playwright.async_api import async_playwright
+
+async def shot():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-gpu'])
+        page = await browser.new_page(viewport={{'width': 1280, 'height': 720}})
+        await page.goto('{url}', wait_until='networkidle', timeout=15000)
+        await page.wait_for_timeout({wait_ms})
+        await page.screenshot(path='{screenshot_path}', full_page={full_page})
+        await browser.close()
+        print('OK')
+
+asyncio.run(shot())
+""",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                if proc.returncode != 0:
+                    err = stderr.decode()[-500:] if stderr else "Unknown error"
+                    return {"status": "error", "error": f"Screenshot failed: {err}"}
+                # Generate small base64 preview (first 200KB of file)
+                file_size = os.path.getsize(screenshot_path) if os.path.isfile(screenshot_path) else 0
+                return {
+                    "status": "ok",
+                    "path": screenshot_path,
+                    "url_captured": url,
+                    "file_size_kb": round(file_size / 1024, 1),
+                    "full_page": full_page,
+                    "note": "Screenshot saved. Use read_file or serve from /uploads/ to view.",
+                }
+            except asyncio.TimeoutError:
+                return {"status": "error", "error": "Screenshot timed out (30s limit)"}
+            except Exception as e:
+                return {"status": "error", "error": f"Screenshot error: {str(e)}"}
 
         else:
             return {"status": "error", "error": f"Unknown tool: {tool_name}"}
@@ -1077,6 +1166,18 @@ def _compress_tool_result(tool_name, result):
             return {"status": "ok", "command": result.get("command"), "output": output[:3000] + "\n... [COMPRESSED]", "exit_code": result.get("exit_code")}
         return result
 
+    if tool_name == "web_search":
+        # Keep web search results compact
+        results_list = result.get("results", [])
+        if len(results_list) > 5:
+            return {"status": "ok", "query": result.get("query"), "count": len(results_list), "results": results_list[:5], "note": f"Showing 5/{len(results_list)}"}
+        return result
+
+    if tool_name == "take_screenshot":
+        # Remove base64 data from compressed results — keep metadata only
+        return {"status": result.get("status"), "path": result.get("path"), "url_captured": result.get("url_captured"),
+                "file_size_kb": result.get("file_size_kb"), "note": result.get("note", "Screenshot captured")}
+
     return result
 
 
@@ -1210,6 +1311,17 @@ async def crawl_url(body: dict):
         return {"status": "error", "url": url, "error": f"HTTP {e.response.status_code}"}
     except Exception as e:
         return {"status": "error", "url": url, "error": str(e)}
+
+@router.get("/screenshots/{filename}")
+async def serve_screenshot(filename: str):
+    """Serve screenshot images from the uploads directory."""
+    from fastapi.responses import FileResponse
+    if not re.match(r'^screenshot_[a-f0-9]+\.png$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Screenshot not found")
+    return FileResponse(file_path, media_type="image/png")
 
 # ══════════════════════════════════════════════════════════
 # SESSION MANAGEMENT
