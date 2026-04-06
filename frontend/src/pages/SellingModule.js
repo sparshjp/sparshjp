@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, FileText, Truck, Receipt, CreditCard, ArrowRight, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, Truck, Receipt, CreditCard, ArrowRight, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ModuleAIPrompt } from '../components/AISmartEntry';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -32,8 +33,6 @@ export default function SellingModule() {
   const [pendingDN, setPendingDN] = useState([]);
   const [pendingInvoice, setPendingInvoice] = useState([]);
   const [outstanding, setOutstanding] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({});
   const [processing, setProcessing] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -63,19 +62,6 @@ export default function SellingModule() {
   }, [activeSection]);
 
   useEffect(() => { loadData(); }, [loadData]);
-
-  async function handleCreateSO(e) {
-    e.preventDefault();
-    try {
-      const items = [{ item_code: formData.item, item_name: formData.item_name || formData.item, qty: parseFloat(formData.qty) || 0, rate: parseFloat(formData.rate) || 0, amount: (parseFloat(formData.qty) || 0) * (parseFloat(formData.rate) || 0) }];
-      const r = await fetch(`${API}/api/selling/sales-orders`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer: formData.customer, transaction_date: formData.date || new Date().toISOString().split('T')[0], delivery_date: formData.delivery_date, items, gst_rate: parseFloat(formData.gst_rate) || 18, cost_center: formData.cost_center || 'Sales & Marketing' })
-      });
-      if (r.ok) { const so = await r.json(); toast.success(`SO ${so.so_number} created`); if (so.credit_warning) toast.warning(so.credit_warning); setShowForm(false); setFormData({}); loadData(); }
-      else { const err = await r.json(); toast.error(err.detail || 'Failed'); }
-    } catch (e) { toast.error('Network error'); }
-  }
 
   async function confirmDelivery(soId) {
     setProcessing(soId);
@@ -127,9 +113,8 @@ export default function SellingModule() {
           <p className="text-[#4A5B6E] text-sm mt-1">SO &rarr; Delivery Note &rarr; Invoice &rarr; Payment (Linked Flow + Auto JE)</p>
         </div>
         {activeSection === 'sales-orders' && (
-          <button data-testid="selling-new-btn" onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#00C9A7] hover:bg-[#00B396] text-[#0D1B2A] rounded-lg text-sm font-semibold transition-colors">
-            <Plus className="w-4 h-4" /> New Sales Order
+          <button data-testid="selling-new-btn" onClick={() => {}}
+            className="hidden">
           </button>
         )}
       </div>
@@ -138,7 +123,7 @@ export default function SellingModule() {
       <div className="flex items-center gap-2 bg-[#152236] border border-[#1B2D42] rounded-lg p-3 overflow-x-auto">
         {sections.map((s, i) => (
           <React.Fragment key={s.id}>
-            <button data-testid={`selling-tab-${s.id}`} onClick={() => { setActiveSection(s.id); setShowForm(false); }}
+            <button data-testid={`selling-tab-${s.id}`} onClick={() => { setActiveSection(s.id); }}
               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap transition-all ${activeSection === s.id ? 'bg-[#00C9A7]/20 text-[#00C9A7] border border-[#00C9A7]/30' : 'text-[#7A8BA0] hover:text-[#E8EDF2] hover:bg-[#1B2D42]'}`}>
               <s.icon className="w-4 h-4" />{s.label}
               {s.id === 'delivery-notes' && pendingDN.length > 0 && <span className="ml-1 bg-[#FFB547] text-[#0D1B2A] text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{pendingDN.length}</span>}
@@ -150,20 +135,13 @@ export default function SellingModule() {
         ))}
       </div>
 
-      {/* SO Form */}
-      {showForm && activeSection === 'sales-orders' && (
-        <div className="bg-[#152236] border border-[#00C9A7]/30 rounded-lg p-6" data-testid="selling-so-form">
-          <h3 className="text-sm font-bold text-[#00C9A7] mb-4">New Sales Order</h3>
-          <form onSubmit={handleCreateSO} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <input data-testid="selling-form-customer" placeholder="Customer Name" className="bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-3 py-2 text-sm text-[#E8EDF2] placeholder:text-[#4A5B6E] focus:border-[#00C9A7]" value={formData.customer || ''} onChange={e => setFormData({...formData, customer: e.target.value})} required />
-            <input data-testid="selling-form-date" type="date" className="bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-3 py-2 text-sm text-[#E8EDF2] focus:border-[#00C9A7]" value={formData.date || ''} onChange={e => setFormData({...formData, date: e.target.value})} />
-            <input data-testid="selling-form-item" placeholder="Item Code" className="bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-3 py-2 text-sm text-[#E8EDF2] placeholder:text-[#4A5B6E] focus:border-[#00C9A7]" value={formData.item || ''} onChange={e => setFormData({...formData, item: e.target.value})} required />
-            <input data-testid="selling-form-qty" placeholder="Qty" type="number" className="bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-3 py-2 text-sm text-[#E8EDF2] font-mono focus:border-[#00C9A7]" value={formData.qty || ''} onChange={e => setFormData({...formData, qty: e.target.value})} required />
-            <input data-testid="selling-form-rate" placeholder="Rate" type="number" className="bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-3 py-2 text-sm text-[#E8EDF2] font-mono focus:border-[#00C9A7]" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} required />
-            <input placeholder="GST %" type="number" className="bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-3 py-2 text-sm text-[#E8EDF2] font-mono focus:border-[#00C9A7]" value={formData.gst_rate || '18'} onChange={e => setFormData({...formData, gst_rate: e.target.value})} />
-            <button data-testid="selling-form-submit" type="submit" className="px-4 py-2 bg-[#00C9A7] text-[#0D1B2A] rounded-lg font-semibold text-sm hover:bg-[#00B396] transition-colors">Create SO</button>
-          </form>
-        </div>
+      {/* AI Prompt — replaces old form */}
+      {activeSection === 'sales-orders' && (
+        <ModuleAIPrompt
+          placeholder={`Describe your sale... e.g. "SO for Asian Paints - 3000 KG EP-2500 at 520/KG"`}
+          defaultIntent="sales_order"
+          onCreated={loadData}
+        />
       )}
 
       {/* SALES ORDERS TABLE */}

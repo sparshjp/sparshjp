@@ -94,7 +94,18 @@ async def list_quotations(status: Optional[str] = None, limit: int = 100):
 # ═══════════════════════════════════════════════════════
 @router.post("/sales-orders")
 async def create_sales_order(data: dict):
+    # Validate customer exists in master data
+    customer_name = data.get("customer", "")
+    customer_doc = await db.entities.find_one({"name": customer_name, "entity_type": "customer"}, {"_id": 0})
+    if not customer_doc:
+        raise HTTPException(status_code=400, detail=f"Customer '{customer_name}' not found in master data. Create the customer first in Master Data.")
+    # Validate items exist in master data
     items = data.get("items", [])
+    for it in items:
+        item_code = it.get("item_code", "")
+        item_doc = await db.items.find_one({"item_code": item_code}, {"_id": 0})
+        if not item_doc:
+            raise HTTPException(status_code=400, detail=f"Item '{item_code}' not found in master data. Create the item first in Master Data.")
     total = sum(i.get("amount", i.get("qty", 0) * i.get("rate", 0)) for i in items)
     gst_rate = data.get("gst_rate", 18)
     gst_amount = round(total * gst_rate / 100, 2)

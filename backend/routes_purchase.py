@@ -59,7 +59,18 @@ async def auto_post_journal_entries(entries, narration, cost_center="General", r
 # ═══════════════════════════════════════════════════════
 @router.post("/orders")
 async def create_purchase_order(data: dict):
+    # Validate vendor exists in master data
+    vendor_name = data.get("vendor", "")
+    vendor_doc = await db.entities.find_one({"name": vendor_name, "entity_type": "vendor"}, {"_id": 0})
+    if not vendor_doc:
+        raise HTTPException(status_code=400, detail=f"Vendor '{vendor_name}' not found in master data. Create the vendor first in Master Data.")
+    # Validate items exist in master data
     items = data.get("items", [])
+    for it in items:
+        item_code = it.get("item_code", "")
+        item_doc = await db.items.find_one({"item_code": item_code}, {"_id": 0})
+        if not item_doc:
+            raise HTTPException(status_code=400, detail=f"Item '{item_code}' not found in master data. Create the item first in Master Data.")
     total = sum(i.get("amount", i.get("qty", 0) * i.get("rate", 0)) for i in items)
     gst_rate = data.get("gst_rate", 18)
     gst_amount = round(total * gst_rate / 100, 2)

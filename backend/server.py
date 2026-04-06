@@ -1132,8 +1132,8 @@ try:
             raise HTTPException(status_code=400, detail="Prompt is required")
 
         # 1. Fetch master data for context
-        vendors_raw = await db.entities.find({"type": "Vendor"}, {"_id": 0}).to_list(200)
-        customers_raw = await db.entities.find({"type": "Customer"}, {"_id": 0}).to_list(200)
+        vendors_raw = await db.entities.find({"entity_type": "vendor"}, {"_id": 0}).to_list(200)
+        customers_raw = await db.entities.find({"entity_type": "customer"}, {"_id": 0}).to_list(200)
         items_raw = await db.items.find({}, {"_id": 0}).to_list(200)
         cost_centers_raw = await db.cost_centers.find({}, {"_id": 0}).to_list(50)
         coa_raw = await db.chart_of_accounts.find({"is_active": {"$ne": False}}, {"_id": 0, "ledger_name": 1, "category": 1}).to_list(500)
