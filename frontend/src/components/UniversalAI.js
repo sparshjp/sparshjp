@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Send, Loader2, Check, AlertCircle } from 'lucide-react';
 import { SmartFormPopup } from './AISmartEntry';
+import { KairosIcon } from './KairosIcon';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -105,7 +106,7 @@ export default function UniversalAI() {
           <div className="absolute -inset-[1px] bg-gradient-to-r from-[#00C9A7]/40 via-transparent to-[#00C9A7]/40 rounded-2xl opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" />
           <div className="relative flex items-center bg-[#0D1B2A]/95 backdrop-blur-xl border border-[#1B2D42] rounded-2xl shadow-2xl shadow-black/40">
             <div className="flex items-center pl-4 pr-2">
-              <span className="text-[#00C9A7] font-black text-sm leading-none tracking-tight select-none">K.</span>
+              <KairosIcon size={18} />
             </div>
             <input
               ref={inputRef}

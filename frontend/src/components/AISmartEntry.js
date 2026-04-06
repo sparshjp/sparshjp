@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, X, Check, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { KairosIcon } from './KairosIcon';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -262,7 +263,7 @@ export function SmartFormPopup({ parsed, masterData, onConfirm, onCancel, loadin
 
         {/* AI Summary */}
         <div className="px-5 py-2.5 bg-[#152236]/50 border-b border-[#1B2D42] flex items-center gap-2">
-          <span className="text-[#00C9A7] font-black text-xs leading-none tracking-tight select-none">K.</span>
+          <KairosIcon size={14} />
           <p className="text-xs text-[#7A8BA0]">{parsed.summary}</p>
         </div>
 

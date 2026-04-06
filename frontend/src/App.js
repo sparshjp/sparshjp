@@ -31,6 +31,7 @@ import ManufacturingModule from './pages/ManufacturingModule';
 import CompanySetup from './pages/CompanySetup';
 import ReportingAI from './pages/ReportingAI';
 import UniversalAI from './components/UniversalAI';
+import { KairosIcon } from './components/KairosIcon';
 import { Toaster } from './components/ui/sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -138,14 +139,7 @@ function Sidebar({ isOpen, setIsOpen }) {
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-4 border-b border-[#1B2D42]">
             <Link to="/" className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1 h-6 bg-[#0D1B2A] rounded-sm" />
-                <div className="flex flex-col gap-0.5">
-                  <div className="w-2.5 h-0.5 bg-[#00C9A7] -rotate-12" />
-                  <div className="w-2.5 h-0.5 bg-[#00C9A7] rotate-12" />
-                </div>
-                <div className="w-1.5 h-1.5 rounded-full bg-[#00C9A7]" />
-              </div>
+              <KairosIcon size={28} />
               <div className="border-l border-[#1B2D42] pl-3 h-8 flex flex-col justify-center">
                 <span className="text-sm font-bold tracking-[3px] text-white leading-none">KAIROS</span>
                 <span className="text-[8px] tracking-[4px] text-[#00C9A7] uppercase leading-none mt-1">Advisory</span>
