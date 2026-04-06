@@ -796,13 +796,19 @@ async def engine_chat(body: dict):
             system_message=system
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
 
-        # Send recent history for context (last 6 turns)
-        for h in history[-12:]:
-            if h["role"] == "user":
-                await chat.send_message(UserMessage(text=h["content"]))
+        # Inject conversation history as context in the message itself (avoids multiple LLM round-trips)
+        history_context = ""
+        if history:
+            recent = history[-8:]
+            history_lines = []
+            for h in recent:
+                role = "User" if h["role"] == "user" else "Assistant"
+                content = h["content"][:500]
+                history_lines.append(f"[{role}]: {content}")
+            history_context = "[CONVERSATION HISTORY]\n" + "\n".join(history_lines) + "\n\n"
 
-        # Phase 1: Get initial response from Claude
-        response_text = await chat.send_message(UserMessage(text=full_message))
+        # Phase 1: Get initial response from Claude (single LLM call)
+        response_text = await chat.send_message(UserMessage(text=history_context + full_message))
 
         # Phase 2: Parse and execute tool calls
         tool_calls = parse_tool_calls(response_text)
@@ -811,7 +817,7 @@ async def engine_chat(body: dict):
         files_modified = []
 
         if tool_calls:
-            for tc in tool_calls:
+            for tc in tool_calls[:8]:
                 tool_name = tc.get("tool", "")
                 tool_args = tc.get("args", {})
                 result = await execute_tool(tool_name, tool_args)
@@ -819,13 +825,13 @@ async def engine_chat(body: dict):
                 if tool_name == "write_file" and result.get("status") == "ok":
                     files_modified.append(result.get("path", ""))
 
-            # Phase 3: Feed tool results back to Claude for follow-up
+            # Phase 3: Feed tool results back to Claude for follow-up (single additional LLM call)
             tool_summary = json.dumps(tool_results, indent=2, default=str)
-            if len(tool_summary) > 15000:
-                tool_summary = tool_summary[:15000] + "\n... [TRUNCATED]"
+            if len(tool_summary) > 10000:
+                tool_summary = tool_summary[:10000] + "\n... [TRUNCATED]"
 
             followup = await chat.send_message(UserMessage(
-                text=f"[TOOL EXECUTION RESULTS]\n{tool_summary}\n\nBased on these results, provide your analysis, confirm what was done, and suggest next steps. If files were modified, note which services need restart."
+                text=f"[TOOL EXECUTION RESULTS]\n{tool_summary}\n\nBriefly confirm what was done and suggest next steps."
             ))
             response_text += f"\n\n---\n\n{followup}"
 
