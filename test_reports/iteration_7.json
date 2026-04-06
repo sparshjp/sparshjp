@@ -1,0 +1,96 @@
+{
+  "summary": "Completed comprehensive testing of LINKED DOCUMENT FLOW for Purchase (PO → GRN → Invoice → Payment) and Selling (SO → DN → Invoice → Payment). All 21 backend tests passed (100%). Frontend UI verified: Both Buying and Selling pages show linked flow navigation with arrows, pending sections with action buttons, and full lifecycle completion with JE posting.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "PURCHASE FLOW - API Health Check: GET /api/ returns Kairos Accounting API v2.0.0",
+    "PURCHASE FLOW - Create PO: POST /api/purchase/orders returns po_number (PO-*), vendor, items, grand_total with status=Submitted, grn_status=Pending",
+    "PURCHASE FLOW - Pending GRN: GET /api/purchase/grn/pending returns POs with status Draft/Submitted",
+    "PURCHASE FLOW - Confirm Receipt: POST /api/purchase/grn/from-po/{id} creates GRN with GRN number, posts JE (DR RM Inventory, DR GST Input, CR AP)",
+    "PURCHASE FLOW - After GRN: PO status becomes 'To Invoice' and grn_status becomes 'Received'",
+    "PURCHASE FLOW - Pending Invoice: GET /api/purchase/invoices/pending returns GRNs with invoice_status=Pending",
+    "PURCHASE FLOW - Create Invoice from GRN: POST /api/purchase/invoices/from-grn/{id} creates invoice with PI number",
+    "PURCHASE FLOW - Outstanding: GET /api/purchase/payments/outstanding returns unpaid invoices with days_outstanding and balance_due",
+    "PURCHASE FLOW - Pay Invoice: POST /api/purchase/payments/for-invoice/{id} posts JE (DR AP, CR Bank) and updates invoice to Paid",
+    "PURCHASE FLOW - Invoice marked Paid: Invoice status=Paid, amount_paid matches grand_total",
+    "SELLING FLOW - Create SO: POST /api/selling/sales-orders returns so_number (SO-*), customer, items, grand_total with status=Submitted",
+    "SELLING FLOW - Pending DN: GET /api/selling/delivery-notes/pending returns SOs with delivery_status='Not Delivered'",
+    "SELLING FLOW - Confirm Delivery: POST /api/selling/delivery-notes/from-so/{id} creates DN with DN number",
+    "SELLING FLOW - After DN: SO status becomes 'To Invoice' and delivery_status becomes 'Fully Delivered'",
+    "SELLING FLOW - Pending Sales Invoice: GET /api/selling/invoices/pending returns DNs with invoice_status=Pending",
+    "SELLING FLOW - Create Invoice from DN: POST /api/selling/invoices/from-dn/{id} creates invoice with SI number, posts Revenue+COGS+GST JE",
+    "SELLING FLOW - Outstanding AR: GET /api/selling/payments/outstanding returns unpaid invoices with days_outstanding and balance_due",
+    "SELLING FLOW - Receive Payment: POST /api/selling/payments/for-invoice/{id} posts JE (DR Bank, CR AR)",
+    "SELLING FLOW - Sales Invoice marked Paid: Invoice status=Paid, amount_paid matches grand_total",
+    "SELLING FLOW - SO Completed: SO status becomes 'Completed' and billing_status becomes 'Fully Billed'",
+    "EXISTING PO - PO-20260406-8022 found in pending GRN list (Vendor: Test, Total: 70,800)",
+    "FRONTEND - Buying page /buying shows linked flow nav with PO → GRN → Invoice → Payment arrows",
+    "FRONTEND - Buying GRN tab shows pending deliveries from POs with 'Confirm Receipt' button",
+    "FRONTEND - Buying full lifecycle: Create PO → Click GRN tab → Confirm Receipt → Click Invoice tab → Create Invoice → Click Payment tab → Pay Invoice",
+    "FRONTEND - Selling page /selling shows linked flow nav with SO → DN → Invoice → Payment arrows",
+    "FRONTEND - Selling full lifecycle: Create SO → Click DN tab → Confirm Delivery → Click Invoice tab → Create Invoice → Click Payment tab → Receive Payment",
+    "FRONTEND - Toast notifications show success messages with document numbers and JE posting confirmation",
+    "FRONTEND - Negative stock warning displayed when dispatching items with insufficient inventory"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_linked_document_flow.py",
+    "/app/test_reports/pytest/pytest_linked_flow.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_linked_document_flow.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "100% (All linked flow features tested successfully)"
+  },
+  "test_credentials": "No authentication - all endpoints are public",
+  "seed_data_creation": "Created test data via API and UI tests: TEST_LinkedFlow_Vendor (PO→GRN→Invoice→Payment), TEST_LinkedFlow_Customer (SO→DN→Invoice→Payment), TEST_UI_Vendor, TEST_UI_Customer",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Linked Document Flow fully working for both Purchase and Selling modules. Purchase: PO → GRN (from-po) → Invoice (from-grn) → Payment (for-invoice). Selling: SO → DN (from-so) → Invoice (from-dn) → Payment (for-invoice). Each stage auto-posts journal entries. Status transitions verified: PO goes Draft→Submitted→To Invoice→Completed, SO goes Submitted→To Invoice→Completed. Existing PO (PO-20260406-8022) still in pending GRN list. Frontend has linked flow navigation with arrows, pending sections with action buttons, and toast notifications for all actions.",
+  "linked_document_flow_verification": {
+    "purchase_flow": {
+      "stages": ["PO (Draft/Submitted)", "GRN (from-po)", "Invoice (from-grn)", "Payment (for-invoice)"],
+      "status_transitions": {
+        "po_status": "Draft → Submitted → To Invoice → Completed",
+        "grn_status": "Pending → Received",
+        "invoice_status": "Pending → Invoiced"
+      },
+      "journal_entries": {
+        "grn": "DR Raw Material Inventory, DR GST Input, CR Accounts Payable",
+        "payment": "DR Accounts Payable, CR Bank"
+      }
+    },
+    "selling_flow": {
+      "stages": ["SO (Submitted)", "DN (from-so)", "Invoice (from-dn)", "Payment (for-invoice)"],
+      "status_transitions": {
+        "so_status": "Submitted → To Invoice → Completed",
+        "delivery_status": "Not Delivered → Fully Delivered",
+        "billing_status": "Not Billed → Fully Billed"
+      },
+      "journal_entries": {
+        "invoice": "DR Accounts Receivable, CR Sales Revenue, CR GST Output, DR COGS, CR FG Inventory",
+        "payment": "DR Bank, CR Accounts Receivable"
+      }
+    }
+  },
+  "existing_po_status": {
+    "po_number": "PO-20260406-8022",
+    "vendor": "Test",
+    "items": "IJ12 x12",
+    "grand_total": 70800,
+    "status": "Draft",
+    "grn_status": "Pending",
+    "invoice_status": "Pending",
+    "note": "Still in pending GRN list - can be processed through full lifecycle"
+  }
+}
