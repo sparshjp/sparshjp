@@ -6,7 +6,7 @@ import {
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
   Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock,
-  FolderKanban, ArrowLeftRight
+  FolderKanban, ArrowLeftRight, CreditCard
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -49,6 +49,7 @@ import AuditTrail from './pages/AuditTrail';
 import UniversalAI from './components/UniversalAI';
 import { KairosIcon } from './components/KairosIcon';
 import { Toaster } from './components/ui/sonner';
+import ExpenseManagement from './pages/ExpenseManagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -141,6 +142,7 @@ function Sidebar({ isOpen, setIsOpen }) {
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
         { path: '/aging-report', label: 'AP / AR Aging', icon: Clock },
         { path: '/bank-reconciliation', label: 'Bank Reconciliation', icon: ArrowLeftRight },
+        { path: '/expense-management', label: 'Expense Management', icon: CreditCard },
         { path: '/audit-trail', label: 'Audit Trail', icon: Shield },
       ]
     },
@@ -319,7 +321,8 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Route path="/transaction-explorer" element={<TransactionExplorer />} />
             <Route path="/bank-reconciliation" element={<BankReconciliation />} />
             <Route path="/ai-agents" element={<AIAgentsPage />} />
-          </Routes>
+                        <Route path="/expense-management" element={<ExpenseManagement />} />
+              </Routes>
         </div>
         {!isAIEngine && <UniversalAI />}
       </div>
