@@ -40,6 +40,7 @@ import ProjectsModule from './pages/ProjectsModule';
 import TimesheetsPage from './pages/TimesheetsPage';
 import RevenueRecognition from './pages/RevenueRecognition';
 import TransactionExplorer from './pages/TransactionExplorer';
+import AIAgentsPage from './pages/AIAgentsPage';
 import ManufacturingModule from './pages/ManufacturingModule';
 import CompanySetup from './pages/CompanySetup';
 import ReportingAI from './pages/ReportingAI';
@@ -113,6 +114,13 @@ function Sidebar({ isOpen, setIsOpen }) {
       title: 'HR',
       items: [
         { path: '/hr', label: 'HR & Payroll', icon: UserSquare },
+      ]
+    },
+    {
+      id: 'ai',
+      title: 'AI Agents',
+      items: [
+        { path: '/ai-agents', label: 'AI Agent Hub', icon: Sparkles },
       ]
     },
     {
@@ -277,7 +285,7 @@ function App() {
           </div>
 
           {/* Main content */}
-          <div className="p-4 sm:p-6">
+          <div className={location.pathname === '/ai-agents' ? '' : 'p-4 sm:p-6'}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/crm" element={<CRM />} />
@@ -316,10 +324,11 @@ function App() {
             <Route path="/timesheets" element={<TimesheetsPage />} />
             <Route path="/revenue-recognition" element={<RevenueRecognition />} />
             <Route path="/transaction-explorer" element={<TransactionExplorer />} />
+            <Route path="/ai-agents" element={<AIAgentsPage />} />
           </Routes>
           </div>
           
-          <UniversalAI />
+          {location.pathname !== '/ai-agents' && <UniversalAI />}
         </div>
         
         <Toaster position="top-right" />

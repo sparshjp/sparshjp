@@ -1292,6 +1292,11 @@ RULES:
     api_router.include_router(timesheets_router)
     api_router.include_router(revenue_router)
     
+    # AI Agents
+    from routes_agents import router as agents_router, set_config as set_agents_config
+    set_agents_config(os.environ.get("EMERGENT_LLM_KEY"), db)
+    api_router.include_router(agents_router)
+    
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")
