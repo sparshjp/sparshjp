@@ -134,9 +134,9 @@ function CRM() {
                   <div key={lead.id} className="border border-[#1B2D42] p-4 rounded-sm hover:shadow-sm transition-all">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-bold text-[#E8EDF2]">{lead.lead_name}</h3>
-                        {lead.company_name && <p className="text-sm text-[#4A5B6E]">{lead.company_name}</p>}
-                        <p className="text-sm text-[#4A5B6E] mt-2">{lead.requirement}</p>
+                        <h3 className="font-bold text-[#E8EDF2]">{lead.lead_name || lead.contact_name || lead.company || '—'}</h3>
+                        {(lead.company_name || lead.company) && <p className="text-sm text-[#4A5B6E]">{lead.company_name || lead.company}</p>}
+                        <p className="text-sm text-[#4A5B6E] mt-2">{lead.requirement || lead.interest || ''}</p>
                         <div className="flex items-center space-x-4 mt-3 text-xs">
                           {lead.email && <span className="text-[#4A5B6E]">{lead.email}</span>}
                           {lead.phone && <span className="text-[#4A5B6E]">{lead.phone}</span>}
@@ -154,7 +154,7 @@ function CRM() {
                           lead.status === 'Qualified' ? 'bg-green-100 text-green-700' :
                           lead.status === 'Converted' ? 'bg-purple-100 text-purple-700' :
                           'bg-red-100 text-red-700'
-                        }`}>{lead.status}</span>
+                        }`}>{lead.status || lead.stage}</span>
                         {lead.status === 'Open' && (
                           <>
                             <button

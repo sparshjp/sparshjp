@@ -1,114 +1,82 @@
-# Kairos Advisory - Product Requirements Document
+# Kairos Advisory - AI-Native ERP (India Localization)
+## Product Requirements Document
 
-## Product Overview
-AI-Native ERP (India Localization) called "Kairos Advisory", operating on a "Zero-Touch" UI where data entry is via NLP. Follows Ind AS / Indian GAAP, April 1 - March 31 fiscal cycle. Schedule III Companies Act 2013 compliant financial statements.
+### Original Problem Statement
+Build an AI-Native ERP called "Kairos Advisory" with India localization, operating on a "Zero-Touch" UI with NLP-driven data entry. Must follow Ind AS / Indian GAAP, Schedule III Companies Act 2013 compliant Financial Statements.
 
-## Tech Stack
-- **Frontend**: React, Tailwind CSS, Shadcn UI, Lucide React, Outfit + JetBrains Mono fonts
-- **Backend**: FastAPI, Motor (async MongoDB driver)
-- **Database**: MongoDB
-- **AI**: Claude Sonnet 4.5 (NLP), Gemini 3 Flash (OCR) via Emergent LLM Key
-- **Exports**: reportlab (PDF), openpyxl (Excel)
-- **Brand**: Navy #0D1B2A, Teal #00C9A7, Off-white #F4F3EF
+### Company
+PolyMerx Specialty Chemicals Pvt. Ltd.
 
-## Core Modules (ERPNext-inspired)
+### Tech Stack
+- Frontend: React, Tailwind CSS, Shadcn UI
+- Backend: FastAPI, Motor (async MongoDB), reportlab, openpyxl
+- AI: Claude Sonnet 4.5 (text), Gemini 3 Vision (OCR) via Emergent LLM Key
+- Theme: Navy (#0D1B2A) / Teal (#00C9A7)
 
-### 1. Accounting
-- Flexible Chart of Accounts (tree categories)
-- General Ledger (auto-posted from all modules)
-- Journal Entry module (manual + corrections)
-- Financial Statements: Balance Sheet, P&L, Trial Balance (Schedule III compliant, Excel export)
-- GST & TDS statutory reports (GSTR-1, GSTR-3B, TDS Return)
-- Cost Centers & Dimensions
+### Architecture
+Modular monolith with strict Linked Document Flow:
+- Purchase: PO → GRN → Purchase Invoice → Vendor Payment
+- Selling: SO → Delivery Note → Sales Invoice → Customer Receipt
+- Manufacturing: Work Order (consume RM → WIP → FG) with auto-JEs
 
-### 2. Procurement (Linked Document Flow)
-**PO → Goods Receipt (from PO) → Purchase Invoice (from GRN) → Vendor Payment (from Invoice)**
-- Purchase Order with GST, items, payment terms
-- GRN: "Pending Deliveries" shows POs not yet received → "Confirm Receipt" creates GRN + auto JE (DR RM Inventory, DR GST Input, CR AP) + stock update
-- Purchase Invoice: "Pending Invoices" shows GRNs not yet invoiced → "Create Invoice" attaches vendor invoice
-- Vendor Payment: Outstanding invoices sorted by days outstanding with full document trail (PO#, GRN#, Invoice#) → "Pay" posts JE (DR AP, CR Bank)
+### Modules Implemented
+1. **Dashboard** - Module stats overview (CRM, Selling, Buying, Stock, HR)
+2. **Chart of Accounts** - 77 ledgers, category-based classification
+3. **Buying (Purchase-to-Pay)** - PO→GRN→Invoice→Payment linked flow
+4. **Selling (Order-to-Cash)** - SO→DN→Invoice→Receipt linked flow
+5. **Financial Statements** - Schedule III BS, P&L, TB with dynamic classification
+6. **Manufacturing** - Work Orders with BOM, auto-accounting (RM→WIP→FG)
+7. **CRM** - Leads, Customers, Lead qualification & conversion
+8. **HR & Payroll** - Employees, attendance, leave, salary processing
+9. **GST & TDS** - Statutory compliance modules
+10. **Journal Entries** - Manual and auto-generated
+11. **Master Data** - Entities, items, cost centers
+12. **Reports** - Trial Balance, Balance Sheet, P&L exports (PDF/Excel)
+13. **CSV Import** - Smart validation with CoA cross-checking
+14. **GSTIN/PAN Validation** - Format checking, state code mapping
 
-### 3. Sales (Linked Document Flow)
-**SO → Delivery Note (from SO) → Sales Invoice (from DN) → Customer Payment (from Invoice)**
-- Sales Order with credit limit check, GST
-- Delivery Note: "Pending Dispatch" shows SOs not yet delivered → "Confirm Delivery" creates DN + stock reduction + negative stock warning
-- Sales Invoice: "Pending Invoices" from DNs → "Create Invoice" posts JE (DR AR, CR Revenue, CR GST Output, DR COGS, CR FG Inventory)
-- Customer Payment: Outstanding AR sorted by days → "Receive" posts JE (DR Bank, CR AR)
+### Data Seeded (PolyMerx 200 Transactions)
+- 77 CoA accounts, 7 cost centers
+- 12 vendors, 10 customers, 18 items (RM + FG)
+- 9 employees, 7 CRM leads
+- 10 POs, 10 GRNs, 6 purchase invoices, 5 vendor payments
+- 8 SOs, 8 delivery notes, 8 sales invoices, 8 customer receipts
+- 8 work orders (7 completed + 1 in-progress)
+- 49+ journal entries (auto-generated)
+- TB Balanced: DR = CR = 11.63 Cr
 
-### 4. Stock & Manufacturing
-- Inventory with stock levels, auto re-order
-- Work Orders with BOM, lifecycle (Draft → In Progress → Completed), auto-accounting
-- Quality inspection
+### P0 Completed
+- PolyMerx 200-transaction seed script executed and validated
+- Fixed opening balance gaps (Retained Earnings, FG Inventory, AR)
+- Manufacturing JEs added (WO Start: DR WIP/CR RM, WO Complete: DR FG/CR WIP/CR Mfg Overhead)
+- Financial statements rewritten with dynamic category-based classification
+- Balance Sheet balanced at 9.67 Cr
+- All 28 backend tests passed, all frontend modules functional
 
-### 5. CRM
-- Leads, Opportunities, Customers
-
-### 6. HR & Payroll
-- Employees, Attendance, Leave, Payroll
-
-### 7. Settings
-- Chart of Accounts, Cost Centers, Master Data (GSTIN/PAN validation), CSV Import
-
-## What's Implemented
-
-### Completed (Apr 6, 2026)
-- [x] Full Navy/Teal theme across ALL pages
-- [x] **Linked Purchase Flow**: PO → GRN (from-po) → Invoice (from-grn) → Payment (for-invoice) with auto JE
-- [x] **Linked Selling Flow**: SO → DN (from-so) → Invoice (from-dn) → Payment (for-invoice) with auto JE
-- [x] Pending sections with badge counts and action buttons (ERPNext-style)
-- [x] Outstanding invoices sorted by days outstanding with aging colors
-- [x] Manufacturing Module with BOM, WO lifecycle, auto-accounting
-- [x] Schedule III Financial Statements with Excel export
-- [x] GST & TDS Statutory Reports with CSV/JSON export
-- [x] GSTIN/PAN Intelligence (format validation, PAN extraction, state mapping)
-- [x] Enhanced CSV Import Validation (CoA cross-check, journal balance, numeric/date)
-- [x] Smart AI Prompt Forms, Negative Stock Enforcement, Credit Limit Checks
-- [x] Claude Sonnet 4.5 NLP + Gemini 3 Flash OCR (LIVE)
-
-### Auto-Accounting Flows
-- GRN: DR Raw Material Inventory, DR GST Input, CR Accounts Payable
-- Vendor Payment: DR Accounts Payable, CR Bank
-- Sales Invoice: DR AR, CR Revenue, CR GST Output, DR COGS, CR FG Inventory
-- Customer Payment: DR Bank, CR AR
-- Work Order Start: DR WIP, CR Raw Material
-- Work Order Complete: DR Finished Goods, CR WIP; DR Scrap/Loss, CR WIP
-
-### Testing Status
-- Iteration 5: 100% (Manufacturing + Excel exports)
-- Iteration 6: 100% (GSTIN/PAN + CSV validation)
-- Iteration 7: 100% (Linked Purchase + Selling flow, 21 backend + all frontend)
-
-## Architecture
-```
-/app/backend/
-  server.py, ai_orchestrator.py
-  routes_purchase.py (Linked: PO→GRN→Invoice→Payment)
-  routes_selling.py (Linked: SO→DN→Invoice→Payment)
-  routes_manufacturing.py (WO with auto-accounting)
-  routes_financial_statements.py (Schedule III + Excel)
-  routes_statutory.py (GST + TDS)
-  routes_crm.py, routes_sales.py, routes_stock.py, routes_hr.py
-
-/app/frontend/src/
-  App.js (Sidebar + Routes)
-  pages/
-    BuyingModule.js (Linked flow tabs with pending sections)
-    SellingModule.js (Linked flow tabs with pending sections)
-    ManufacturingModule.js, FinancialStatements.js, GSTModule.js
-    JournalEntry.js, Dashboard.js, etc.
-```
-
-## Remaining Backlog
-
-### P2
-- Bank reconciliation / statement matching
-- Fixed asset register with auto depreciation (WDV/SLM/DDB)
+### Upcoming Tasks (P1)
+- AP/AR Aging Report (0-30, 30-60, 60-90, 90+ days)
 - Inventory landed cost calculation
-- General Ledger drill-down report
-- Accounts Receivable / Payable aging reports (standalone)
+- Fixed asset auto-depreciation
 
-### P3
+### Backlog (P2)
+- Bank reconciliation / statement matching
+- General Ledger drill-down
 - Mobile responsiveness polish
 - Multi-company support
-- Stock reservation for specific orders
 - Subcontracting module
+
+### Key API Endpoints
+- `/api/coa` - Chart of Accounts
+- `/api/purchase/*` - Purchase module (orders, grn, invoices, payments)
+- `/api/selling/*` - Selling module (sales-orders, delivery-notes, invoices, receipts)
+- `/api/financial-statements/*` - BS, P&L, TB
+- `/api/manufacturing/*` - Work Orders
+- `/api/crm/*` - Leads, Customers
+- `/api/hr/*` - Employees, Payroll
+- `/api/reports/*` - Various reports
+
+### Key DB Collections
+- chart_of_accounts, journal_entries, manual_journal_entries
+- purchase_orders, goods_receipt_notes, purchase_invoices, vendor_payments
+- selling_sales_orders, selling_delivery_notes, selling_invoices, customer_payments
+- items, entities (vendors/customers), employees, work_orders, leads
