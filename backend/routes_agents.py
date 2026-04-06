@@ -275,7 +275,34 @@ RULES:
 - Use `web_search` to find documentation, code examples, or library info when you don't know something. Combine with the existing `crawl-url` upload endpoint to read full pages.
 - Use `take_screenshot` after creating/modifying frontend pages to visually verify UI changes.
 - **ALWAYS verify your work before finishing.** After creating/modifying backend modules, use `verify_deployment` to confirm: backend health, API endpoints return expected status, frontend routes are registered, files exist. NEVER say DONE without verification.
-- Maximum """ + str(MAX_ITERATIONS) + """ iterations. Target 1-2 for most tasks, but ALWAYS include a verification step."""
+- Maximum """ + str(MAX_ITERATIONS) + """ iterations.
+
+## EXECUTION STYLE (CRITICAL)
+You are an AUTONOMOUS developer. You work exactly like a senior engineer:
+1. **ACT IMMEDIATELY** — When given a task, start executing tool calls RIGHT AWAY. Do NOT output a plan and wait. Do NOT ask "shall I proceed?" or "would you like me to...". Just DO IT.
+2. **Execute in batches** — Issue multiple tool calls per response. Read files + write code + test all in one step when possible.
+3. **Show your work via tool calls** — The user can see your progress through the tools you execute. Your thinking is visible in the step trail.
+4. **Only ask QUESTION when you genuinely cannot proceed** — Missing database name, ambiguous business rules, conflicting requirements. Never ask for permission to execute.
+5. **Always verify and report** — After making changes, verify deployment and output DONE with a clear summary of what was built/changed.
+6. **If something fails, fix it yourself** — Read error logs, diagnose, and fix. Don't stop and report the error. Fix it and continue.
+
+BAD (do NOT do this):
+"Here's my plan:
+1. Create a new route file
+2. Add endpoints
+3. Register in server.py
+Shall I proceed?"
+
+GOOD (do this):
+```TOOL_CALL
+{"tool": "scaffold_module", "args": {...}}
+```
+```TOOL_CALL
+{"tool": "create_page", "args": {...}}
+```
+```TOOL_CALL
+{"tool": "verify_deployment", "args": {...}}
+```"""
 
 BA_ONLY_SUFFIX = "\n\nMODE: Business Analysis Only. Focus on requirements, compliance, accounting. No code generation."
 DEV_ONLY_SUFFIX = "\n\nMODE: Coding Only. Read files, generate code, deploy. Skip business analysis."
@@ -1440,14 +1467,50 @@ async def api_run_test_query(body: dict):
 _tasks = {}
 
 
+async def _save_task(task_id, task_data):
+    """Persist task state to both memory and MongoDB for restart resilience."""
+    _tasks[task_id] = task_data
+    if db is not None:
+        try:
+            # Strip non-serializable data and save
+            safe_data = {}
+            for k, v in task_data.items():
+                if k == "result" and v is None:
+                    continue
+                safe_data[k] = v
+            safe_data["task_id"] = task_id
+            safe_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+            await db.agent_tasks.update_one(
+                {"task_id": task_id},
+                {"$set": safe_data},
+                upsert=True,
+            )
+        except Exception as e:
+            logging.warning(f"Failed to save task {task_id} to DB: {e}")
+
+
+async def _load_task(task_id):
+    """Load task state from memory first, then fall back to MongoDB."""
+    if task_id in _tasks:
+        return _tasks[task_id]
+    if db is not None:
+        try:
+            task = await db.agent_tasks.find_one({"task_id": task_id}, {"_id": 0})
+            if task:
+                _tasks[task_id] = task
+                return task
+        except Exception:
+            pass
+    return None
+
+
 async def _run_engine_task(task_id, mode, message, session_id, context, preferred_provider="auto"):
     """Background coroutine: Agentic loop with PARALLEL tool execution + live thought streaming."""
     try:
-        _tasks[task_id]["status"] = "thinking"
-        _tasks[task_id]["progress"] = "Step 1: Analyzing your request..."
-        _tasks[task_id]["steps"] = []
-        _tasks[task_id]["thinking_text"] = ""
-        _tasks[task_id]["thinking_step"] = 0
+        await _save_task(task_id, {
+            "status": "thinking", "progress": "Step 1: Analyzing your request...",
+            "steps": [], "thinking_text": "", "thinking_step": 0, "result": None,
+        })
 
         system = ENGINE_SYSTEM_PROMPT
         if mode == "ba":
@@ -1502,6 +1565,7 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
             # Stream thinking status BEFORE LLM call
             _tasks[task_id]["thinking_text"] = f"Reasoning about {'your request' if iteration == 1 else 'next actions'}..."
             _tasks[task_id]["thinking_step"] = step_num
+            await _save_task(task_id, _tasks[task_id])
 
             response_text, provider = await call_llm(system, loop_messages, preferred=provider_used or preferred_provider or "auto")
             provider_used = provider
@@ -1532,18 +1596,46 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
             if done_summary:
                 all_response_parts.append(done_summary)
 
-            # No tool calls → done
-            if not tool_calls:
-                step_record["type"] = "complete" if done_summary else "answer"
-                if done_summary:
-                    step_record["summary"] = done_summary[:300]
+            # ── STOP CONDITIONS ──
+            # 1. Explicit DONE → stop
+            if done_summary and not tool_calls:
+                step_record["type"] = "complete"
+                step_record["summary"] = done_summary[:300]
                 _tasks[task_id]["steps"].append(step_record)
                 break
+
+            # 2. Questions that need user input → stop
+            if questions and not tool_calls:
+                step_record["type"] = "question"
+                _tasks[task_id]["steps"].append(step_record)
+                break
+
+            # 3. No tool calls AND no DONE → LLM output a plan/analysis but didn't execute
+            #    AUTO-CONTINUE: Feed it back and tell it to execute NOW
+            if not tool_calls and not done_summary:
+                step_record["type"] = "planning"
+                step_record["summary"] = (readable_text[:200] + "...") if readable_text and len(readable_text) > 200 else (readable_text or "")
+                _tasks[task_id]["steps"].append(step_record)
+
+                # Only auto-continue if we have iterations left
+                if iteration < MAX_ITERATIONS:
+                    loop_messages.append({"role": "assistant", "content": response_text})
+                    loop_messages.append({"role": "user", "content": "[SYSTEM] You just output a plan but didn't execute any tool calls. Execute the plan NOW — issue the tool calls immediately. Do NOT describe what you're going to do — just DO IT with ```TOOL_CALL blocks."})
+                    _tasks[task_id]["progress"] = f"Step {step_num}: Plan received, auto-executing..."
+                    _tasks[task_id]["thinking_text"] = "Plan received — now executing..."
+
+                    # Trim messages if too long
+                    if len(loop_messages) > 8:
+                        loop_messages = [loop_messages[0]] + loop_messages[-6:]
+                    continue
+                else:
+                    break
 
             # ── PARALLEL TOOL EXECUTION ──
             _tasks[task_id]["status"] = "executing"
             _tasks[task_id]["thinking_text"] = ""  # Clear thinking while executing tools
             _tasks[task_id]["progress"] = f"Step {step_num}: Running {len(tool_calls)} tool{'s' if len(tool_calls) > 1 else ''} in parallel..."
+            await _save_task(task_id, _tasks[task_id])
 
             # Separate tools into parallel-safe and sequential groups
             # Write tools that modify the same file must be sequential; everything else parallel
@@ -1574,8 +1666,10 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
             # AUTO-RESTART after backend file changes (scaffold_module already restarts)
             if backend_files_changed:
                 _tasks[task_id]["progress"] = f"Step {step_num}: Auto-restarting backend..."
+                # Save to DB BEFORE restart so state survives hot reload
+                await _save_task(task_id, _tasks[task_id])
                 proc = subprocess.run(["sudo", "supervisorctl", "restart", "backend"], capture_output=True, text=True, timeout=15)
-                await asyncio.sleep(3)
+                await asyncio.sleep(4)  # Wait for restart to complete
                 log_proc = subprocess.run("tail -n 5 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
                 startup_ok = "Application startup complete" in (log_proc.stdout or "")
                 step_tool_results.append({
@@ -1590,6 +1684,8 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
             step_record["tool_results"] = step_tool_results
             step_record["files_modified"] = step_files_modified
             _tasks[task_id]["steps"].append(step_record)
+            # Persist step progress to DB
+            await _save_task(task_id, _tasks[task_id])
 
             if done_summary:
                 _tasks[task_id]["progress"] = f"Step {step_num}: Complete"
@@ -1606,9 +1702,9 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                 tool_summary = tool_summary[:12000] + "\n... [COMPRESSED]"
 
             loop_messages.append({"role": "assistant", "content": response_text})
-            loop_messages.append({"role": "user", "content": f"[TOOL RESULTS — Step {step_num}]\n{tool_summary}\n\nAnalyze results. Continue with tool calls if needed, or output ```DONE``` with summary."})
+            loop_messages.append({"role": "user", "content": f"[TOOL RESULTS — Step {step_num}]\n{tool_summary}\n\nAnalyze results. If there are errors, fix them immediately with new tool calls. If everything passed, run `verify_deployment` and then output ```DONE``` with a summary. Do NOT ask for permission — just continue working."})
 
-            _tasks[task_id]["progress"] = f"Step {step_num} complete. Analyzing..."
+            _tasks[task_id]["progress"] = f"Step {step_num} complete. Analyzing results..."
 
             if len(loop_messages) > 8:
                 loop_messages = [loop_messages[0]] + loop_messages[-6:]
@@ -1630,10 +1726,10 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                 update["$set"]["title"] = message[:80]
             await db.agent_sessions.update_one({"id": session_id}, update)
 
-        _tasks[task_id] = {
+        complete_data = {
             "status": "complete",
             "progress": f"Done ({iteration} step{'s' if iteration > 1 else ''})",
-            "steps": _tasks[task_id].get("steps", []),
+            "steps": _tasks.get(task_id, {}).get("steps", []),
             "result": {
                 "response": final_response, "agent_type": mode, "session_id": session_id,
                 "timestamp": timestamp, "tool_calls_executed": len(all_tool_results),
@@ -1641,9 +1737,10 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                 "tool_results": all_tool_results[:20], "provider": provider_used, "iterations": iteration,
             }
         }
+        await _save_task(task_id, complete_data)
     except Exception as e:
         logging.error(f"Engine task error: {e}", exc_info=True)
-        _tasks[task_id] = {
+        error_data = {
             "status": "error", "progress": str(e),
             "steps": _tasks.get(task_id, {}).get("steps", []),
             "result": {
@@ -1653,6 +1750,7 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                 "tool_results": [], "iterations": 0,
             }
         }
+        await _save_task(task_id, error_data)
 
 
 @router.post("/chat")
@@ -1672,15 +1770,19 @@ async def engine_chat(body: dict):
 
 @router.get("/tasks/{task_id}")
 async def get_task_status(task_id: str):
-    task = _tasks.get(task_id)
+    task = await _load_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task["status"] in ["complete", "error"]:
         result = task.get("result", {})
         steps = task.get("steps", [])
         _tasks.pop(task_id, None)
+        if db is not None:
+            try:
+                await db.agent_tasks.delete_one({"task_id": task_id})
+            except Exception:
+                pass
         return {"status": task["status"], "progress": task["progress"], "steps": steps, **result}
-    # Include live thinking data for in-progress tasks
     return {
         "status": task["status"],
         "progress": task["progress"],

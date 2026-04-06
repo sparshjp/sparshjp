@@ -501,6 +501,24 @@ async def validate_csv_data(csv_data: str, module: str) -> Dict[str, Any]:
         }
 
 # API Endpoints
+
+@api_router.get("/health")
+async def health_check():
+    """System health check endpoint"""
+    try:
+        # Check database connection
+        await db.command('ping')
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return {
+        "status": "ok",
+        "service": "kairos-accounting",
+        "database": db_status,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @api_router.get("/")
 async def root():
     return {"message": "Kairos Accounting API", "version": "2.0.0"}
@@ -541,6 +559,13 @@ async def get_coa():
     """Get all Chart of Accounts"""
     coa_list = await db.chart_of_accounts.find({"is_active": {"$ne": False}}, {"_id": 0}).to_list(1000)
     return coa_list
+
+
+@api_router.get("/ledgers")
+async def get_ledgers_alias():
+    """Alias for /coa endpoint - returns Chart of Accounts"""
+    items = await db.chart_of_accounts.find({}, {"_id": 0}).to_list(500)
+    return items
 
 @api_router.post("/coa")
 async def create_coa(coa: ChartOfAccount):
@@ -1322,6 +1347,16 @@ RULES:
     from routes_feedback import router as feedback_router, set_db as set_feedback_db
     set_feedback_db(db)
     api_router.include_router(feedback_router)
+    
+    # Announcements
+    from routes_announcements import router as announcements_router, set_db as set_announcements_db
+    set_announcements_db(db)
+    api_router.include_router(announcements_router)
+    
+    # Chart Of Accounts
+    from routes_chart_of_accounts import router as chart_of_accounts_router, set_db as set_chart_of_accounts_db
+    set_chart_of_accounts_db(db)
+    api_router.include_router(chart_of_accounts_router)
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

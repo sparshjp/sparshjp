@@ -109,11 +109,13 @@ function StepCard({ step, index, isLast }) {
   const [expanded, setExpanded] = useState(false);
   const typeColors = {
     thinking: '#60a5fa', executing: '#f59e0b', answer: '#00d4aa',
-    complete: '#22c55e', validating: '#a78bfa',
+    complete: '#22c55e', validating: '#a78bfa', planning: '#f97316',
+    question: '#ef4444',
   };
   const typeLabels = {
-    thinking: 'Thinking', executing: 'Executing', answer: 'Responding',
-    complete: 'Complete', validating: 'Validating',
+    thinking: 'Analyzing', executing: 'Executing', answer: 'Responding',
+    complete: 'Complete', validating: 'Validating', planning: 'Planning (auto-continuing)',
+    question: 'Needs Input',
   };
   const color = typeColors[step.type] || '#4A5B6E';
   const label = typeLabels[step.type] || step.type;
