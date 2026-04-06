@@ -1,6 +1,6 @@
 """Kairos AI Engine — Unified orchestrator combining BA + DEV + QA brains.
 Understands requirements, plans, writes code, validates, and deploys."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from datetime import datetime, timezone
 import uuid
 import os
@@ -9,6 +9,7 @@ import glob
 import subprocess
 import asyncio
 import httpx
+import tempfile
 
 router = APIRouter(prefix="/agents", tags=["AI Engine"])
 
@@ -689,6 +690,212 @@ def parse_questions(text):
         if end != -1:
             questions.append(part[:end].strip())
     return questions
+
+# ══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════
+# FILE UPLOAD & URL CRAWLING
+# ══════════════════════════════════════════════════════════
+
+UPLOAD_DIR = "/app/backend/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+def _extract_pdf(path):
+    import pdfplumber
+    text_parts = []
+    with pdfplumber.open(path) as pdf:
+        for i, page in enumerate(pdf.pages[:50]):
+            t = page.extract_text()
+            if t:
+                text_parts.append(f"--- Page {i+1} ---\n{t}")
+            tables = page.extract_tables()
+            for ti, table in enumerate(tables):
+                text_parts.append(f"[Table {ti+1}]\n" + "\n".join([" | ".join(str(c or "") for c in row) for row in table]))
+    return "\n\n".join(text_parts)
+
+def _extract_docx(path):
+    from docx import Document
+    doc = Document(path)
+    parts = []
+    for para in doc.paragraphs:
+        if para.text.strip():
+            parts.append(para.text)
+    for table in doc.tables:
+        rows = []
+        for row in table.rows:
+            rows.append(" | ".join(cell.text for cell in row.cells))
+        parts.append("[Table]\n" + "\n".join(rows))
+    return "\n".join(parts)
+
+def _extract_xlsx(path):
+    from openpyxl import load_workbook
+    wb = load_workbook(path, data_only=True)
+    parts = []
+    for sheet_name in wb.sheetnames[:10]:
+        ws = wb[sheet_name]
+        rows = []
+        for row in ws.iter_rows(max_row=200, values_only=True):
+            rows.append(" | ".join(str(c or "") for c in row))
+        parts.append(f"--- Sheet: {sheet_name} ---\n" + "\n".join(rows))
+    return "\n\n".join(parts)
+
+def _extract_pptx(path):
+    from pptx import Presentation
+    prs = Presentation(path)
+    parts = []
+    for i, slide in enumerate(prs.slides[:50]):
+        slide_text = []
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    if para.text.strip():
+                        slide_text.append(para.text)
+            if shape.has_table:
+                for row in shape.table.rows:
+                    slide_text.append(" | ".join(cell.text for cell in row.cells))
+        if slide_text:
+            parts.append(f"--- Slide {i+1} ---\n" + "\n".join(slide_text))
+    return "\n\n".join(parts)
+
+def _extract_csv(path):
+    import csv
+    rows = []
+    with open(path, "r", errors="replace") as f:
+        reader = csv.reader(f)
+        for i, row in enumerate(reader):
+            if i > 500:
+                rows.append("... [TRUNCATED at 500 rows]")
+                break
+            rows.append(" | ".join(row))
+    return "\n".join(rows)
+
+EXTRACTORS = {
+    ".pdf": _extract_pdf,
+    ".docx": _extract_docx,
+    ".doc": _extract_docx,
+    ".xlsx": _extract_xlsx,
+    ".xls": _extract_xlsx,
+    ".pptx": _extract_pptx,
+    ".ppt": _extract_pptx,
+    ".csv": _extract_csv,
+}
+
+TEXT_EXTS = {".txt", ".md", ".json", ".xml", ".py", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".yaml", ".yml", ".ini", ".cfg", ".log", ".sql"}
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".heic", ".heif"}
+
+@router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """Upload and extract text from a file. Returns extracted content."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    file_id = str(uuid.uuid4())[:8]
+    safe_name = f"{file_id}_{file.filename}"
+    save_path = os.path.join(UPLOAD_DIR, safe_name)
+
+    content_bytes = await file.read()
+    with open(save_path, "wb") as f:
+        f.write(content_bytes)
+
+    size_kb = len(content_bytes) / 1024
+    result = {
+        "id": file_id,
+        "filename": file.filename,
+        "ext": ext,
+        "size_kb": round(size_kb, 1),
+        "type": "unknown",
+        "content": "",
+    }
+
+    try:
+        if ext in EXTRACTORS:
+            result["content"] = EXTRACTORS[ext](save_path)
+            result["type"] = "document"
+        elif ext in TEXT_EXTS:
+            with open(save_path, "r", errors="replace") as f:
+                result["content"] = f.read()[:50000]
+            result["type"] = "text"
+        elif ext in IMAGE_EXTS:
+            result["type"] = "image"
+            result["content"] = f"[Image: {file.filename} ({size_kb:.0f}KB). Describe what you need analyzed from this image.]"
+            result["image_path"] = save_path
+        else:
+            result["type"] = "binary"
+            result["content"] = f"[Unsupported file type: {ext}. File saved as {safe_name}]"
+    except Exception as e:
+        result["content"] = f"[Extraction error: {str(e)}]"
+        result["type"] = "error"
+
+    # Truncate to avoid overloading the LLM
+    if len(result["content"]) > 40000:
+        result["content"] = result["content"][:40000] + "\n... [TRUNCATED — content exceeds 40KB]"
+
+    return result
+
+
+@router.post("/crawl-url")
+async def crawl_url(body: dict):
+    """Crawl a URL and extract its text content."""
+    url = body.get("url", "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            resp = await client.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; KairosBot/1.0)"
+            })
+            resp.raise_for_status()
+
+        content_type = resp.headers.get("content-type", "")
+        raw = resp.text
+
+        # If it's HTML, extract text
+        if "html" in content_type:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(raw, "html.parser")
+            # Remove scripts, styles, nav
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
+                tag.decompose()
+            title = soup.title.string if soup.title else url
+            text = soup.get_text(separator="\n", strip=True)
+            # Clean up excessive whitespace
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            text = "\n".join(lines)
+            if len(text) > 30000:
+                text = text[:30000] + "\n... [TRUNCATED]"
+            return {
+                "status": "ok",
+                "url": url,
+                "title": title,
+                "type": "html",
+                "content": text,
+                "size_kb": round(len(text) / 1024, 1),
+            }
+        # If it's JSON
+        elif "json" in content_type:
+            return {
+                "status": "ok",
+                "url": url,
+                "title": url,
+                "type": "json",
+                "content": raw[:30000],
+                "size_kb": round(len(raw) / 1024, 1),
+            }
+        # Plain text / XML
+        else:
+            return {
+                "status": "ok",
+                "url": url,
+                "title": url,
+                "type": "text",
+                "content": raw[:30000],
+                "size_kb": round(len(raw) / 1024, 1),
+            }
+    except httpx.HTTPStatusError as e:
+        return {"status": "error", "url": url, "error": f"HTTP {e.response.status_code}"}
+    except Exception as e:
+        return {"status": "error", "url": url, "error": str(e)}
+
 
 # ══════════════════════════════════════════════════════════
 # SESSION MANAGEMENT (kept from previous)

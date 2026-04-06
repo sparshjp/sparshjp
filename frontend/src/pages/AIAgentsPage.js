@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { API } from '../App';
 import {
   Send, Plus, Trash2, ChevronDown, ChevronRight, Copy, Check, FileText,
   Code, Loader2, FolderOpen, X, Cpu, Wrench, Terminal, Database,
-  AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play
+  AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play,
+  Paperclip, Globe, Image, FileSpreadsheet, FileType, Link2
 } from 'lucide-react';
 
 const MODES = [
@@ -100,8 +101,14 @@ export default function AIAgentsPage() {
   const [fileContent, setFileContent] = useState('');
   const [copied, setCopied] = useState(null);
   const [toolbarOpen, setToolbarOpen] = useState(false);
+  const [attachments, setAttachments] = useState([]); // {id, name, type, content, size_kb, uploading}
+  const [urlInput, setUrlInput] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlLoading, setUrlLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     fetch(`${API}/agents/sessions`).then(r => r.json()).then(setSessions).catch(() => {});
@@ -140,25 +147,39 @@ export default function AIAgentsPage() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && attachments.length === 0) || loading) return;
     let sessionId = activeSession;
     if (!sessionId) sessionId = await createSession();
 
     const userMsg = input.trim();
+    const currentAttachments = [...attachments];
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMsg, timestamp: new Date().toISOString() }]);
+    setAttachments([]);
+    setMessages(prev => [...prev, {
+      role: 'user',
+      content: userMsg,
+      timestamp: new Date().toISOString(),
+      attachments: currentAttachments.map(a => ({ name: a.name, type: a.type, size_kb: a.size_kb })),
+    }]);
     setLoading(true);
 
     try {
-      let context = '';
+      // Build context from all attachments + selected code file
+      let contextParts = [];
       if (selectedFile && fileContent) {
-        context = `File: ${selectedFile}\n\`\`\`\n${fileContent.slice(0, 8000)}\n\`\`\``;
+        contextParts.push(`[Code File: ${selectedFile}]\n\`\`\`\n${fileContent.slice(0, 8000)}\n\`\`\``);
       }
+      for (const att of currentAttachments) {
+        if (att.content) {
+          contextParts.push(`[${att.type === 'url' ? 'URL' : 'File'}: ${att.name} (${att.size_kb}KB)]\n${att.content.slice(0, 15000)}`);
+        }
+      }
+      const context = contextParts.join('\n\n---\n\n');
 
       const res = await fetch(`${API}/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_type: mode, message: userMsg, session_id: sessionId, context }),
+        body: JSON.stringify({ agent_type: mode, message: userMsg || 'Analyze the attached content.', session_id: sessionId, context }),
       });
 
       if (!res.ok) throw new Error(`Engine error: ${res.status}`);
@@ -176,7 +197,7 @@ export default function AIAgentsPage() {
       }]);
 
       setSessions(prev => prev.map(s =>
-        s.id === sessionId ? { ...s, title: userMsg.slice(0, 80), updated_at: data.timestamp } : s
+        s.id === sessionId ? { ...s, title: (userMsg || currentAttachments[0]?.name || '').slice(0, 80), updated_at: data.timestamp } : s
       ));
     } catch (err) {
       setMessages(prev => [...prev, {
@@ -188,6 +209,78 @@ export default function AIAgentsPage() {
     }
     setLoading(false);
   };
+
+  const handleFileUpload = async (e) => {
+    const fileList = Array.from(e.target.files || []);
+    if (!fileList.length) return;
+    for (const file of fileList) {
+      const tempId = Math.random().toString(36).slice(2, 8);
+      const placeholder = { id: tempId, name: file.name, type: 'uploading', content: '', size_kb: 0, uploading: true };
+      setAttachments(prev => [...prev, placeholder]);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`${API}/agents/upload`, { method: 'POST', body: formData });
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        const data = await res.json();
+        setAttachments(prev => prev.map(a => a.id === tempId ? {
+          id: data.id,
+          name: data.filename,
+          type: data.type,
+          content: data.content,
+          size_kb: data.size_kb,
+          ext: data.ext,
+          uploading: false,
+        } : a));
+      } catch (err) {
+        setAttachments(prev => prev.map(a => a.id === tempId ? { ...a, uploading: false, type: 'error', content: err.message } : a));
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleUrlSubmit = async () => {
+    if (!urlInput.trim() || urlLoading) return;
+    const url = urlInput.trim();
+    setUrlLoading(true);
+    const tempId = Math.random().toString(36).slice(2, 8);
+    setAttachments(prev => [...prev, { id: tempId, name: url, type: 'uploading', content: '', size_kb: 0, uploading: true }]);
+    setShowUrlInput(false);
+    setUrlInput('');
+
+    try {
+      const res = await fetch(`${API}/agents/crawl-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.status === 'error') throw new Error(data.error);
+      setAttachments(prev => prev.map(a => a.id === tempId ? {
+        id: tempId,
+        name: data.title || url,
+        type: 'url',
+        content: data.content,
+        size_kb: data.size_kb,
+        url: data.url,
+        uploading: false,
+      } : a));
+    } catch (err) {
+      setAttachments(prev => prev.map(a => a.id === tempId ? { ...a, uploading: false, type: 'error', content: err.message } : a));
+    }
+    setUrlLoading(false);
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const autoResize = useCallback((el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+  }, []);
 
   const runTestQuery = async (queryType) => {
     setLoading(true);
@@ -450,7 +543,19 @@ export default function AIAgentsPage() {
                     : 'bg-[#0A1628] border border-[#1B2D42]'
                   }`}>
                   {msg.role === 'user' ? (
-                    <p className="text-xs text-[#E8EDF2] whitespace-pre-wrap">{msg.content}</p>
+                    <div>
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {msg.attachments.map((att, ai) => (
+                            <span key={ai} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">
+                              {att.type === 'url' ? <Globe size={9} /> : att.type === 'image' ? <Image size={9} /> : <FileText size={9} />}
+                              {att.name?.length > 30 ? att.name.slice(0, 30) + '...' : att.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {msg.content && <p className="text-xs text-[#E8EDF2] whitespace-pre-wrap">{msg.content}</p>}
+                    </div>
                   ) : (
                     <div className="relative group">
                       <button onClick={() => copyText(msg.content, i)} data-testid={`copy-msg-${i}`}
@@ -520,19 +625,105 @@ export default function AIAgentsPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="p-3 border-t border-[#1B2D42] bg-[#0A1628]">
-          <div className="flex gap-2">
-            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              placeholder="Describe what you need — analysis, code changes, tests, or deployments..."
-              disabled={loading}
-              data-testid="engine-input"
-              className="flex-1 px-4 py-2.5 bg-[#152236] border border-[#1B2D42] rounded-lg text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:outline-none focus:border-[#00d4aa]/50 disabled:opacity-50 transition-colors" />
-            <button onClick={sendMessage} disabled={loading || !input.trim()} data-testid="engine-send-btn"
-              className="px-4 py-2.5 rounded-lg text-xs font-bold bg-[#00d4aa]/15 text-[#00d4aa] border border-[#00d4aa]/30 hover:bg-[#00d4aa]/25 transition-all disabled:opacity-30">
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-            </button>
+        {/* Input Area */}
+        <div className="border-t border-[#1B2D42] bg-[#0A1628]">
+          {/* Attachment Chips */}
+          {attachments.length > 0 && (
+            <div className="px-3 pt-2.5 flex flex-wrap gap-1.5" data-testid="attachment-chips">
+              {attachments.map(att => (
+                <div key={att.id} className={`inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg text-[10px] border transition-all ${
+                  att.uploading ? 'bg-[#152236] border-[#1B2D42] text-[#4A5B6E]'
+                  : att.type === 'error' ? 'bg-[#ef4444]/10 border-[#ef4444]/30 text-[#ef4444]'
+                  : att.type === 'url' ? 'bg-[#60a5fa]/10 border-[#60a5fa]/25 text-[#60a5fa]'
+                  : att.type === 'image' ? 'bg-[#a78bfa]/10 border-[#a78bfa]/25 text-[#a78bfa]'
+                  : 'bg-[#22c55e]/10 border-[#22c55e]/25 text-[#22c55e]'
+                }`}>
+                  {att.uploading ? <Loader2 size={10} className="animate-spin" />
+                   : att.type === 'url' ? <Globe size={10} />
+                   : att.type === 'image' ? <Image size={10} />
+                   : att.type === 'error' ? <AlertCircle size={10} />
+                   : <FileText size={10} />}
+                  <span className="font-medium max-w-[180px] truncate">{att.name}</span>
+                  {!att.uploading && att.size_kb > 0 && <span className="text-[8px] opacity-60">{att.size_kb}KB</span>}
+                  <button onClick={() => removeAttachment(att.id)} className="p-0.5 rounded hover:bg-white/10 transition-colors" data-testid={`remove-attachment-${att.id}`}>
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* URL Input Bar */}
+          {showUrlInput && (
+            <div className="px-3 pt-2" data-testid="url-input-bar">
+              <div className="flex gap-2 items-center bg-[#152236] border border-[#60a5fa]/30 rounded-lg px-3 py-2">
+                <Link2 size={13} className="text-[#60a5fa] shrink-0" />
+                <input
+                  autoFocus
+                  value={urlInput}
+                  onChange={e => setUrlInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleUrlSubmit(); if (e.key === 'Escape') { setShowUrlInput(false); setUrlInput(''); } }}
+                  placeholder="Paste any URL — website, article, docs..."
+                  data-testid="url-input-field"
+                  className="flex-1 bg-transparent text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:outline-none"
+                />
+                <button onClick={handleUrlSubmit} disabled={!urlInput.trim() || urlLoading} data-testid="url-submit-btn"
+                  className="px-2.5 py-1 rounded text-[10px] font-bold bg-[#60a5fa]/15 text-[#60a5fa] border border-[#60a5fa]/30 hover:bg-[#60a5fa]/25 transition-all disabled:opacity-30">
+                  {urlLoading ? <Loader2 size={11} className="animate-spin" /> : 'Fetch'}
+                </button>
+                <button onClick={() => { setShowUrlInput(false); setUrlInput(''); }} className="text-[#4A5B6E] hover:text-[#E8EDF2] transition-colors">
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Main Input */}
+          <div className="p-3">
+            <div className="flex items-end gap-2 bg-[#152236] border border-[#1B2D42] rounded-xl px-1 py-1 focus-within:border-[#00d4aa]/40 transition-colors">
+              {/* Left action buttons */}
+              <div className="flex items-center gap-0.5 pl-1 pb-1">
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple className="hidden"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.csv,.txt,.md,.json,.xml,.py,.js,.jsx,.ts,.tsx,.html,.css,.png,.jpg,.jpeg,.gif,.webp,.svg" />
+                <button onClick={() => fileInputRef.current?.click()} disabled={loading}
+                  data-testid="attach-file-btn"
+                  title="Attach files (PDF, Word, Excel, PowerPoint, images, code...)"
+                  className="p-1.5 rounded-lg text-[#4A5B6E] hover:text-[#22c55e] hover:bg-[#22c55e]/10 transition-all disabled:opacity-30">
+                  <Paperclip size={16} />
+                </button>
+                <button onClick={() => setShowUrlInput(!showUrlInput)} disabled={loading}
+                  data-testid="attach-url-btn"
+                  title="Paste a URL to crawl"
+                  className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${showUrlInput ? 'text-[#60a5fa] bg-[#60a5fa]/10' : 'text-[#4A5B6E] hover:text-[#60a5fa] hover:bg-[#60a5fa]/10'}`}>
+                  <Globe size={16} />
+                </button>
+              </div>
+
+              {/* Textarea */}
+              <textarea
+                ref={el => { textareaRef.current = el; inputRef.current = el; }}
+                value={input}
+                onChange={e => { setInput(e.target.value); autoResize(e.target); }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                placeholder="Describe what you need — attach files, paste URLs, or type your request..."
+                disabled={loading}
+                rows={1}
+                data-testid="engine-input"
+                className="flex-1 px-2 py-2 bg-transparent text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:outline-none disabled:opacity-50 resize-none max-h-40 leading-relaxed"
+              />
+
+              {/* Send button */}
+              <div className="pb-1 pr-1">
+                <button onClick={sendMessage} disabled={loading || (!input.trim() && attachments.length === 0)} data-testid="engine-send-btn"
+                  className="p-2 rounded-lg bg-[#00d4aa]/15 text-[#00d4aa] border border-[#00d4aa]/30 hover:bg-[#00d4aa]/25 transition-all disabled:opacity-20">
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
+              Supports PDF, Word, Excel, PowerPoint, images, CSV, code files, and any URL
+            </p>
           </div>
         </div>
       </div>
