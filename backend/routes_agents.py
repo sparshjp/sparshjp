@@ -29,7 +29,7 @@ def set_config(key, database):
     OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 # ══════════════════════════════════════════════════════════
-# MULTI-PROVIDER LLM CLIENT (Groq → OpenRouter → Claude)
+# MULTI-PROVIDER LLM CLIENT (Claude → Gemini → GPT-5 → Groq → OpenRouter)
 # ══════════════════════════════════════════════════════════
 
 def _call_groq_sync(system: str, messages: list) -> str:
@@ -63,6 +63,26 @@ async def _call_claude(system: str, messages: list) -> str:
     combined = "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in messages])
     return await chat.send_message(UserMessage(text=combined))
 
+async def _call_gemini(system: str, messages: list) -> str:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    chat = LlmChat(
+        api_key=EMERGENT_KEY, session_id=f"engine-gemini-{uuid.uuid4()}", system_message=system,
+    ).with_model("gemini", "gemini-3-flash-preview")
+    combined = "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in messages])
+    combined += "\n\nIMPORTANT FORMAT: Tool calls must use ```TOOL_CALL code blocks. When done, write DONE: summary."
+    resp = await chat.send_message(UserMessage(text=combined))
+    if resp is None or (isinstance(resp, str) and len(resp.strip()) == 0):
+        raise Exception("Gemini returned empty response — falling back to next provider")
+    return resp
+
+async def _call_gpt5(system: str, messages: list) -> str:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    chat = LlmChat(
+        api_key=EMERGENT_KEY, session_id=f"engine-gpt5-{uuid.uuid4()}", system_message=system,
+    ).with_model("openai", "gpt-5")
+    combined = "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in messages])
+    return await chat.send_message(UserMessage(text=combined))
+
 # Track recent provider failures for smart routing
 _provider_failures = {}  # {"groq": [timestamp, ...], ...}
 _FAILURE_WINDOW = 300  # 5 minutes — skip provider if failed recently
@@ -85,15 +105,15 @@ def _clear_failures(provider: str):
 
 
 async def call_llm(system: str, messages: list, preferred: str = "auto") -> tuple:
-    if preferred == "claude":
-        order = ["claude", "groq", "openrouter"]
-    elif preferred == "groq":
-        order = ["groq", "openrouter", "claude"]
-    elif preferred == "openrouter":
-        order = ["openrouter", "groq", "claude"]
-    else:
-        # Smart default: Claude first (most capable, reliable), then Groq, then OpenRouter
-        order = ["claude", "groq", "openrouter"]
+    PROVIDER_ORDERS = {
+        "claude": ["claude", "gemini", "gpt5", "groq", "openrouter"],
+        "gemini": ["gemini", "claude", "gpt5", "groq", "openrouter"],
+        "gpt5": ["gpt5", "claude", "gemini", "groq", "openrouter"],
+        "groq": ["groq", "claude", "gemini", "gpt5", "openrouter"],
+        "openrouter": ["openrouter", "groq", "claude", "gemini", "gpt5"],
+    }
+    # Smart default: Claude > Gemini > GPT-5 > Groq > OpenRouter
+    order = PROVIDER_ORDERS.get(preferred, ["claude", "gemini", "gpt5", "groq", "openrouter"])
     errors = []
     loop = asyncio.get_event_loop()
     for provider in order:
@@ -114,6 +134,14 @@ async def call_llm(system: str, messages: list, preferred: str = "auto") -> tupl
                 text = await _call_claude(system, messages)
                 _clear_failures(provider)
                 return text, "claude"
+            elif provider == "gemini" and EMERGENT_KEY:
+                text = await _call_gemini(system, messages)
+                _clear_failures(provider)
+                return text, "gemini"
+            elif provider == "gpt5" and EMERGENT_KEY:
+                text = await _call_gpt5(system, messages)
+                _clear_failures(provider)
+                return text, "gpt5"
         except Exception as e:
             err_msg = str(e)[:200]
             logging.warning(f"AI Engine: {provider} failed: {err_msg}")
@@ -1412,7 +1440,7 @@ async def api_run_test_query(body: dict):
 _tasks = {}
 
 
-async def _run_engine_task(task_id, mode, message, session_id, context):
+async def _run_engine_task(task_id, mode, message, session_id, context, preferred_provider="auto"):
     """Background coroutine: Agentic loop with PARALLEL tool execution + live thought streaming."""
     try:
         _tasks[task_id]["status"] = "thinking"
@@ -1475,7 +1503,7 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
             _tasks[task_id]["thinking_text"] = f"Reasoning about {'your request' if iteration == 1 else 'next actions'}..."
             _tasks[task_id]["thinking_step"] = step_num
 
-            response_text, provider = await call_llm(system, loop_messages, preferred=provider_used or "auto")
+            response_text, provider = await call_llm(system, loop_messages, preferred=provider_used or preferred_provider or "auto")
             provider_used = provider
 
             tool_calls = parse_tool_calls(response_text)
@@ -1633,11 +1661,12 @@ async def engine_chat(body: dict):
     message = body.get("message", "")
     session_id = body.get("session_id", "")
     context = body.get("context", "")
+    preferred_provider = body.get("preferred_provider", "auto")
     if not message:
         raise HTTPException(status_code=400, detail="Message is required")
     task_id = str(uuid.uuid4())[:12]
-    _tasks[task_id] = {"status": "queued", "progress": "Starting...", "steps": [], "result": None}
-    asyncio.create_task(_run_engine_task(task_id, mode, message, session_id, context))
+    _tasks[task_id] = {"status": "queued", "progress": "Starting...", "steps": [], "result": None, "thinking_text": "", "thinking_step": 0}
+    asyncio.create_task(_run_engine_task(task_id, mode, message, session_id, context, preferred_provider))
     return {"task_id": task_id, "status": "queued"}
 
 
@@ -1672,8 +1701,10 @@ async def get_providers():
     return {
         "providers": [
             {"name": "claude", "model": "claude-sonnet-4-5", "status": provider_status("claude", EMERGENT_KEY), "priority": 1},
-            {"name": "groq", "model": "llama-3.3-70b-versatile", "status": provider_status("groq", GROQ_KEY), "priority": 2},
-            {"name": "openrouter", "model": "auto (free models)", "status": provider_status("openrouter", OPENROUTER_KEY), "priority": 3},
+            {"name": "gemini", "model": "gemini-3-flash", "status": provider_status("gemini", EMERGENT_KEY), "priority": 2},
+            {"name": "gpt5", "model": "gpt-5", "status": provider_status("gpt5", EMERGENT_KEY), "priority": 3},
+            {"name": "groq", "model": "llama-3.3-70b-versatile", "status": provider_status("groq", GROQ_KEY), "priority": 4},
+            {"name": "openrouter", "model": "auto (free models)", "status": provider_status("openrouter", OPENROUTER_KEY), "priority": 5},
         ],
-        "fallback_order": ["claude", "groq", "openrouter"],
+        "fallback_order": ["claude", "gemini", "gpt5", "groq", "openrouter"],
     }

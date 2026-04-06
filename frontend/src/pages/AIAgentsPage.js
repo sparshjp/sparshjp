@@ -192,6 +192,15 @@ function QuestionBlock({ question }) {
   );
 }
 
+const PROVIDERS = [
+  { id: 'auto', label: 'Auto (Best Available)', color: '#00d4aa' },
+  { id: 'claude', label: 'Claude Sonnet 4.5', color: '#a78bfa' },
+  { id: 'gemini', label: 'Gemini 3 Flash', color: '#4285f4' },
+  { id: 'gpt5', label: 'GPT-5', color: '#10a37f' },
+  { id: 'groq', label: 'Groq / Llama 3.3', color: '#f97316' },
+  { id: 'openrouter', label: 'OpenRouter', color: '#06b6d4' },
+];
+
 export default function AIAgentsPage() {
   const [sessions, setSessions] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
@@ -201,6 +210,8 @@ export default function AIAgentsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mode, setMode] = useState('auto');
   const [modeOpen, setModeOpen] = useState(false);
+  const [preferredProvider, setPreferredProvider] = useState('auto');
+  const [providerOpen, setProviderOpen] = useState(false);
   const [fileExplorer, setFileExplorer] = useState(false);
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -336,7 +347,7 @@ export default function AIAgentsPage() {
       const res = await fetch(`${API}/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_type: mode, message: userMsg || 'Analyze the attached content.', session_id: sessionId, context }),
+        body: JSON.stringify({ agent_type: mode, message: userMsg || 'Analyze the attached content.', session_id: sessionId, context, preferred_provider: preferredProvider }),
       });
 
       if (!res.ok) throw new Error(`Engine error: ${res.status}`);
@@ -561,9 +572,37 @@ export default function AIAgentsPage() {
             )}
           </div>
 
-          <div className="flex-1" />
+          {/* Provider Selector */}
+          <div className="relative ml-2">
+            {(() => { const currentProvider = PROVIDERS.find(p => p.id === preferredProvider); return (
+              <>
+                <button onClick={() => setProviderOpen(!providerOpen)} data-testid="provider-selector"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all"
+                  style={{ background: `${currentProvider.color}10`, color: currentProvider.color, borderColor: `${currentProvider.color}40` }}>
+                  <Cpu size={11} />
+                  {currentProvider.label}
+                  <ChevronDown size={10} className={`transition-transform ${providerOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {providerOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProviderOpen(false)} />
+                    <div className="absolute top-full left-0 mt-1 w-52 bg-[#0D1B2A] border border-[#1B2D42] rounded-lg shadow-xl z-50 overflow-hidden">
+                      {PROVIDERS.map(p => (
+                        <button key={p.id} data-testid={`provider-${p.id}`}
+                          onClick={() => { setPreferredProvider(p.id); setProviderOpen(false); }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${preferredProvider === p.id ? 'bg-[#152236]' : 'hover:bg-[#152236]/50'}`}>
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
+                          <p className="text-[11px] font-bold" style={{ color: preferredProvider === p.id ? p.color : '#E8EDF2' }}>{p.label}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ); })()}
+          </div>
 
-          {/* Toolbar */}
+          <div className="flex-1" />
           <div className="flex items-center gap-1.5">
             <button onClick={() => loadFiles('/app/backend')} data-testid="browse-backend-btn"
               className="px-2 py-1.5 rounded text-[9px] font-bold bg-[#152236] border border-[#1B2D42] text-[#4A5B6E] hover:text-[#22c55e] hover:border-[#22c55e]/30 transition-colors flex items-center gap-1">
@@ -698,9 +737,11 @@ export default function AIAgentsPage() {
                       <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${
                         msg.provider === 'groq' ? 'text-[#f97316] bg-[#f97316]/10 border-[#f97316]/20'
                         : msg.provider === 'openrouter' ? 'text-[#06b6d4] bg-[#06b6d4]/10 border-[#06b6d4]/20'
+                        : msg.provider === 'gemini' ? 'text-[#4285f4] bg-[#4285f4]/10 border-[#4285f4]/20'
+                        : msg.provider === 'gpt5' ? 'text-[#10a37f] bg-[#10a37f]/10 border-[#10a37f]/20'
                         : 'text-[#a78bfa] bg-[#a78bfa]/10 border-[#a78bfa]/20'
                       }`}>
-                        {msg.provider === 'groq' ? 'Groq / Llama 3.3' : msg.provider === 'openrouter' ? 'OpenRouter' : 'Claude'}
+                        {msg.provider === 'groq' ? 'Groq / Llama 3.3' : msg.provider === 'openrouter' ? 'OpenRouter' : msg.provider === 'gemini' ? 'Gemini 3 Flash' : msg.provider === 'gpt5' ? 'GPT-5' : 'Claude'}
                       </span>
                     )}
                     {msg.iterations > 1 && (
@@ -870,7 +911,7 @@ export default function AIAgentsPage() {
               </div>
             </div>
             <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
-              Parallel execution &middot; 21 tools &middot; Web search &middot; Screenshots &middot; Live thought process &middot; Auto-verify
+              Parallel execution &middot; 21 tools &middot; 5 LLM providers &middot; Web search &middot; Screenshots &middot; Auto-verify
             </p>
           </div>
         </div>
