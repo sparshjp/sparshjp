@@ -495,7 +495,7 @@ async def execute_tool(tool_name, args):
 # ══════════════════════════════════════════════════════════
 
 async def _scaffold_module(args):
-    """Create a complete backend module: route file + server.py registration + restart + verify."""
+    """Create a complete backend module: route file + server.py registration + restart + verify + auto-polish."""
     module_name = args.get("module_name", "")
     prefix = args.get("prefix", "")
     endpoints = args.get("endpoints", [])
@@ -504,13 +504,11 @@ async def _scaffold_module(args):
     if not module_name or not prefix or not endpoints:
         return {"status": "error", "error": "module_name, prefix, and endpoints are required"}
 
-    # Sanitize
     safe_module = re.sub(r'[^a-z0-9_]', '_', module_name.lower())
     file_path = f"/app/backend/routes_{safe_module}.py"
     if os.path.isfile(file_path):
         return {"status": "error", "error": f"Module file already exists: {file_path}. Use patch_file to modify."}
 
-    # Generate route file
     tag = module_name.replace("_", " ").title()
     code_lines = [
         f'"""Auto-generated module: {tag}"""',
@@ -536,29 +534,40 @@ async def _scaffold_module(args):
         path = ep.get("path", "")
         name = ep.get("name", f"handler_{method}")
         body = ep.get("body", "    return {}")
-        # Ensure body lines have proper indentation
         body_lines = body.split("\n")
         formatted_body = "\n".join(f"    {line}" if not line.startswith("    ") else line for line in body_lines)
 
+        # Extract path parameters for proper function signatures
+        import re as _re
+        path_params = _re.findall(r'\{(\w+)\}', path)
+
         if method == "post":
             code_lines.append(f'@router.post("{path}")')
-            code_lines.append(f'async def {name}(body: dict):')
+            params = ", ".join([f"{p}: str" for p in path_params] + ["body: dict"])
+            code_lines.append(f'async def {name}({params}):')
         elif method == "put":
             code_lines.append(f'@router.put("{path}")')
-            code_lines.append(f'async def {name}(body: dict):')
+            params = ", ".join([f"{p}: str" for p in path_params] + ["body: dict"])
+            code_lines.append(f'async def {name}({params}):')
         elif method == "delete":
             ep_path = path if path else "/{item_id}"
             code_lines.append(f'@router.delete("{ep_path}")')
-            code_lines.append(f'async def {name}(item_id: str):')
+            del_params = path_params if path_params else ["item_id"]
+            code_lines.append(f'async def {name}({", ".join(f"{p}: str" for p in del_params)}):')
         else:
             code_lines.append(f'@router.get("{path}")')
-            code_lines.append(f'async def {name}():')
+            if path_params:
+                code_lines.append(f'async def {name}({", ".join(f"{p}: str" for p in path_params)}):')
+            else:
+                code_lines.append(f'async def {name}():')
         code_lines.append(formatted_body)
         code_lines.append('')
 
     file_content = "\n".join(code_lines)
 
-    # Write the file
+    # ── AUTO-POLISH: fix known LLM code-gen bugs ──
+    file_content = _polish_generated_python(file_content)
+
     with open(file_path, "w") as f:
         f.write(file_content)
     await _audit_file_write(file_path, file_content, "SCAFFOLD")
@@ -576,28 +585,40 @@ async def _scaffold_module(args):
     with open(server_path, "r") as f:
         server_content = f.read()
 
-    # Find the insertion point (before "logging.info("ERP modules will be integrated")")
     marker = 'logging.info("ERP modules will be integrated")'
     if marker in server_content:
         server_content = server_content.replace(marker, f"{registration_code}\n    {marker}")
         with open(server_path, "w") as f:
             f.write(server_content)
     else:
-        return {"status": "partial", "path": file_path, "warning": "Could not find server.py marker to register route. Register manually."}
+        return {"status": "partial", "path": file_path, "warning": "Could not find server.py marker. Register manually."}
 
     # Restart backend
     proc = subprocess.run(["sudo", "supervisorctl", "restart", "backend"], capture_output=True, text=True, timeout=15)
     await asyncio.sleep(3)
 
     # Verify startup
-    log_proc = subprocess.run("tail -n 10 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
+    log_proc = subprocess.run("tail -n 15 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
     startup_ok = "Application startup complete" in (log_proc.stdout or "")
+
+    # If startup failed, try auto-fix once
+    auto_fix_applied = False
+    if not startup_ok:
+        fix_result = _auto_fix_startup_error(file_path, log_proc.stdout or "")
+        if fix_result:
+            auto_fix_applied = True
+            proc = subprocess.run(["sudo", "supervisorctl", "restart", "backend"], capture_output=True, text=True, timeout=15)
+            await asyncio.sleep(3)
+            log_proc = subprocess.run("tail -n 15 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
+            startup_ok = "Application startup complete" in (log_proc.stdout or "")
 
     # Test first GET endpoint
     test_result = None
     first_get = next((ep for ep in endpoints if ep.get("method", "GET").upper() == "GET"), None)
     if first_get and startup_ok:
         test_url = f"http://localhost:8001/api{prefix}{first_get.get('path', '')}"
+        # Strip path params for test URL
+        test_url = re.sub(r'/\{[^}]+\}', '', test_url)
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(test_url)
@@ -614,18 +635,22 @@ async def _scaffold_module(args):
         "registered_in_server": True,
         "backend_restarted": True,
         "startup_ok": startup_ok,
+        "auto_fix_applied": auto_fix_applied,
+        "auto_polish": True,
         "test_result": test_result,
         "logs": log_proc.stdout[-500:] if not startup_ok else "",
     }
 
 
 async def _create_page(args):
-    """Create a React page component + register route in App.js."""
+    """Create a React page component + register route in App.js + add sidebar nav."""
     page_name = args.get("page_name", "")
     route_path = args.get("route_path", "")
     title = args.get("title", page_name)
     api_endpoints = args.get("api_endpoints", [])
     custom_content = args.get("content", "")
+    icon = args.get("icon", "FileText")
+    nav_section = args.get("nav_section", "")
 
     if not page_name or not route_path:
         return {"status": "error", "error": "page_name and route_path required"}
@@ -634,13 +659,17 @@ async def _create_page(args):
     if os.path.isfile(file_path):
         return {"status": "error", "error": f"Page already exists: {file_path}. Use patch_file."}
 
-    # Generate React page
     if custom_content:
         page_code = custom_content
     else:
         fetch_code = ""
         if api_endpoints:
+            # Fix: api_endpoints should NOT include /api prefix (API const already has it)
             ep = api_endpoints[0]
+            if ep.startswith("/api/"):
+                ep = ep[4:]  # strip /api prefix — API const already includes it
+            elif not ep.startswith("/"):
+                ep = "/" + ep
             fetch_code = f"""
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -673,20 +702,36 @@ export default function {page_name}() {{
     # Add import
     import_line = f"import {page_name} from './pages/{page_name}';"
     if import_line not in app_content:
-        # Find last import line
         import_match = list(re.finditer(r'^import .+ from .+;$', app_content, re.MULTILINE))
         if import_match:
             last_import_end = import_match[-1].end()
             app_content = app_content[:last_import_end] + f"\n{import_line}" + app_content[last_import_end:]
 
-    # Add route (before the catch-all or last Route)
+    # Add route
     route_line = f'<Route path="{route_path}" element={{<{page_name} />}} />'
     if route_line not in app_content:
-        # Find a good insertion point - before </Routes>
         routes_end = app_content.find("</Routes>")
         if routes_end != -1:
             indent = "              "
             app_content = app_content[:routes_end] + f"{indent}{route_line}\n{indent}" + app_content[routes_end:]
+
+    # Add sidebar navigation entry
+    sidebar_added = False
+    if nav_section:
+        # Find the nav section and add entry
+        nav_marker = f"label: '{nav_section}'"
+        if nav_marker not in app_content:
+            # Try to add near existing nav entries
+            nav_entry = f"        {{ path: '{route_path}', label: '{title}', icon: {icon} }},"
+            # Find the last nav entry before a closing bracket
+            last_nav = app_content.rfind("{ path: '/bank-reconciliation'")
+            if last_nav == -1:
+                last_nav = app_content.rfind("{ path: '/expense-management'")
+            if last_nav != -1:
+                line_end = app_content.find("\n", last_nav)
+                if line_end != -1:
+                    app_content = app_content[:line_end + 1] + nav_entry + "\n" + app_content[line_end + 1:]
+                    sidebar_added = True
 
     with open(app_path, "w") as f:
         f.write(app_content)
@@ -697,7 +742,133 @@ export default function {page_name}() {{
         "page_name": page_name,
         "route_path": route_path,
         "registered_in_app_js": True,
+        "sidebar_added": sidebar_added,
+        "api_prefix_fixed": True,
     }
+
+
+# ══════════════════════════════════════════════════════════
+# AUTO-POLISH & AUTO-FIX
+# ══════════════════════════════════════════════════════════
+
+def _polish_generated_python(code: str) -> str:
+    """Fix common LLM code-generation bugs in Python code targeting Motor/MongoDB."""
+    original = code
+
+    # Fix 1: .to_list() missing length argument → .to_list(500)
+    code = re.sub(r'\.to_list\(\s*\)', '.to_list(500)', code)
+
+    # Fix 2: MongoDB _id not excluded in find projections
+    # Only fix if find({...}) has no projection argument
+    code = re.sub(
+        r'\.find\(\{([^}]*)\}\)\s*\.to_list',
+        lambda m: f'.find({{{m.group(1)}}}, {{"_id": 0}}).to_list' if '"_id"' not in m.group(0) else m.group(0),
+        code
+    )
+    # Also fix find_one without _id exclusion
+    code = re.sub(
+        r'\.find_one\(\{([^}]*)\}\)\s*$',
+        lambda m: f'.find_one({{{m.group(1)}}}, {{"_id": 0}})' if '"_id"' not in m.group(0) else m.group(0),
+        code,
+        flags=re.MULTILINE,
+    )
+
+    # Fix 3: return doc that may contain _id after insert_one
+    # Pattern: insert_one(var) then return var → return {k:v for k,v...}
+    code = re.sub(
+        r'await db\.\w+\.insert_one\((\w+)\)\s*\n(\s*)return \1\s*$',
+        lambda m: f'await db.{m.group(0).split("db.")[1].split(".insert")[0]}.insert_one({m.group(1)})\n{m.group(2)}return {{k: v for k, v in {m.group(1)}.items() if k != "_id"}}',
+        code,
+        flags=re.MULTILINE,
+    )
+
+    # Fix 4: Missing 'body: dict' param for POST/PUT handlers
+    # If function body references 'body' but signature doesn't have it
+    for match in re.finditer(r'async def (\w+)\(\):\n((?:    .*\n)*)', code):
+        fn_name, fn_body = match.group(1), match.group(2)
+        if 'body' in fn_body and 'body' not in match.group(0).split('(')[1]:
+            code = code.replace(f'async def {fn_name}():', f'async def {fn_name}(body: dict):', 1)
+
+    # Fix 5: Aggregation _id field handling — rename _id to meaningful name
+    # $group results have _id as the group key, not a MongoDB ObjectId
+    code = re.sub(
+        r'\{k:\s*v\s+for\s+k,\s*v\s+in\s+item\.items\(\)\s+if\s+k\s*!=\s*"_id"\}',
+        '{**{("name" if k == "_id" else k): v for k, v in item.items()}}',
+        code,
+    )
+
+    # Fix 6: datetime.utcnow() → datetime.now(timezone.utc)
+    code = code.replace('datetime.utcnow()', 'datetime.now(timezone.utc)')
+
+    changes = sum(1 for a, b in zip(original.split('\n'), code.split('\n')) if a != b)
+    if changes > 0:
+        logging.info(f"Auto-polish: fixed {changes} lines in generated code")
+
+    return code
+
+
+def _auto_fix_startup_error(file_path: str, log_output: str) -> bool:
+    """Try to auto-fix common startup errors. Returns True if a fix was applied."""
+    if not os.path.isfile(file_path):
+        return False
+
+    with open(file_path, "r") as f:
+        code = f.read()
+
+    original = code
+    fixed = False
+
+    # Fix: to_list() missing positional argument 'length'
+    if "to_list() missing 1 required positional argument" in log_output:
+        code = re.sub(r'\.to_list\(\s*\)', '.to_list(500)', code)
+        fixed = True
+
+    # Fix: 'body' is not defined (missing function parameter)
+    if "name 'body' is not defined" in log_output:
+        # Find async def without body param that uses body
+        code = re.sub(
+            r'(async def \w+)\(\)(:.*\n(?:    .*body.*\n))',
+            r'\1(body: dict)\2',
+            code,
+        )
+        fixed = True
+
+    # Fix: IndentationError
+    if "IndentationError" in log_output:
+        # Try to fix by ensuring consistent 4-space indentation
+        lines = code.split('\n')
+        new_lines = []
+        for line in lines:
+            if line.strip() and not line[0] in (' ', '\t', '#', '@', 'd', 'f', 'i', 'r', 'a', '"', "'"):
+                # Line doesn't start with expected char — might need indentation
+                new_lines.append('    ' + line)
+            else:
+                new_lines.append(line)
+        code = '\n'.join(new_lines)
+        fixed = True
+
+    # Fix: SyntaxError on specific line
+    if "SyntaxError" in log_output:
+        # Extract line number
+        match = re.search(r'line (\d+)', log_output)
+        if match:
+            line_num = int(match.group(1))
+            lines = code.split('\n')
+            if 0 < line_num <= len(lines):
+                problem_line = lines[line_num - 1]
+                # Common fix: unbalanced quotes
+                if problem_line.count('"') % 2 != 0:
+                    lines[line_num - 1] = problem_line + '"'
+                    code = '\n'.join(lines)
+                    fixed = True
+
+    if fixed and code != original:
+        with open(file_path, "w") as f:
+            f.write(code)
+        logging.info(f"Auto-fix applied to {file_path}")
+        return True
+
+    return False
 
 
 # ══════════════════════════════════════════════════════════

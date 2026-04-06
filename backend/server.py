@@ -1317,6 +1317,11 @@ RULES:
     from routes_expense_management import router as expense_management_router, set_db as set_expense_management_db
     set_expense_management_db(db)
     api_router.include_router(expense_management_router)
+    
+    # Feedback
+    from routes_feedback import router as feedback_router, set_db as set_feedback_db
+    set_feedback_db(db)
+    api_router.include_router(feedback_router)
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

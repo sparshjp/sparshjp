@@ -50,6 +50,7 @@ import UniversalAI from './components/UniversalAI';
 import { KairosIcon } from './components/KairosIcon';
 import { Toaster } from './components/ui/sonner';
 import ExpenseManagement from './pages/ExpenseManagement';
+import FeedbackPage from './pages/FeedbackPage';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -322,6 +323,7 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Route path="/bank-reconciliation" element={<BankReconciliation />} />
             <Route path="/ai-agents" element={<AIAgentsPage />} />
                         <Route path="/expense-management" element={<ExpenseManagement />} />
+                            <Route path="/feedback" element={<FeedbackPage />} />
               </Routes>
         </div>
         {!isAIEngine && <UniversalAI />}
