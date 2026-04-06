@@ -1107,6 +1107,7 @@ try:
     from routes_company import router as company_router, set_db as company_set_db, set_key as company_set_key
     from routes_audit import router as audit_router, set_db as audit_set_db
     from routes_gst import router as gst_router, set_key as gst_set_key
+    from routes_aging import router as aging_router, set_db as aging_set_db
     import audit_trail
     from ai_orchestrator import AIOrchestrator
     
@@ -1131,6 +1132,7 @@ try:
     audit_set_db(db)
     audit_trail.set_db(db)
     gst_set_key(EMERGENT_KEY)
+    aging_set_db(db)
     
     # Universal AI Prompt Endpoint
     @api_router.post("/ai/universal-prompt")
@@ -1280,6 +1282,7 @@ RULES:
     api_router.include_router(company_router, prefix="/company")
     api_router.include_router(audit_router)
     api_router.include_router(gst_router)
+    api_router.include_router(aging_router)
     
     logging.info("ERP modules will be integrated")
 except Exception as e:

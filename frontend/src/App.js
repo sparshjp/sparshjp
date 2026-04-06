@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
-  Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode
+  Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Building
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -31,6 +31,10 @@ import GSTR1Page from './pages/GSTR1Page';
 import GSTR3BPage from './pages/GSTR3BPage';
 import EInvoicePage from './pages/EInvoicePage';
 import TDSPage from './pages/TDSPage';
+import VendorsPage from './pages/VendorsPage';
+import CustomersPage from './pages/CustomersPage';
+import ItemsPage from './pages/ItemsPage';
+import AgingReport from './pages/AgingReport';
 import ManufacturingModule from './pages/ManufacturingModule';
 import CompanySetup from './pages/CompanySetup';
 import ReportingAI from './pages/ReportingAI';
@@ -63,6 +67,16 @@ function Sidebar({ isOpen, setIsOpen }) {
       items: [
         { path: '/', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/company-setup', label: 'Company Setup', icon: Building2 },
+      ]
+    },
+    {
+      id: 'master-data',
+      title: 'Master Data',
+      items: [
+        { path: '/vendors', label: 'Vendors', icon: Building },
+        { path: '/customers', label: 'Customers', icon: Users },
+        { path: '/items', label: 'Items', icon: Package },
+        { path: '/settings', label: 'CoA & Settings', icon: Settings },
       ]
     },
     {
@@ -103,6 +117,7 @@ function Sidebar({ isOpen, setIsOpen }) {
       items: [
         { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
+        { path: '/aging-report', label: 'AP / AR Aging', icon: Clock },
         { path: '/audit-trail', label: 'Audit Trail', icon: Shield },
       ]
     },
@@ -136,7 +151,6 @@ function Sidebar({ isOpen, setIsOpen }) {
       items: [
         { path: '/reports', label: 'Reports', icon: FileText },
         { path: '/admin/tables', label: 'Data Tables', icon: Database },
-        { path: '/settings', label: 'Settings', icon: Settings },
       ]
     }
   ];
@@ -278,6 +292,10 @@ function App() {
             <Route path="/gstr-3b" element={<GSTR3BPage />} />
             <Route path="/e-invoicing" element={<EInvoicePage />} />
             <Route path="/tds-returns" element={<TDSPage />} />
+            <Route path="/vendors" element={<VendorsPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/items" element={<ItemsPage />} />
+            <Route path="/aging-report" element={<AgingReport />} />
             <Route path="/company-setup" element={<CompanySetup />} />
             <Route path="/reporting-ai" element={<ReportingAI />} />
             <Route path="/audit-trail" element={<AuditTrail />} />

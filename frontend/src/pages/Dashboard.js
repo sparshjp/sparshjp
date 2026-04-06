@@ -12,9 +12,11 @@ function Dashboard() {
     stock: { items: 0, lowStock: 0 },
     hr: { employees: 0, attendance: 0 }
   });
+  const [company, setCompany] = useState({});
 
   useEffect(() => {
     fetchModuleStats();
+    fetch(`${API}/company/settings`).then(r => r.json()).then(setCompany).catch(() => {});
   }, []);
 
   const fetchModuleStats = async () => {

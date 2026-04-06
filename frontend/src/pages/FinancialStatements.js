@@ -103,6 +103,11 @@ export default function FinancialStatements() {
   const [plData, setPlData] = useState(null);
   const [tbData, setTbData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [company, setCompany] = useState({});
+
+  useEffect(() => {
+    fetch(`${API}/api/company/settings`).then(r => r.json()).then(setCompany).catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadReport(activeTab);
@@ -136,7 +141,10 @@ export default function FinancialStatements() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#E8EDF2]">Financial Statements</h1>
-          <p className="text-[#4A5B6E] text-sm mt-1">Schedule III - Companies Act 2013 (Division I)</p>
+          <p className="text-[#4A5B6E] text-sm mt-1">
+            {company.legal_name || 'Company Name'} — Schedule III, Companies Act 2013
+          </p>
+          {company.gstin && <p className="text-[#4A5B6E] text-[10px] font-mono mt-0.5">GSTIN: {company.gstin} | CIN: {company.cin || '—'}</p>}
         </div>
         <div className="flex gap-2">
           {activeTab === 'balance-sheet' && (
