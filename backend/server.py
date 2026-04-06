@@ -1307,6 +1307,11 @@ RULES:
     set_emp_analytics_db(db)
     api_router.include_router(emp_analytics_router)
     
+    
+    # Leave Management
+    from routes_leave_management import router as leave_management_router, set_db as set_leave_management_db
+    set_leave_management_db(db)
+    api_router.include_router(leave_management_router)
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

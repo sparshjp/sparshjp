@@ -58,6 +58,9 @@ function ToolResultCard({ result, index }) {
   else if (result.tool === 'check_logs') summary = result.args?.service || 'backend';
   else if (result.tool === 'install_package') summary = result.args?.package || '';
   else if (result.tool === 'run_tests') summary = result.args?.test_path || 'tests';
+  else if (result.tool === 'scaffold_module') summary = `${result.args?.module_name} (${result.result?.endpoints_created || 0} endpoints)`;
+  else if (result.tool === 'create_page') summary = result.args?.page_name || '';
+  else if (result.tool === '_auto_restart') summary = result.result?.startup_ok ? 'OK' : 'Failed';
 
   return (
     <div className="border border-[#1B2D42] rounded-lg overflow-hidden bg-[#0D1B2A]" data-testid={`tool-result-${index}`}>
@@ -482,10 +485,10 @@ export default function AIAgentsPage() {
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-xs font-bold text-[#E8EDF2] leading-none">Kairos AI Engine</h1>
-                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v2</span>
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v3</span>
               </div>
               <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5 flex items-center gap-1">
-                <GitBranch size={8} /> Agentic Loop &middot; Multi-Step &middot; Self-Validating
+                <GitBranch size={8} /> Parallel Execution &middot; Compound Tools &middot; Auto-Restart
               </p>
             </div>
           </div>
@@ -593,14 +596,14 @@ export default function AIAgentsPage() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00d4aa]/15 to-[#00d4aa]/5 border border-[#00d4aa]/20 flex items-center justify-center mb-4">
                 <Cpu size={28} className="text-[#00d4aa]" />
               </div>
-              <h2 className="text-lg font-bold text-[#E8EDF2] mb-1">Kairos AI Engine v2</h2>
+              <h2 className="text-lg font-bold text-[#E8EDF2] mb-1">Kairos AI Engine v3</h2>
               <p className="text-xs text-[#4A5B6E] max-w-md mb-2">
                 Agentic AI developer with multi-step autonomous execution.
               </p>
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Multi-Step Loop</span>
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">Self-Validating</span>
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">16 Tools</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Parallel Execution</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">Compound Tools</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">18 Tools + Auto-Restart</span>
               </div>
               <div className="flex flex-wrap gap-2 justify-center max-w-xl">
                 {starters.map((s, i) => (
@@ -814,7 +817,7 @@ export default function AIAgentsPage() {
               </div>
             </div>
             <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
-              Agentic loop with up to 10 autonomous steps &middot; 16 tools &middot; Self-validating
+              Parallel execution &middot; 18 tools &middot; scaffold_module &middot; Auto-restart &middot; Compressed context
             </p>
           </div>
         </div>
