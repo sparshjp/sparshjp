@@ -147,34 +147,76 @@ ENGINE_SYSTEM_PROMPT = """You are the Kairos AI Engine — the unified intellige
 
 COMPANY: Nexora Digital Solutions | GSTIN: 24AABCN4567P1Z8 | Gujarat | IT Services
 Revenue: INR/USD(84.50)/GBP(106.80) | 8 Projects, 20 Employees, 7 Clients, 10 Vendors
-Bank Accounts: HDFC Bank Current (6840000), Axis Bank Current (2250000), EEFC USD (3042000)
+Bank Accounts: HDFC Bank - Current (6840000), Axis Bank - Current (2250000), EEFC USD (3042000)
 TB Balance: 28142000 (balanced) | 26 CoA ledgers
+Billable employees: 16 (E002-E016) | Non-billable: 4 (E001 CEO, E017 Finance, E018 HR, E019 Sales, E020 Inside Sales) = TOTAL 20
 
-PROJECTS: PRJ-001 FinTrack(Axis Sec,FP 45L,88%), PRJ-002 CloudMigration(Mahindra,T&M USD95/hr), PRJ-003 Analytics(HDFC AMC,Milestone 28L,50%), PRJ-004 ManagedSvcs(Havells,Retainer 4.5L/mo), PRJ-005 PayEdge(TechFin USA,FP USD120K,CLOSED), PRJ-006 DevOps(RetailCo UK,T&M GBP140/hr), PRJ-007 DataWarehouse(AsianPaints,Milestone 18L,33%)
+PROJECTS: PRJ-001 FinTrack(FP 45L,88%,asset=1.6L), PRJ-002 CloudMigration(T&M USD95/hr), PRJ-003 Analytics(Milestone 28L,50%,asset=7L), PRJ-004 ManagedSvcs(Retainer 4.5L/mo,liability=4.5L), PRJ-005 PayEdge(FP USD120K,CLOSED), PRJ-006 DevOps(T&M GBP140/hr), PRJ-007 DataWarehouse(Milestone 18L,33%,asset=7.08L)
+Total Contract Asset: Rs.15.68L | Total Contract Liability: Rs.4.50L
 
 TECH: FastAPI+Motor(MongoDB) backend:8001 | React+Tailwind+Shadcn frontend:3000
 Design: Dark theme #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00d4aa accent
 
-FILES: /app/backend/server.py(main), routes_*.py(purchase,selling,crm,hr,stock,manufacturing,projects,timesheets,revenue,agents,financial_statements,statutory,gst,company,audit,aging,sales), seed_nexora.py
+FILES: /app/backend/server.py(main hub), routes_*.py(purchase,selling,crm,hr,stock,manufacturing,projects,timesheets,revenue,agents,financial_statements,statutory,gst,company,audit,aging,sales,bank_recon), seed_nexora.py
 /app/frontend/src/App.js, pages/*.js, components/ui/*.jsx
 
-PATTERNS: APIRouter(prefix="/module"), IDs: str(uuid.uuid4()), Timestamps: datetime.now(timezone.utc).isoformat(), exclude _id from MongoDB, API prefix /api, frontend uses process.env.REACT_APP_BACKEND_URL+'/api'
-
-DB COLLECTIONS: chart_of_accounts, entities, employees, projects, timesheets, erp_transactions, revenue_schedule, company_settings, agent_sessions, purchase_orders, goods_receipt_notes, purchase_invoices, vendor_payments, selling_sales_orders, selling_delivery_notes, selling_invoices, customer_payments, journal_entries, manual_journal_entries, leads, audit_trail, items, work_orders, monthly_hours
+CRITICAL CODE PATTERNS (you MUST follow these):
+- Each route file uses: `router = APIRouter(prefix="/module")` and `set_db(database)` function — NEVER create your own motor client
+- IDs: `str(uuid.uuid4())` | Timestamps: `datetime.now(timezone.utc).isoformat()`
+- ALWAYS exclude `_id` from MongoDB: `{"_id": 0}` in projection
+- Frontend API: `import { API } from '../App'` then `fetch(\`\${API}/endpoint\`)`
+- Lucide React for icons, Shadcn/UI from ../components/ui/, data-testid on all elements
 
 BUSINESS RULES: GST intra-state=CGST+SGST, inter-state=IGST. Export=zero-rated LUT. TDS: 194J(10%), 194C(2%), 194I(10%). Revenue Ind AS 115: FP=POC, T&M=right to invoice, Milestone=acceptance, Retainer=straight-line.
 
-TOOLS (use via ```TOOL_CALL blocks):
-1. read_file(path) — read project file
-2. write_file(path, content) — create/modify file (COMPLETE content, no placeholders)
-3. run_query(query_type) — full_health_check|tb_balance|entity_validation|project_health|collection_stats
-4. restart_service(service) — "backend" or "frontend"
-5. test_api(method, url, body) — test API endpoint
-6. list_files(directory) — list files
+## YOUR TOOLS
+1. **read_file(path, start_line?, end_line?)** — Read file with line numbers. Use start_line/end_line for large files.
+2. **create_file(path, content)** — Create NEW files only. Fails if file exists.
+3. **patch_file(path, old_str, new_str)** — Safe search-and-replace in existing files. old_str must match exactly.
+4. **insert_lines(path, after_line, content)** — Insert text after a specific line number.
+5. **delete_lines(path, start_line, end_line)** — Delete a range of lines.
+6. **write_file(path, content)** — Full overwrite (ONLY for files <50 lines or new files). Blocked for large files.
+7. **get_schema(collection)** — Get actual field names and types from a MongoDB collection.
+8. **run_query(query_type)** — full_health_check|tb_balance|entity_validation|project_health|collection_stats
+9. **restart_service(service)** — "backend" or "frontend"
+10. **test_api(method, url, body)** — Test any /api/* endpoint
+11. **list_files(directory)** — List project files
+12. **run_command(command)** — Run read-only bash commands (grep, wc, find, cat). No rm/mv/sudo.
 
-WORKFLOW: Understand→Plan→Execute→Validate→Deploy
-OUTPUT: Use ```TOOL_CALL\n{"tool":"x","args":{...}}\n``` blocks. Use ```QUESTION\ntext\n``` for clarifications.
-When writing code: produce COMPLETE files, match existing patterns, include data-testid on interactive elements, register new routes in server.py."""
+## WORKFLOW
+When modifying existing code: ALWAYS read_file first → then use patch_file or insert_lines. NEVER use write_file on existing large files.
+When creating new code: Use get_schema first to learn actual field names → then create_file.
+When adding to existing route files: read_file → insert_lines to add new endpoints at the end.
+
+## OUTPUT FORMAT
+```TOOL_CALL
+{"tool": "read_file", "args": {"path": "/app/backend/routes_projects.py", "start_line": 1, "end_line": 50}}
+```
+```TOOL_CALL
+{"tool": "get_schema", "args": {"collection": "projects"}}
+```
+```TOOL_CALL
+{"tool": "patch_file", "args": {"path": "/app/backend/routes_projects.py", "old_str": "return projects", "new_str": "return projects\\n\\n@router.get(\\"/profitability\\")..."}}
+```
+```TOOL_CALL
+{"tool": "create_file", "args": {"path": "/app/backend/routes_new.py", "content": "full content"}}
+```
+```TOOL_CALL
+{"tool": "insert_lines", "args": {"path": "/app/backend/routes_projects.py", "after_line": 113, "content": "@router.get(\\"/profitability\\")..."}}
+```
+```TOOL_CALL
+{"tool": "run_command", "args": {"command": "grep -n 'def ' backend/routes_projects.py"}}
+```
+```QUESTION
+Your clarifying question here
+```
+
+IMPORTANT RULES:
+- When you know the answer from the system prompt, ANSWER DIRECTLY. Don't say "I would need to query" when you have the data.
+- ALWAYS read existing files before modifying them. NEVER guess file contents.
+- ALWAYS use get_schema before writing DB queries to learn actual field names.
+- NEVER overwrite large files. Use patch_file or insert_lines.
+- Register new route files in server.py using insert_lines."""
 
 # Individual mode prompts (for when user forces a specific brain)
 BA_ONLY_SUFFIX = "\n\nMODE: Business Analysis Only. Focus on requirements, compliance, accounting implications. Do NOT generate code or tool calls for file writing."
@@ -190,34 +232,120 @@ async def execute_tool(tool_name, args):
     try:
         if tool_name == "read_file":
             path = args.get("path", "")
+            start_line = args.get("start_line", 1)
+            end_line = args.get("end_line")
+            if not is_safe_path(path):
+                return {"status": "error", "error": "Access denied — blocked path"}
+            if not os.path.isfile(path):
+                return {"status": "error", "error": f"File not found: {path}"}
+            with open(path, "r") as f:
+                lines = f.readlines()
+            total = len(lines)
+            s = max(1, start_line) - 1
+            e = min(end_line or total, total)
+            numbered = [f"{i+s+1}| {line}" for i, line in enumerate(lines[s:e])]
+            content = "".join(numbered)
+            if len(content) > 30000:
+                content = content[:30000] + "\n... [TRUNCATED] ..."
+            return {"status": "ok", "path": path, "total_lines": total, "showing": f"{s+1}-{e}", "content": content}
+
+        elif tool_name == "create_file":
+            # Only for NEW files — refuses if file already exists
+            path = args.get("path", "")
+            content = args.get("content", "")
+            if not is_safe_path(path):
+                return {"status": "error", "error": "Access denied — blocked path"}
+            if os.path.isfile(path):
+                return {"status": "error", "error": f"File already exists: {path}. Use patch_file to modify existing files, or delete_lines + insert_lines."}
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as f:
+                f.write(content)
+            await _audit_file_write(path, content, "CREATE")
+            return {"status": "ok", "path": path, "size": len(content), "message": f"New file created: {path}"}
+
+        elif tool_name == "patch_file":
+            # Safe search-and-replace in existing files
+            path = args.get("path", "")
+            old_str = args.get("old_str", "")
+            new_str = args.get("new_str", "")
             if not is_safe_path(path):
                 return {"status": "error", "error": "Access denied — blocked path"}
             if not os.path.isfile(path):
                 return {"status": "error", "error": f"File not found: {path}"}
             with open(path, "r") as f:
                 content = f.read()
-            if len(content) > 30000:
-                content = content[:30000] + "\n... [TRUNCATED] ..."
-            return {"status": "ok", "path": path, "content": content, "size": len(content)}
+            if old_str not in content:
+                # Try fuzzy match — strip whitespace differences
+                stripped_old = old_str.strip()
+                found = False
+                for line in content.split("\n"):
+                    if stripped_old in line.strip():
+                        found = True
+                        break
+                if not found:
+                    return {"status": "error", "error": "old_str not found in file. Read the file first to get the exact text to replace.", "hint": "Use read_file to see the current content, then copy the exact string to replace."}
+            new_content = content.replace(old_str, new_str, 1)
+            with open(path, "w") as f:
+                f.write(new_content)
+            await _audit_file_write(path, f"PATCH: replaced {len(old_str)} chars with {len(new_str)} chars", "PATCH")
+            return {"status": "ok", "path": path, "chars_removed": len(old_str), "chars_added": len(new_str)}
+
+        elif tool_name == "insert_lines":
+            # Insert text after a specific line number
+            path = args.get("path", "")
+            after_line = args.get("after_line", 0)
+            content = args.get("content", "")
+            if not is_safe_path(path):
+                return {"status": "error", "error": "Access denied — blocked path"}
+            if not os.path.isfile(path):
+                return {"status": "error", "error": f"File not found: {path}"}
+            with open(path, "r") as f:
+                lines = f.readlines()
+            insert_pos = min(max(0, after_line), len(lines))
+            new_lines = content.split("\n")
+            for i, nl in enumerate(new_lines):
+                lines.insert(insert_pos + i, nl + "\n")
+            with open(path, "w") as f:
+                f.writelines(lines)
+            await _audit_file_write(path, f"INSERT: {len(new_lines)} lines after line {after_line}", "INSERT")
+            return {"status": "ok", "path": path, "lines_inserted": len(new_lines), "at_line": after_line + 1, "new_total": len(lines)}
+
+        elif tool_name == "delete_lines":
+            # Delete a range of lines from a file
+            path = args.get("path", "")
+            start_line = args.get("start_line", 1)
+            end_line = args.get("end_line", 1)
+            if not is_safe_path(path):
+                return {"status": "error", "error": "Access denied — blocked path"}
+            if not os.path.isfile(path):
+                return {"status": "error", "error": f"File not found: {path}"}
+            with open(path, "r") as f:
+                lines = f.readlines()
+            s = max(1, start_line) - 1
+            e = min(end_line, len(lines))
+            deleted = lines[s:e]
+            new_lines = lines[:s] + lines[e:]
+            with open(path, "w") as f:
+                f.writelines(new_lines)
+            await _audit_file_write(path, f"DELETE: lines {start_line}-{end_line} ({len(deleted)} lines)", "DELETE")
+            return {"status": "ok", "path": path, "lines_deleted": len(deleted), "new_total": len(new_lines)}
 
         elif tool_name == "write_file":
+            # Legacy — only for NEW files or explicit full rewrites
             path = args.get("path", "")
             content = args.get("content", "")
             if not is_safe_path(path):
                 return {"status": "error", "error": "Access denied — blocked path"}
+            # GUARDRAIL: If file exists and is large, warn
+            if os.path.isfile(path):
+                with open(path, "r") as f:
+                    existing = f.readlines()
+                if len(existing) > 50:
+                    return {"status": "error", "error": f"File has {len(existing)} lines. Use patch_file, insert_lines, or delete_lines instead. Full overwrite blocked for files >50 lines. Read the file first, then make targeted changes."}
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w") as f:
                 f.write(content)
-            await db.audit_trail.insert_one({
-                "id": str(uuid.uuid4()),
-                "action": "FILE_WRITE",
-                "module": "AI_ENGINE",
-                "record_id": path,
-                "record_name": os.path.basename(path),
-                "changes": [{"field": "content", "new_value": f"File written ({len(content)} chars)"}],
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "user": "kairos-engine",
-            })
+            await _audit_file_write(path, content, "WRITE")
             return {"status": "ok", "path": path, "size": len(content), "message": f"File written: {path}"}
 
         elif tool_name == "run_query":
@@ -274,10 +402,57 @@ async def execute_tool(tool_name, args):
                         files.append({"path": f, "relative": f.replace("/app/", ""), "size": os.path.getsize(f)})
             return {"status": "ok", "files": files[:100], "count": len(files)}
 
+        elif tool_name == "get_schema":
+            # Get actual field names from a MongoDB collection by sampling
+            collection = args.get("collection", "")
+            if not collection:
+                return {"status": "error", "error": "collection name required"}
+            try:
+                sample = await db[collection].find_one({}, {"_id": 0})
+                if not sample:
+                    return {"status": "ok", "collection": collection, "fields": [], "note": "Collection empty"}
+                fields = {}
+                for k, v in sample.items():
+                    fields[k] = type(v).__name__
+                count = await db[collection].count_documents({})
+                return {"status": "ok", "collection": collection, "count": count, "fields": fields, "sample_keys": list(sample.keys())}
+            except Exception as ex:
+                return {"status": "error", "error": str(ex)}
+
+        elif tool_name == "run_command":
+            # Run a safe read-only bash command (grep, wc, find, head, etc.)
+            cmd = args.get("command", "")
+            BLOCKED_CMDS = ["rm ", "mv ", "cp ", "chmod", "chown", "kill", "sudo", "apt", "pip ", "npm ", "yarn", "> ", ">>"]
+            for bc in BLOCKED_CMDS:
+                if bc in cmd:
+                    return {"status": "error", "error": f"Command blocked for safety: contains '{bc.strip()}'"}
+            try:
+                proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                output = proc.stdout[:5000]
+                if proc.stderr:
+                    output += f"\n[STDERR]: {proc.stderr[:1000]}"
+                return {"status": "ok", "command": cmd, "output": output, "exit_code": proc.returncode}
+            except subprocess.TimeoutExpired:
+                return {"status": "error", "error": "Command timed out (10s limit)"}
+
         else:
             return {"status": "error", "error": f"Unknown tool: {tool_name}"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+async def _audit_file_write(path, detail, action_type):
+    """Log file modifications to audit trail."""
+    await db.audit_trail.insert_one({
+        "id": str(uuid.uuid4()),
+        "action": f"FILE_{action_type}",
+        "module": "AI_ENGINE",
+        "record_id": path,
+        "record_name": os.path.basename(path),
+        "changes": [{"field": "content", "new_value": str(detail)[:500]}],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "user": "kairos-engine",
+    })
 
 
 async def _run_test_query(query_type):
@@ -627,6 +802,19 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
             system += BA_ONLY_SUFFIX
         elif mode == "dev":
             system += DEV_ONLY_SUFFIX
+            # Inject live DB schemas for dev mode so Kairos uses real field names
+            try:
+                _tasks[task_id]["progress"] = "Loading DB schemas..."
+                schema_info = []
+                key_collections = ["projects", "timesheets", "employees", "entities", "chart_of_accounts", "erp_transactions", "revenue_schedule"]
+                for coll in key_collections:
+                    sample = await db[coll].find_one({}, {"_id": 0})
+                    if sample:
+                        schema_info.append(f"{coll}: {list(sample.keys())}")
+                if schema_info:
+                    system += "\n\n[LIVE DB SCHEMAS]\n" + "\n".join(schema_info)
+            except Exception:
+                pass
         elif mode == "qa":
             system += QA_ONLY_SUFFIX
 
@@ -668,8 +856,8 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
                 _tasks[task_id]["progress"] = f"Executing tool {i+1}/{len(tool_calls[:8])}: {tool_name}..."
                 result = await execute_tool(tool_name, tool_args)
                 tool_results.append({"tool": tool_name, "args": tool_args, "result": result})
-                if tool_name == "write_file" and result.get("status") == "ok":
-                    files_modified.append(result.get("path", ""))
+                if tool_name in ("write_file", "create_file", "patch_file", "insert_lines", "delete_lines") and result.get("status") == "ok":
+                    files_modified.append(result.get("path", tool_args.get("path", "")))
 
             # Phase 3: Follow-up LLM call with tool results
             _tasks[task_id]["progress"] = f"Analyzing results via {provider}..."
