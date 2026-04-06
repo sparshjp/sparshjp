@@ -4,7 +4,7 @@ import {
   Send, Plus, Trash2, ChevronDown, ChevronRight, Copy, Check, FileText,
   Code, Loader2, FolderOpen, X, Cpu, Wrench, Terminal, Database,
   AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play,
-  Paperclip, Globe, Image, FileSpreadsheet, FileType, Link2
+  Paperclip, Globe, Image, Link2, Search, Activity, GitBranch, Package
 } from 'lucide-react';
 
 const MODES = [
@@ -23,21 +23,21 @@ const TEST_QUERIES = [
 ];
 
 const TOOL_ICONS = {
-  read_file: FileText,
-  write_file: Code,
-  run_query: Database,
-  restart_service: Zap,
-  test_api: Terminal,
-  list_files: FolderOpen,
+  read_file: FileText, write_file: Code, run_query: Database,
+  restart_service: Zap, test_api: Terminal, list_files: FolderOpen,
+  create_file: Code, patch_file: Code, insert_lines: Code,
+  delete_lines: Code, get_schema: Database, run_command: Terminal,
+  grep_search: Search, check_logs: Activity, install_package: Package,
+  run_tests: Play,
 };
 
 const TOOL_COLORS = {
-  read_file: '#60a5fa',
-  write_file: '#22c55e',
-  run_query: '#f59e0b',
-  restart_service: '#ef4444',
-  test_api: '#a78bfa',
-  list_files: '#06b6d4',
+  read_file: '#60a5fa', write_file: '#22c55e', run_query: '#f59e0b',
+  restart_service: '#ef4444', test_api: '#a78bfa', list_files: '#06b6d4',
+  create_file: '#22c55e', patch_file: '#f59e0b', insert_lines: '#22c55e',
+  delete_lines: '#ef4444', get_schema: '#06b6d4', run_command: '#60a5fa',
+  grep_search: '#f59e0b', check_logs: '#a78bfa', install_package: '#06b6d4',
+  run_tests: '#22c55e',
 };
 
 function ToolResultCard({ result, index }) {
@@ -48,20 +48,22 @@ function ToolResultCard({ result, index }) {
 
   let summary = '';
   if (result.tool === 'read_file') summary = result.args?.path?.split('/').pop() || '';
-  else if (result.tool === 'write_file') summary = `${result.args?.path?.split('/').pop()} (${result.result?.size || 0} chars)`;
+  else if (result.tool === 'write_file' || result.tool === 'create_file') summary = `${result.args?.path?.split('/').pop()} (${result.result?.size || 0} chars)`;
+  else if (result.tool === 'patch_file') summary = result.args?.path?.split('/').pop() || '';
   else if (result.tool === 'run_query') summary = result.args?.query_type || '';
   else if (result.tool === 'restart_service') summary = result.args?.service || '';
   else if (result.tool === 'test_api') summary = `${result.args?.method} ${result.args?.url}`;
   else if (result.tool === 'list_files') summary = `${result.result?.count || 0} files`;
+  else if (result.tool === 'grep_search') summary = `"${result.args?.pattern}" (${result.result?.count || 0} matches)`;
+  else if (result.tool === 'check_logs') summary = result.args?.service || 'backend';
+  else if (result.tool === 'install_package') summary = result.args?.package || '';
+  else if (result.tool === 'run_tests') summary = result.args?.test_path || 'tests';
 
   return (
     <div className="border border-[#1B2D42] rounded-lg overflow-hidden bg-[#0D1B2A]" data-testid={`tool-result-${index}`}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#152236] transition-colors text-left"
-      >
+      <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#152236] transition-colors text-left">
         <Icon size={13} style={{ color }} className="shrink-0" />
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{result.tool.replace('_', ' ')}</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{result.tool.replace(/_/g, ' ')}</span>
         <span className="text-[10px] text-[#7A8BA0] truncate flex-1">{summary}</span>
         {ok ? <CheckCircle2 size={12} className="text-emerald-500 shrink-0" /> : <AlertCircle size={12} className="text-red-400 shrink-0" />}
         {expanded ? <ChevronUp size={12} className="text-[#4A5B6E] shrink-0" /> : <ChevronDown size={12} className="text-[#4A5B6E] shrink-0" />}
@@ -73,6 +75,73 @@ function ToolResultCard({ result, index }) {
           </pre>
         </div>
       )}
+    </div>
+  );
+}
+
+function StepCard({ step, index, isLast }) {
+  const [expanded, setExpanded] = useState(false);
+  const typeColors = {
+    thinking: '#60a5fa', executing: '#f59e0b', answer: '#00d4aa',
+    complete: '#22c55e', validating: '#a78bfa',
+  };
+  const typeLabels = {
+    thinking: 'Thinking', executing: 'Executing', answer: 'Responding',
+    complete: 'Complete', validating: 'Validating',
+  };
+  const color = typeColors[step.type] || '#4A5B6E';
+  const label = typeLabels[step.type] || step.type;
+
+  return (
+    <div className="relative" data-testid={`step-card-${index}`}>
+      {/* Connector line */}
+      {!isLast && <div className="absolute left-[15px] top-[30px] bottom-[-8px] w-[2px] bg-[#1B2D42]" />}
+      <div className="flex items-start gap-3">
+        {/* Step indicator */}
+        <div
+          className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 border-2"
+          style={{ borderColor: color, color: color, background: `${color}10` }}
+        >
+          {step.step}
+        </div>
+        {/* Step content */}
+        <div className="flex-1 min-w-0 pb-3">
+          <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{label}</span>
+              {step.provider && (
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full border border-[#1B2D42] text-[#4A5B6E]">{step.provider}</span>
+              )}
+              {step.tool_count > 0 && (
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">
+                  {step.tool_count} tool{step.tool_count > 1 ? 's' : ''}
+                </span>
+              )}
+              {step.files_modified?.length > 0 && (
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20">
+                  {step.files_modified.length} file{step.files_modified.length > 1 ? 's' : ''} modified
+                </span>
+              )}
+              {expanded ? <ChevronUp size={10} className="text-[#4A5B6E]" /> : <ChevronDown size={10} className="text-[#4A5B6E]" />}
+            </div>
+            {step.summary && <p className="text-[10px] text-[#7A8BA0] mt-1 line-clamp-2">{step.summary}</p>}
+          </button>
+          {expanded && step.tool_results?.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {step.tool_results.map((tr, ti) => <ToolResultCard key={ti} result={tr} index={ti} />)}
+            </div>
+          )}
+          {expanded && step.files_modified?.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {step.files_modified.map((f, fi) => (
+                <span key={fi} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20">
+                  <CheckCircle2 size={9} /> {f.split('/').pop()}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -101,11 +170,12 @@ export default function AIAgentsPage() {
   const [fileContent, setFileContent] = useState('');
   const [copied, setCopied] = useState(null);
   const [toolbarOpen, setToolbarOpen] = useState(false);
-  const [attachments, setAttachments] = useState([]); // {id, name, type, content, size_kb, uploading}
+  const [attachments, setAttachments] = useState([]);
   const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlLoading, setUrlLoading] = useState(false);
   const [taskProgress, setTaskProgress] = useState('');
+  const [liveSteps, setLiveSteps] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -118,7 +188,7 @@ export default function AIAgentsPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, liveSteps]);
 
   const createSession = async () => {
     const res = await fetch(`${API}/agents/sessions`, {
@@ -156,11 +226,13 @@ export default function AIAgentsPage() {
         const data = await res.json();
 
         setTaskProgress(data.progress || '');
+        if (data.steps) setLiveSteps(data.steps);
 
         if (data.status === 'complete' || data.status === 'error') {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
           setTaskProgress('');
+          setLiveSteps([]);
           setLoading(false);
 
           setMessages(prev => [...prev, {
@@ -171,8 +243,10 @@ export default function AIAgentsPage() {
             files_modified: data.files_modified || [],
             questions: data.questions || [],
             tool_results: data.tool_results || [],
+            steps: data.steps || [],
             agent_type: data.agent_type,
             provider: data.provider,
+            iterations: data.iterations || 1,
             error: data.status === 'error',
           }]);
 
@@ -181,10 +255,9 @@ export default function AIAgentsPage() {
           ));
         }
       } catch {}
-    }, 2000);
+    }, 1500);
   }, []);
 
-  // Cleanup polling on unmount
   useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
 
   const sendMessage = async () => {
@@ -205,9 +278,9 @@ export default function AIAgentsPage() {
     }]);
     setLoading(true);
     setTaskProgress('Starting...');
+    setLiveSteps([]);
 
     try {
-      // Build context from all attachments + selected code file
       let contextParts = [];
       if (selectedFile && fileContent) {
         contextParts.push(`[Code File: ${selectedFile}]\n\`\`\`\n${fileContent.slice(0, 8000)}\n\`\`\``);
@@ -219,7 +292,6 @@ export default function AIAgentsPage() {
       }
       const context = contextParts.join('\n\n---\n\n');
 
-      // Start the task (returns instantly)
       const res = await fetch(`${API}/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -228,17 +300,13 @@ export default function AIAgentsPage() {
 
       if (!res.ok) throw new Error(`Engine error: ${res.status}`);
       const { task_id } = await res.json();
-
-      // Start polling for task completion
       pollTask(task_id, sessionId, userMsg, currentAttachments);
     } catch (err) {
       setLoading(false);
       setTaskProgress('');
+      setLiveSteps([]);
       setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `Error: ${err.message}`,
-        timestamp: new Date().toISOString(),
-        error: true,
+        role: 'assistant', content: `Error: ${err.message}`, timestamp: new Date().toISOString(), error: true,
       }]);
     }
   };
@@ -248,9 +316,7 @@ export default function AIAgentsPage() {
     if (!fileList.length) return;
     for (const file of fileList) {
       const tempId = Math.random().toString(36).slice(2, 8);
-      const placeholder = { id: tempId, name: file.name, type: 'uploading', content: '', size_kb: 0, uploading: true };
-      setAttachments(prev => [...prev, placeholder]);
-
+      setAttachments(prev => [...prev, { id: tempId, name: file.name, type: 'uploading', content: '', size_kb: 0, uploading: true }]);
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -258,13 +324,7 @@ export default function AIAgentsPage() {
         if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
         const data = await res.json();
         setAttachments(prev => prev.map(a => a.id === tempId ? {
-          id: data.id,
-          name: data.filename,
-          type: data.type,
-          content: data.content,
-          size_kb: data.size_kb,
-          ext: data.ext,
-          uploading: false,
+          id: data.id, name: data.filename, type: data.type, content: data.content, size_kb: data.size_kb, ext: data.ext, uploading: false,
         } : a));
       } catch (err) {
         setAttachments(prev => prev.map(a => a.id === tempId ? { ...a, uploading: false, type: 'error', content: err.message } : a));
@@ -281,23 +341,14 @@ export default function AIAgentsPage() {
     setAttachments(prev => [...prev, { id: tempId, name: url, type: 'uploading', content: '', size_kb: 0, uploading: true }]);
     setShowUrlInput(false);
     setUrlInput('');
-
     try {
       const res = await fetch(`${API}/agents/crawl-url`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }),
       });
       const data = await res.json();
       if (data.status === 'error') throw new Error(data.error);
       setAttachments(prev => prev.map(a => a.id === tempId ? {
-        id: tempId,
-        name: data.title || url,
-        type: 'url',
-        content: data.content,
-        size_kb: data.size_kb,
-        url: data.url,
-        uploading: false,
+        id: tempId, name: data.title || url, type: 'url', content: data.content, size_kb: data.size_kb, url: data.url, uploading: false,
       } : a));
     } catch (err) {
       setAttachments(prev => prev.map(a => a.id === tempId ? { ...a, uploading: false, type: 'error', content: err.message } : a));
@@ -305,9 +356,7 @@ export default function AIAgentsPage() {
     setUrlLoading(false);
   };
 
-  const removeAttachment = (id) => {
-    setAttachments(prev => prev.filter(a => a.id !== id));
-  };
+  const removeAttachment = (id) => setAttachments(prev => prev.filter(a => a.id !== id));
 
   const autoResize = useCallback((el) => {
     if (!el) return;
@@ -319,9 +368,7 @@ export default function AIAgentsPage() {
     setLoading(true);
     try {
       const res = await fetch(`${API}/agents/testing/query`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query_type: queryType }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query_type: queryType }),
       });
       const data = await res.json();
       setMessages(prev => [...prev, {
@@ -349,9 +396,7 @@ export default function AIAgentsPage() {
   const readFile = async (path) => {
     try {
       const res = await fetch(`${API}/agents/coding/read-file`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }),
       });
       const data = await res.json();
       setSelectedFile(path);
@@ -373,6 +418,7 @@ export default function AIAgentsPage() {
     return text
       .replace(/```TOOL_CALL[\s\S]*?```/g, '')
       .replace(/```QUESTION[\s\S]*?```/g, '')
+      .replace(/```DONE[\s\S]*?```/g, '')
       .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
         `<div class="my-2"><div class="bg-[#0A1628] rounded-lg border border-[#1B2D42] overflow-hidden"><div class="flex items-center px-3 py-1 bg-[#1B2D42]/50 border-b border-[#1B2D42]"><span class="text-[9px] font-mono text-[#4A5B6E]">${lang || 'code'}</span></div><pre class="p-3 overflow-x-auto text-[10px] leading-relaxed"><code class="text-[#E8EDF2] font-mono">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre></div></div>`)
       .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-[#1B2D42] rounded text-[#00d4aa] text-[10px] font-mono">$1</code>')
@@ -388,9 +434,9 @@ export default function AIAgentsPage() {
 
   const starters = [
     'Run a full health check on the ERP database',
-    'Show me the routes_projects.py file and suggest improvements',
+    'Show me routes_projects.py and suggest improvements',
     'Create a new API endpoint for project profitability report',
-    'Explain Ind AS 115 revenue recognition for our T&M projects',
+    'Explain Ind AS 115 revenue recognition for T&M projects',
     'Validate all vendor GSTINs and check for compliance issues',
   ];
 
@@ -434,19 +480,21 @@ export default function AIAgentsPage() {
               <Cpu size={14} className="text-[#00d4aa]" />
             </div>
             <div>
-              <h1 className="text-xs font-bold text-[#E8EDF2] leading-none">Kairos AI Engine</h1>
-              <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5">Analyze · Code · Test · Deploy</p>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-xs font-bold text-[#E8EDF2] leading-none">Kairos AI Engine</h1>
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v2</span>
+              </div>
+              <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5 flex items-center gap-1">
+                <GitBranch size={8} /> Agentic Loop &middot; Multi-Step &middot; Self-Validating
+              </p>
             </div>
           </div>
 
           {/* Mode Selector */}
           <div className="relative ml-3">
-            <button
-              onClick={() => setModeOpen(!modeOpen)}
-              data-testid="mode-selector"
+            <button onClick={() => setModeOpen(!modeOpen)} data-testid="mode-selector"
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all"
-              style={{ background: `${currentMode.color}10`, color: currentMode.color, borderColor: `${currentMode.color}40` }}
-            >
+              style={{ background: `${currentMode.color}10`, color: currentMode.color, borderColor: `${currentMode.color}40` }}>
               <Settings2 size={11} />
               {currentMode.label}
               <ChevronDown size={10} className={`transition-transform ${modeOpen ? 'rotate-180' : ''}`} />
@@ -458,8 +506,7 @@ export default function AIAgentsPage() {
                   {MODES.map(m => (
                     <button key={m.id} data-testid={`mode-${m.id}`}
                       onClick={() => { setMode(m.id); setModeOpen(false); }}
-                      className={`w-full flex items-start gap-2 px-3 py-2.5 text-left transition-colors ${mode === m.id ? 'bg-[#152236]' : 'hover:bg-[#152236]/50'}`}
-                    >
+                      className={`w-full flex items-start gap-2 px-3 py-2.5 text-left transition-colors ${mode === m.id ? 'bg-[#152236]' : 'hover:bg-[#152236]/50'}`}>
                       <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: m.color }} />
                       <div>
                         <p className="text-[11px] font-bold" style={{ color: mode === m.id ? m.color : '#E8EDF2' }}>{m.label}</p>
@@ -474,7 +521,7 @@ export default function AIAgentsPage() {
 
           <div className="flex-1" />
 
-          {/* Toolbar Buttons */}
+          {/* Toolbar */}
           <div className="flex items-center gap-1.5">
             <button onClick={() => loadFiles('/app/backend')} data-testid="browse-backend-btn"
               className="px-2 py-1.5 rounded text-[9px] font-bold bg-[#152236] border border-[#1B2D42] text-[#4A5B6E] hover:text-[#22c55e] hover:border-[#22c55e]/30 transition-colors flex items-center gap-1">
@@ -511,7 +558,7 @@ export default function AIAgentsPage() {
           <div className="px-3 py-1.5 bg-[#22c55e]/5 border-b border-[#22c55e]/20 flex items-center gap-2">
             <FileText size={11} className="text-[#22c55e]" />
             <span className="text-[10px] font-mono text-[#22c55e]">{selectedFile}</span>
-            <span className="text-[9px] text-[#4A5B6E]">({(fileContent.length / 1024).toFixed(1)}KB attached as context)</span>
+            <span className="text-[9px] text-[#4A5B6E]">({(fileContent.length / 1024).toFixed(1)}KB attached)</span>
             <button onClick={() => { setSelectedFile(null); setFileContent(''); }} className="ml-auto text-[#4A5B6E] hover:text-[#ef4444] transition-colors"><X size={12} /></button>
           </div>
         )}
@@ -546,10 +593,15 @@ export default function AIAgentsPage() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00d4aa]/15 to-[#00d4aa]/5 border border-[#00d4aa]/20 flex items-center justify-center mb-4">
                 <Cpu size={28} className="text-[#00d4aa]" />
               </div>
-              <h2 className="text-lg font-bold text-[#E8EDF2] mb-1">Kairos AI Engine</h2>
-              <p className="text-xs text-[#4A5B6E] max-w-md mb-6">
-                Your unified AI developer. I can analyze requirements, write and modify code, run database validations, and deploy changes — all in one conversation.
+              <h2 className="text-lg font-bold text-[#E8EDF2] mb-1">Kairos AI Engine v2</h2>
+              <p className="text-xs text-[#4A5B6E] max-w-md mb-2">
+                Agentic AI developer with multi-step autonomous execution.
               </p>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Multi-Step Loop</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">Self-Validating</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">16 Tools</span>
+              </div>
               <div className="flex flex-wrap gap-2 justify-center max-w-xl">
                 {starters.map((s, i) => (
                   <button key={i} onClick={() => setInput(s)} data-testid={`starter-${i}`}
@@ -571,10 +623,9 @@ export default function AIAgentsPage() {
               <div className={`max-w-[78%] ${msg.role === 'user' ? '' : 'flex-1 max-w-[78%]'}`}>
                 <div className={`rounded-lg p-3 ${msg.role === 'user'
                   ? 'bg-[#152236] border border-[#1B2D42]'
-                  : msg.error
-                    ? 'bg-[#ef4444]/5 border border-[#ef4444]/20'
-                    : 'bg-[#0A1628] border border-[#1B2D42]'
-                  }`}>
+                  : msg.error ? 'bg-[#ef4444]/5 border border-[#ef4444]/20'
+                  : 'bg-[#0A1628] border border-[#1B2D42]'
+                }`}>
                   {msg.role === 'user' ? (
                     <div>
                       {msg.attachments && msg.attachments.length > 0 && (
@@ -599,7 +650,7 @@ export default function AIAgentsPage() {
                       <div className="text-xs text-[#c8d4e0] leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
                     </div>
                   )}
-                  <div className="flex items-center gap-2 mt-1.5">
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <p className="text-[8px] text-[#4A5B6E]">{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}</p>
                     {msg.provider && (
                       <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${
@@ -608,6 +659,11 @@ export default function AIAgentsPage() {
                         : 'text-[#a78bfa] bg-[#a78bfa]/10 border-[#a78bfa]/20'
                       }`}>
                         {msg.provider === 'groq' ? 'Groq / Llama 3.3' : msg.provider === 'openrouter' ? 'OpenRouter' : 'Claude'}
+                      </span>
+                    )}
+                    {msg.iterations > 1 && (
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">
+                        {msg.iterations} steps
                       </span>
                     )}
                   </div>
@@ -620,8 +676,13 @@ export default function AIAgentsPage() {
                   </div>
                 )}
 
-                {/* Tool Execution Results */}
-                {msg.tool_results && msg.tool_results.length > 0 && (
+                {/* Step-by-step execution trail */}
+                {msg.steps && msg.steps.length > 1 && (
+                  <StepTrail steps={msg.steps} />
+                )}
+
+                {/* Tool Results (for single-step or legacy messages) */}
+                {msg.tool_results && msg.tool_results.length > 0 && (!msg.steps || msg.steps.length <= 1) && (
                   <div className="mt-2 space-y-1" data-testid="tool-results-section">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Wrench size={11} className="text-[#4A5B6E]" />
@@ -633,7 +694,7 @@ export default function AIAgentsPage() {
                   </div>
                 )}
 
-                {/* Files Modified Badge */}
+                {/* Files Modified */}
                 {msg.files_modified && msg.files_modified.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5" data-testid="files-modified-section">
                     {msg.files_modified.map((f, fi) => (
@@ -651,18 +712,29 @@ export default function AIAgentsPage() {
             </div>
           ))}
 
+          {/* Live execution indicator */}
           {loading && (
             <div className="flex gap-3">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00d4aa]/20 to-[#00d4aa]/5 border border-[#00d4aa]/20 flex items-center justify-center shrink-0">
                 <Loader2 size={13} className="animate-spin text-[#00d4aa]" />
               </div>
-              <div className="bg-[#0A1628] border border-[#1B2D42] rounded-lg p-3">
-                <div className="flex items-center gap-2 text-xs text-[#4A5B6E]">
-                  <span className="animate-pulse">{taskProgress || 'Engine processing...'}</span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#152236] border border-[#1B2D42]" style={{ color: currentMode.color }}>
-                    {currentMode.label}
-                  </span>
+              <div className="flex-1 max-w-[78%]">
+                <div className="bg-[#0A1628] border border-[#1B2D42] rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-xs text-[#4A5B6E] mb-2">
+                    <span className="animate-pulse">{taskProgress || 'Engine processing...'}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#152236] border border-[#1B2D42]" style={{ color: currentMode.color }}>
+                      {currentMode.label}
+                    </span>
+                  </div>
                 </div>
+                {/* Live steps */}
+                {liveSteps.length > 0 && (
+                  <div className="mt-2 space-y-1 ml-1">
+                    {liveSteps.map((step, si) => (
+                      <StepCard key={si} step={step} index={si} isLast={si === liveSteps.length - 1} />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -671,7 +743,6 @@ export default function AIAgentsPage() {
 
         {/* Input Area */}
         <div className="border-t border-[#1B2D42] bg-[#0A1628]">
-          {/* Attachment Chips */}
           {attachments.length > 0 && (
             <div className="px-3 pt-2.5 flex flex-wrap gap-1.5" data-testid="attachment-chips">
               {attachments.map(att => (
@@ -697,66 +768,44 @@ export default function AIAgentsPage() {
             </div>
           )}
 
-          {/* URL Input Bar */}
           {showUrlInput && (
             <div className="px-3 pt-2" data-testid="url-input-bar">
               <div className="flex gap-2 items-center bg-[#152236] border border-[#60a5fa]/30 rounded-lg px-3 py-2">
                 <Link2 size={13} className="text-[#60a5fa] shrink-0" />
-                <input
-                  autoFocus
-                  value={urlInput}
-                  onChange={e => setUrlInput(e.target.value)}
+                <input autoFocus value={urlInput} onChange={e => setUrlInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleUrlSubmit(); if (e.key === 'Escape') { setShowUrlInput(false); setUrlInput(''); } }}
                   placeholder="Paste any URL — website, article, docs..."
                   data-testid="url-input-field"
-                  className="flex-1 bg-transparent text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:outline-none"
-                />
+                  className="flex-1 bg-transparent text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:outline-none" />
                 <button onClick={handleUrlSubmit} disabled={!urlInput.trim() || urlLoading} data-testid="url-submit-btn"
                   className="px-2.5 py-1 rounded text-[10px] font-bold bg-[#60a5fa]/15 text-[#60a5fa] border border-[#60a5fa]/30 hover:bg-[#60a5fa]/25 transition-all disabled:opacity-30">
                   {urlLoading ? <Loader2 size={11} className="animate-spin" /> : 'Fetch'}
                 </button>
-                <button onClick={() => { setShowUrlInput(false); setUrlInput(''); }} className="text-[#4A5B6E] hover:text-[#E8EDF2] transition-colors">
-                  <X size={13} />
-                </button>
+                <button onClick={() => { setShowUrlInput(false); setUrlInput(''); }} className="text-[#4A5B6E] hover:text-[#E8EDF2] transition-colors"><X size={13} /></button>
               </div>
             </div>
           )}
 
-          {/* Main Input */}
           <div className="p-3">
             <div className="flex items-end gap-2 bg-[#152236] border border-[#1B2D42] rounded-xl px-1 py-1 focus-within:border-[#00d4aa]/40 transition-colors">
-              {/* Left action buttons */}
               <div className="flex items-center gap-0.5 pl-1 pb-1">
                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple className="hidden"
                   accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.csv,.txt,.md,.json,.xml,.py,.js,.jsx,.ts,.tsx,.html,.css,.png,.jpg,.jpeg,.gif,.webp,.svg" />
-                <button onClick={() => fileInputRef.current?.click()} disabled={loading}
-                  data-testid="attach-file-btn"
-                  title="Attach files (PDF, Word, Excel, PowerPoint, images, code...)"
-                  className="p-1.5 rounded-lg text-[#4A5B6E] hover:text-[#22c55e] hover:bg-[#22c55e]/10 transition-all disabled:opacity-30">
+                <button onClick={() => fileInputRef.current?.click()} disabled={loading} data-testid="attach-file-btn"
+                  title="Attach files" className="p-1.5 rounded-lg text-[#4A5B6E] hover:text-[#22c55e] hover:bg-[#22c55e]/10 transition-all disabled:opacity-30">
                   <Paperclip size={16} />
                 </button>
-                <button onClick={() => setShowUrlInput(!showUrlInput)} disabled={loading}
-                  data-testid="attach-url-btn"
-                  title="Paste a URL to crawl"
-                  className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${showUrlInput ? 'text-[#60a5fa] bg-[#60a5fa]/10' : 'text-[#4A5B6E] hover:text-[#60a5fa] hover:bg-[#60a5fa]/10'}`}>
+                <button onClick={() => setShowUrlInput(!showUrlInput)} disabled={loading} data-testid="attach-url-btn"
+                  title="Paste URL" className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${showUrlInput ? 'text-[#60a5fa] bg-[#60a5fa]/10' : 'text-[#4A5B6E] hover:text-[#60a5fa] hover:bg-[#60a5fa]/10'}`}>
                   <Globe size={16} />
                 </button>
               </div>
-
-              {/* Textarea */}
-              <textarea
-                ref={el => { textareaRef.current = el; inputRef.current = el; }}
-                value={input}
-                onChange={e => { setInput(e.target.value); autoResize(e.target); }}
+              <textarea ref={el => { textareaRef.current = el; inputRef.current = el; }}
+                value={input} onChange={e => { setInput(e.target.value); autoResize(e.target); }}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                placeholder="Describe what you need — attach files, paste URLs, or type your request..."
-                disabled={loading}
-                rows={1}
-                data-testid="engine-input"
-                className="flex-1 px-2 py-2 bg-transparent text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:outline-none disabled:opacity-50 resize-none max-h-40 leading-relaxed"
-              />
-
-              {/* Send button */}
+                placeholder="Describe what you need — I'll plan, execute, and verify autonomously..."
+                disabled={loading} rows={1} data-testid="engine-input"
+                className="flex-1 px-2 py-2 bg-transparent text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:outline-none disabled:opacity-50 resize-none max-h-40 leading-relaxed" />
               <div className="pb-1 pr-1">
                 <button onClick={sendMessage} disabled={loading || (!input.trim() && attachments.length === 0)} data-testid="engine-send-btn"
                   className="p-2 rounded-lg bg-[#00d4aa]/15 text-[#00d4aa] border border-[#00d4aa]/30 hover:bg-[#00d4aa]/25 transition-all disabled:opacity-20">
@@ -764,13 +813,33 @@ export default function AIAgentsPage() {
                 </button>
               </div>
             </div>
-
             <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
-              Supports PDF, Word, Excel, PowerPoint, images, CSV, code files, and any URL
+              Agentic loop with up to 10 autonomous steps &middot; 16 tools &middot; Self-validating
             </p>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StepTrail({ steps }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="mt-2" data-testid="step-trail">
+      <button onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[#4A5B6E] hover:text-[#00d4aa] transition-colors">
+        <GitBranch size={11} />
+        {steps.length} execution step{steps.length > 1 ? 's' : ''}
+        {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+      </button>
+      {expanded && (
+        <div className="mt-2 ml-1 space-y-1">
+          {steps.map((step, si) => (
+            <StepCard key={si} step={step} index={si} isLast={si === steps.length - 1} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
