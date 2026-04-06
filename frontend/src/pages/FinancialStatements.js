@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronRight, IndianRupee } from 'lucide-react';
+import { FileText, Download, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronRight, IndianRupee, FileSpreadsheet } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+function downloadExport(endpoint, filename) {
+  const url = `${API}/api/financial-statements/${endpoint}`;
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
 function formatINR(num) {
   if (num === undefined || num === null) return '—';
@@ -127,6 +137,26 @@ export default function FinancialStatements() {
         <div>
           <h1 className="text-2xl font-bold text-[#E8EDF2]">Financial Statements</h1>
           <p className="text-[#4A5B6E] text-sm mt-1">Schedule III - Companies Act 2013 (Division I)</p>
+        </div>
+        <div className="flex gap-2">
+          {activeTab === 'balance-sheet' && (
+            <button data-testid="fs-download-bs" onClick={() => downloadExport('balance-sheet/export/excel', 'Balance_Sheet_Schedule_III.xlsx')}
+              className="flex items-center gap-2 px-3 py-2 bg-[#152236] border border-[#1B2D42] text-[#7A8BA0] hover:text-[#00C9A7] hover:border-[#00C9A7]/30 rounded-lg text-xs font-medium transition-colors">
+              <FileSpreadsheet size={14} /> Download Excel
+            </button>
+          )}
+          {activeTab === 'profit-loss' && (
+            <button data-testid="fs-download-pl" onClick={() => downloadExport('profit-and-loss/export/excel', 'Profit_Loss_Schedule_III.xlsx')}
+              className="flex items-center gap-2 px-3 py-2 bg-[#152236] border border-[#1B2D42] text-[#7A8BA0] hover:text-[#00C9A7] hover:border-[#00C9A7]/30 rounded-lg text-xs font-medium transition-colors">
+              <FileSpreadsheet size={14} /> Download Excel
+            </button>
+          )}
+          {activeTab === 'trial-balance' && (
+            <button data-testid="fs-download-tb" onClick={() => downloadExport('trial-balance/export/excel', 'Trial_Balance.xlsx')}
+              className="flex items-center gap-2 px-3 py-2 bg-[#152236] border border-[#1B2D42] text-[#7A8BA0] hover:text-[#00C9A7] hover:border-[#00C9A7]/30 rounded-lg text-xs font-medium transition-colors">
+              <FileSpreadsheet size={14} /> Download Excel
+            </button>
+          )}
         </div>
       </div>
 

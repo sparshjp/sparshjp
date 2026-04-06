@@ -58,7 +58,7 @@ function MasterData() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -110,7 +110,7 @@ function MasterData() {
                   type="text"
                   value={newEntity.name}
                   onChange={(e) => setNewEntity({...newEntity, name: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                   placeholder="Company/Person name"
                 />
               </div>
@@ -120,7 +120,7 @@ function MasterData() {
                   type="text"
                   value={newEntity.gstin}
                   onChange={(e) => setNewEntity({...newEntity, gstin: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7] mono"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] mono placeholder:text-[#4A5B6E]"
                   placeholder="22AAAAA0000A1Z5"
                   maxLength="15"
                 />
@@ -131,7 +131,7 @@ function MasterData() {
                   type="text"
                   value={newEntity.pan}
                   onChange={(e) => setNewEntity({...newEntity, pan: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7] mono"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] mono placeholder:text-[#4A5B6E]"
                   placeholder="ABCDE1234F"
                   maxLength="10"
                 />
@@ -142,7 +142,7 @@ function MasterData() {
                   type="text"
                   value={newEntity.contact}
                   onChange={(e) => setNewEntity({...newEntity, contact: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                   placeholder="Phone number"
                 />
               </div>
@@ -152,7 +152,7 @@ function MasterData() {
                   type="email"
                   value={newEntity.email}
                   onChange={(e) => setNewEntity({...newEntity, email: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                   placeholder="email@example.com"
                 />
               </div>
@@ -162,7 +162,7 @@ function MasterData() {
                   type="text"
                   value={newEntity.address}
                   onChange={(e) => setNewEntity({...newEntity, address: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                   placeholder="Full address"
                 />
               </div>
@@ -210,7 +210,7 @@ function MasterData() {
                 </thead>
                 <tbody>
                   {entities.map((entity) => (
-                    <tr key={entity.id} className="border-b border-slate-100 hover:bg-[#152236]">
+                    <tr key={entity.id} className="border-b border-[#1B2D42]/40 hover:bg-[#1B2D42]/30">
                       <td className="py-3">
                         <div>
                           <p className="font-medium text-[#E8EDF2]">{entity.name}</p>
@@ -221,7 +221,7 @@ function MasterData() {
                       </td>
                       <td className="py-3 mono text-[#7A8BA0]">{entity.gstin || '-'}</td>
                       <td className="py-3">
-                        <span className={`px-2 py-1 rounded text-xs ${entity.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`px-2 py-1 rounded text-xs ${entity.status === 'Active' ? 'bg-[#00C9A7]/15 text-[#00C9A7]' : 'bg-[#FF4D6A]/15 text-[#FF4D6A]'}`}>
                           {entity.status}
                         </span>
                       </td>

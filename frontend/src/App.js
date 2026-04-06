@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
-  Scale, IndianRupee
+  Scale, IndianRupee, Factory
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -27,6 +27,7 @@ import FinancialStatements from './pages/FinancialStatements';
 import SellingModule from './pages/SellingModule';
 import BuyingModule from './pages/BuyingModule';
 import GSTModule from './pages/GSTModule';
+import ManufacturingModule from './pages/ManufacturingModule';
 import UniversalAI from './components/UniversalAI';
 import { Toaster } from './components/ui/sonner';
 
@@ -72,9 +73,10 @@ function Sidebar({ isOpen, setIsOpen }) {
     },
     {
       id: 'stock',
-      title: 'Stock',
+      title: 'Stock & Manufacturing',
       items: [
         { path: '/stock', label: 'Inventory', icon: Boxes },
+        { path: '/manufacturing', label: 'Manufacturing', icon: Factory },
         { path: '/quality', label: 'Quality', icon: ClipboardCheck },
       ]
     },
@@ -243,6 +245,7 @@ function App() {
             <Route path="/financial-statements" element={<FinancialStatements />} />
             <Route path="/selling" element={<SellingModule />} />
             <Route path="/buying" element={<BuyingModule />} />
+            <Route path="/manufacturing" element={<ManufacturingModule />} />
             <Route path="/gst-tds" element={<GSTModule />} />
           </Routes>
           </div>
@@ -258,27 +261,25 @@ function App() {
 
 function SettingsRouter() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900">Settings</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link to="/settings/coa" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
-            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">Chart of Accounts</h3>
-            <p className="text-sm text-slate-600">Manage ledger accounts</p>
-          </Link>
-          <Link to="/settings/cost-centers" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
-            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">Cost Centers</h3>
-            <p className="text-sm text-slate-600">Define departments</p>
-          </Link>
-          <Link to="/settings/master-data" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
-            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">Master Data</h3>
-            <p className="text-sm text-slate-600">Vendors & Clients</p>
-          </Link>
-          <Link to="/settings/import" className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all">
-            <h3 className="heading-font text-lg font-bold text-slate-900 mb-2">CSV Import</h3>
-            <p className="text-sm text-slate-600">Bulk import data</p>
-          </Link>
-        </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold text-[#E8EDF2]">Settings</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link to="/settings/coa" className="bg-[#152236] border border-[#1B2D42] p-6 rounded-lg hover:border-[#00C9A7]/30 transition-all">
+          <h3 className="text-lg font-bold text-[#E8EDF2] mb-2">Chart of Accounts</h3>
+          <p className="text-sm text-[#4A5B6E]">Manage ledger accounts</p>
+        </Link>
+        <Link to="/settings/cost-centers" className="bg-[#152236] border border-[#1B2D42] p-6 rounded-lg hover:border-[#00C9A7]/30 transition-all">
+          <h3 className="text-lg font-bold text-[#E8EDF2] mb-2">Cost Centers</h3>
+          <p className="text-sm text-[#4A5B6E]">Define departments</p>
+        </Link>
+        <Link to="/settings/master-data" className="bg-[#152236] border border-[#1B2D42] p-6 rounded-lg hover:border-[#00C9A7]/30 transition-all">
+          <h3 className="text-lg font-bold text-[#E8EDF2] mb-2">Master Data</h3>
+          <p className="text-sm text-[#4A5B6E]">Vendors & Clients</p>
+        </Link>
+        <Link to="/settings/import" className="bg-[#152236] border border-[#1B2D42] p-6 rounded-lg hover:border-[#00C9A7]/30 transition-all">
+          <h3 className="text-lg font-bold text-[#E8EDF2] mb-2">CSV Import</h3>
+          <p className="text-sm text-[#4A5B6E]">Bulk import data</p>
+        </Link>
       </div>
     </div>
   );

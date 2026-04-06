@@ -62,7 +62,7 @@ function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
           <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="reports-title">
@@ -89,7 +89,7 @@ function Reports() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Example: Show me all electricity spends for Gujarat plant in 2025"
-                className="flex-1 border border-[#1B2D42] rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                className="flex-1 bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-3 text-sm text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                 data-testid="ai-query-input"
                 onKeyPress={(e) => e.key === 'Enter' && handleQuery()}
               />
@@ -263,7 +263,7 @@ function Reports() {
                 </thead>
                 <tbody className="mono">
                   {Object.entries(trialBalance.accounts).map(([acc, bal]) => (
-                    <tr key={acc} className="border-b border-slate-100">
+                    <tr key={acc} className="border-b border-[#1B2D42]/40">
                       <td className="py-2 text-[#7A8BA0]">{acc}</td>
                       <td className="py-2 text-right text-[#E8EDF2]">₹{bal.debit.toFixed(2)}</td>
                       <td className="py-2 text-right text-[#E8EDF2]">₹{bal.credit.toFixed(2)}</td>

@@ -82,7 +82,7 @@ function CSVImport() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="csv-import-title">
@@ -100,10 +100,10 @@ function CSVImport() {
               <select
                 value={module}
                 onChange={(e) => setModule(e.target.value)}
-                className="w-full md:w-64 border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                className="w-full md:w-64 bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7]"
               >
                 {modules.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
+                  <option key={m.value} value={m.value} className="bg-[#0D1B2A] text-[#E8EDF2]">{m.label}</option>
                 ))}
               </select>
             </div>
@@ -146,25 +146,25 @@ function CSVImport() {
         </div>
 
         {validation && (
-          <div className={`border p-6 rounded-sm ${validation.valid ? 'bg-[#00C9A7]/10 border-green-200' : 'bg-[#FF4D6A]/10 border-red-200'}`} data-testid="validation-result">
+          <div className={`border p-6 rounded-sm ${validation.valid ? 'bg-[#00C9A7]/10 border-[#00C9A7]/30' : 'bg-[#FF4D6A]/10 border-[#FF4D6A]/30'}`} data-testid="validation-result">
             <div className="flex items-start space-x-3">
               {validation.valid ? (
-                <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
+                <CheckCircle className="text-[#00C9A7] flex-shrink-0" size={24} />
               ) : (
-                <AlertCircle className="text-red-600 flex-shrink-0" size={24} />
+                <AlertCircle className="text-[#FF4D6A] flex-shrink-0" size={24} />
               )}
               <div className="flex-1">
-                <h3 className="heading-font text-lg font-bold mb-2">
+                <h3 className="heading-font text-lg font-bold text-[#E8EDF2] mb-2">
                   {validation.valid ? 'Validation Passed' : 'Validation Failed'}
                 </h3>
-                <p className="text-sm mb-3">Found {validation.row_count} rows</p>
+                <p className="text-sm text-[#7A8BA0] mb-3">Found {validation.row_count} rows</p>
                 
                 {validation.errors.length > 0 && (
                   <div className="mb-3">
-                    <p className="text-sm font-bold mb-2">Errors:</p>
+                    <p className="text-sm font-bold text-[#E8EDF2] mb-2">Errors:</p>
                     <ul className="space-y-1 text-sm">
                       {validation.errors.map((err, idx) => (
-                        <li key={idx} className="text-red-700">• {err}</li>
+                        <li key={idx} className="text-[#FF4D6A]">• {err}</li>
                       ))}
                     </ul>
                   </div>
@@ -172,10 +172,10 @@ function CSVImport() {
                 
                 {validation.warnings.length > 0 && (
                   <div>
-                    <p className="text-sm font-bold mb-2">Warnings:</p>
+                    <p className="text-sm font-bold text-[#E8EDF2] mb-2">Warnings:</p>
                     <ul className="space-y-1 text-sm">
                       {validation.warnings.map((warn, idx) => (
-                        <li key={idx} className="text-yellow-700">• {warn}</li>
+                        <li key={idx} className="text-[#FFB547]">• {warn}</li>
                       ))}
                     </ul>
                   </div>
@@ -186,25 +186,25 @@ function CSVImport() {
         )}
 
         {importResult && (
-          <div className="bg-[#00C9A7]/10 border border-green-200 p-6 rounded-sm" data-testid="import-result">
+          <div className="bg-[#00C9A7]/10 border border-[#00C9A7]/30 p-6 rounded-sm" data-testid="import-result">
             <div className="flex items-start space-x-3">
-              <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
+              <CheckCircle className="text-[#00C9A7] flex-shrink-0" size={24} />
               <div>
-                <h3 className="heading-font text-lg font-bold text-green-900 mb-2">Import Successful</h3>
-                <p className="text-sm text-green-700">Imported {importResult.imported} transactions to {module} module</p>
-                <p className="text-xs text-green-600 mt-2">Transactions are in draft status. Review and post them from the module page.</p>
+                <h3 className="heading-font text-lg font-bold text-[#00C9A7] mb-2">Import Successful</h3>
+                <p className="text-sm text-[#7A8BA0]">Imported {importResult.imported} transactions to {module} module</p>
+                <p className="text-xs text-[#4A5B6E] mt-2">Transactions are in draft status. Review and post them from the module page.</p>
               </div>
             </div>
           </div>
         )}
 
-        <div className="bg-[#F4F4F5] border border-[#1B2D42] p-6 rounded-sm">
+        <div className="bg-[#0D1B2A] border border-[#1B2D42] p-6 rounded-sm">
           <h3 className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-3">Zoho-Standard CSV Format</h3>
           
           <div className="space-y-4">
             <div>
               <p className="text-sm font-bold text-[#7A8BA0] mb-2">Purchases/Sales:</p>
-              <code className="block bg-[#152236] p-3 rounded-sm text-xs mono border border-[#1B2D42]">
+              <code className="block bg-[#152236] p-3 rounded-sm text-xs mono border border-[#1B2D42] text-[#E8EDF2]">
                 Date, Entity Name, Item/Service, HSN Code, Quantity, Rate, GST Rate, Cess, Total, Cost Center
               </code>
               <p className="text-xs text-[#4A5B6E] mt-2">Example: "2026-01-15, ABC Suppliers, Laptop, 84713020, 1, 50000, 18, 0, 59000, IT Department"</p>
@@ -226,9 +226,9 @@ function CSVImport() {
             </div>
           </div>
 
-          <div className="mt-4 p-4 bg-[#00C9A7]/10 border border-blue-200 rounded-sm">
-            <p className="text-sm font-bold text-blue-900 mb-1">Important Notes:</p>
-            <ul className="space-y-1 text-xs text-blue-700">
+          <div className="mt-4 p-4 bg-[#152236] border border-[#1B2D42] rounded-sm">
+            <p className="text-sm font-bold text-[#00C9A7] mb-1">Important Notes:</p>
+            <ul className="space-y-1 text-xs text-[#7A8BA0]">
               <li>• Date format must be YYYY-MM-DD</li>
               <li>• For purchases with HSN codes, inventory will be automatically updated</li>
               <li>• Ledger names must exist in Chart of Accounts (validation will warn if missing)</li>

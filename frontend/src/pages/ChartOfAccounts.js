@@ -84,7 +84,7 @@ function ChartOfAccounts() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -120,7 +120,7 @@ function ChartOfAccounts() {
                   type="text"
                   value={newAccount.ledger_name}
                   onChange={(e) => setNewAccount({...newAccount, ledger_name: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                   placeholder="e.g., Bank Account - HDFC"
                 />
               </div>
@@ -129,10 +129,10 @@ function ChartOfAccounts() {
                 <select
                   value={newAccount.category}
                   onChange={(e) => setNewAccount({...newAccount, category: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7]"
                 >
                   {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                    <option key={cat} value={cat} className="bg-[#0D1B2A] text-[#E8EDF2]">{cat}</option>
                   ))}
                 </select>
               </div>
@@ -142,7 +142,7 @@ function ChartOfAccounts() {
                   type="number"
                   value={newAccount.opening_balance}
                   onChange={(e) => setNewAccount({...newAccount, opening_balance: parseFloat(e.target.value)})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7]"
                   placeholder="0.00"
                 />
               </div>
@@ -173,7 +173,7 @@ function ChartOfAccounts() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search accounts..."
-                className="w-full pl-10 pr-4 py-2 border border-[#1B2D42] rounded-sm focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                className="w-full bg-[#0D1B2A] pl-10 pr-4 py-2 border border-[#1B2D42] rounded-sm text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
               />
             </div>
             <span className="mono text-sm text-[#4A5B6E]">{filteredAccounts.length} accounts</span>
@@ -199,7 +199,7 @@ function ChartOfAccounts() {
                 </thead>
                 <tbody className="mono">
                   {filteredAccounts.map((acc) => (
-                    <tr key={acc.id} className="border-b border-slate-100 hover:bg-[#152236]">
+                    <tr key={acc.id} className="border-b border-[#1B2D42]/40 hover:bg-[#1B2D42]/30">
                       <td className="py-3 text-[#E8EDF2]">{acc.ledger_name}</td>
                       <td className="py-3">
                         <span className="px-2 py-1 bg-[#1B2D42] text-[#7A8BA0] rounded text-xs">{acc.category}</span>
@@ -214,10 +214,10 @@ function ChartOfAccounts() {
           )}
         </div>
 
-        <div className="bg-[#F4F4F5] border border-[#1B2D42] p-6 rounded-sm">
+        <div className="bg-[#0D1B2A] border border-[#1B2D42] p-6 rounded-sm">
           <h3 className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-3">CSV Template Format</h3>
           <p className="text-sm text-[#7A8BA0] mb-2">Your CSV should have these columns:</p>
-          <code className="block bg-[#152236] p-3 rounded-sm text-xs mono border border-[#1B2D42]">
+          <code className="block bg-[#152236] p-3 rounded-sm text-xs mono border border-[#1B2D42] text-[#E8EDF2]">
             Ledger Name, Category, Opening Balance
           </code>
           <p className="text-xs text-[#4A5B6E] mt-2">Example: "Bank Account - HDFC, Current Asset, 50000"</p>

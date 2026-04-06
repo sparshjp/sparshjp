@@ -930,6 +930,7 @@ try:
     from routes_selling import router as selling_router, set_db as selling_set_db
     from routes_financial_statements import router as fs_router, set_db as fs_set_db
     from routes_statutory import router as stat_router, set_db as stat_set_db
+    from routes_manufacturing import router as mfg_router, set_db as mfg_set_db
     from ai_orchestrator import AIOrchestrator
     
     # Initialize AI Orchestrator
@@ -947,6 +948,7 @@ try:
     selling_set_db(db)
     fs_set_db(db)
     stat_set_db(db)
+    mfg_set_db(db)
     
     # Universal AI Prompt Endpoint
     @api_router.post("/ai/universal-prompt")
@@ -971,6 +973,7 @@ try:
     api_router.include_router(selling_router)
     api_router.include_router(fs_router)
     api_router.include_router(stat_router)
+    api_router.include_router(mfg_router)
     
     logging.info("ERP modules will be integrated")
 except Exception as e:

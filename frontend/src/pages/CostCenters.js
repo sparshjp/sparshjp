@@ -49,7 +49,7 @@ function CostCenters() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -78,7 +78,7 @@ function CostCenters() {
                   type="text"
                   value={newCenter.name}
                   onChange={(e) => setNewCenter({...newCenter, name: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                   placeholder="e.g., Marketing Department"
                 />
               </div>
@@ -88,7 +88,7 @@ function CostCenters() {
                   type="text"
                   value={newCenter.description}
                   onChange={(e) => setNewCenter({...newCenter, description: e.target.value})}
-                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] placeholder:text-[#4A5B6E]"
                   placeholder="Optional description"
                 />
               </div>
@@ -135,7 +135,7 @@ function CostCenters() {
           )}
         </div>
 
-        <div className="bg-[#F4F4F5] border border-[#1B2D42] p-6 rounded-sm">
+        <div className="bg-[#0D1B2A] border border-[#1B2D42] p-6 rounded-sm">
           <h3 className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-3">How Cost Centers Work</h3>
           <ul className="space-y-2 text-sm text-[#7A8BA0]">
             <li className="flex items-start space-x-2">
