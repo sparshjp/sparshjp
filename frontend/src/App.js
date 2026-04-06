@@ -22,6 +22,9 @@ import MasterData from './pages/MasterData';
 import CSVImport from './pages/CSVImport';
 import JournalEntry from './pages/JournalEntry';
 import AdminDataTables from './pages/AdminDataTables';
+import FinancialStatements from './pages/FinancialStatements';
+import SellingModule from './pages/SellingModule';
+import BuyingModule from './pages/BuyingModule';
 import UniversalAI from './components/UniversalAI';
 import { Toaster } from './components/ui/sonner';
 
@@ -55,15 +58,14 @@ function Sidebar({ isOpen, setIsOpen }) {
       title: 'Selling',
       items: [
         { path: '/crm', label: 'CRM', icon: Users },
-        { path: '/sales', label: 'Sales', icon: TrendingUp },
+        { path: '/selling', label: 'Sales Module', icon: TrendingUp },
       ]
     },
     {
       id: 'buying',
       title: 'Buying',
       items: [
-        { path: '/purchase', label: 'Purchase', icon: ShoppingCart },
-        { path: '/purchase-to-pay', label: 'P2P (Legacy)', icon: Receipt },
+        { path: '/buying', label: 'Purchase Module', icon: ShoppingCart },
       ]
     },
     {
@@ -87,6 +89,7 @@ function Sidebar({ isOpen, setIsOpen }) {
       title: 'Accounting',
       items: [
         { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
+        { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
       ]
     },
     {
@@ -222,6 +225,9 @@ function App() {
             <Route path="/settings/import" element={<CSVImport />} />
             <Route path="/journal-entries" element={<JournalEntry />} />
             <Route path="/admin/tables" element={<AdminDataTables />} />
+            <Route path="/financial-statements" element={<FinancialStatements />} />
+            <Route path="/selling" element={<SellingModule />} />
+            <Route path="/buying" element={<BuyingModule />} />
           </Routes>
           
           <UniversalAI />
