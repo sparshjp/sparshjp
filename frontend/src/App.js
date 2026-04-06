@@ -261,31 +261,22 @@ function Sidebar({ isOpen, setIsOpen }) {
   );
 }
 
-function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+function AppShell({ sidebarOpen, setSidebarOpen }) {
+  const loc = useLocation();
+  const isAIEngine = loc.pathname === '/ai-agents';
 
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-        
-        <div className="md:ml-64 min-h-screen bg-[#0D1B2A]">
-          {/* Top bar */}
-          <div className="h-14 bg-[#152236] border-b border-[#1B2D42] flex items-center justify-between px-4 sticky top-0 z-30">
-            <button 
-              className="md:hidden p-2 hover:bg-[#1B2D42] rounded text-[#7A8BA0]"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu size={24} />
-            </button>
-            <div className="flex-1" />
-            <button className="text-sm text-[#7A8BA0] hover:text-[#00C9A7] font-medium transition-colors">
-              Admin
-            </button>
-          </div>
-
-          {/* Main content */}
-          <div className={location.pathname === '/ai-agents' ? '' : 'p-4 sm:p-6'}>
+    <>
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <div className="md:ml-64 min-h-screen bg-[#0D1B2A]">
+        <div className="h-14 bg-[#152236] border-b border-[#1B2D42] flex items-center justify-between px-4 sticky top-0 z-30">
+          <button className="md:hidden p-2 hover:bg-[#1B2D42] rounded text-[#7A8BA0]" onClick={() => setSidebarOpen(true)}>
+            <Menu size={24} />
+          </button>
+          <div className="flex-1" />
+          <button className="text-sm text-[#7A8BA0] hover:text-[#00C9A7] font-medium transition-colors">Admin</button>
+        </div>
+        <div className={isAIEngine ? '' : 'p-4 sm:p-6'}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/crm" element={<CRM />} />
@@ -326,12 +317,21 @@ function App() {
             <Route path="/transaction-explorer" element={<TransactionExplorer />} />
             <Route path="/ai-agents" element={<AIAgentsPage />} />
           </Routes>
-          </div>
-          
-          {location.pathname !== '/ai-agents' && <UniversalAI />}
         </div>
-        
-        <Toaster position="top-right" />
+        {!isAIEngine && <UniversalAI />}
+      </div>
+      <Toaster position="top-right" />
+    </>
+  );
+}
+
+function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <div className="App">
+      <BrowserRouter>
+        <AppShell sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       </BrowserRouter>
     </div>
   );
