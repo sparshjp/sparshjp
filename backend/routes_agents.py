@@ -166,6 +166,14 @@ Design: Dark theme #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00
 17. **list_files(directory)** — List project files.
 18. **run_command(command)** — Read-only bash (grep, wc, find, cat, head, tail).
 
+### Verification
+19. **verify_deployment(checks)** — Comprehensive deployment verification. Runs multiple checks in one call.
+   checks is a list of: {"type": "backend_health"}, {"type": "api", "url": "/api/...", "method": "GET", "expected_status": 200}, {"type": "frontend_route", "route": "/some-path"}, {"type": "file_exists", "path": "/app/..."}
+   Example:
+   ```TOOL_CALL
+   {"tool": "verify_deployment", "args": {"checks": [{"type": "backend_health"}, {"type": "api", "url": "/api/expenses", "method": "GET"}, {"type": "frontend_route", "route": "/expense-management"}, {"type": "file_exists", "path": "/app/backend/routes_expense_management.py"}]}}
+   ```
+
 ## CODE PATTERNS
 - Route file: `router = APIRouter(prefix="/x")` + `set_db(database)` — NEVER create own motor client
 - IDs: `str(uuid.uuid4())` | Timestamps: `datetime.now(timezone.utc).isoformat()`
@@ -193,7 +201,8 @@ Clarifying question
 RULES:
 - ALL tool calls in ONE response run in PARALLEL. Be aggressive with batching.
 - Prefer scaffold_module + test_api over manual create_file + insert_lines + restart_service + check_logs.
-- Maximum """ + str(MAX_ITERATIONS) + """ iterations. Target 1-2 for most tasks."""
+- **ALWAYS verify your work before finishing.** After creating/modifying backend modules, use `verify_deployment` to confirm: backend health, API endpoints return expected status, frontend routes are registered, files exist. NEVER say DONE without verification.
+- Maximum """ + str(MAX_ITERATIONS) + """ iterations. Target 1-2 for most tasks, but ALWAYS include a verification step."""
 
 BA_ONLY_SUFFIX = "\n\nMODE: Business Analysis Only. Focus on requirements, compliance, accounting. No code generation."
 DEV_ONLY_SUFFIX = "\n\nMODE: Coding Only. Read files, generate code, deploy. Skip business analysis."
@@ -204,7 +213,7 @@ QA_ONLY_SUFFIX = "\n\nMODE: Testing/Validation Only. Run queries, test APIs, che
 # ══════════════════════════════════════════════════════════
 
 WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page"}
-READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query"}
+READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment"}
 
 async def execute_tool(tool_name, args):
     try:
@@ -484,6 +493,68 @@ async def execute_tool(tool_name, args):
             except subprocess.TimeoutExpired:
                 return {"status": "error", "error": "Command timed out"}
 
+        elif tool_name == "verify_deployment":
+            """Comprehensive deployment verification — checks backend health, specific API endpoints, and frontend routes."""
+            checks = args.get("checks", [])
+            if not checks:
+                checks = [{"type": "backend_health"}]
+            results = []
+            for check in checks[:8]:
+                check_type = check.get("type", "api")
+                if check_type == "backend_health":
+                    # Check if backend is running and responding
+                    try:
+                        log_proc = subprocess.run("tail -n 10 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
+                        startup_ok = "Application startup complete" in (log_proc.stdout or "")
+                        async with httpx.AsyncClient(timeout=10) as client:
+                            resp = await client.get("http://localhost:8001/api/health")
+                            health_ok = resp.status_code == 200
+                        results.append({"check": "backend_health", "startup_ok": startup_ok, "health_endpoint": health_ok, "status": "pass" if (startup_ok and health_ok) else "fail"})
+                    except Exception as e:
+                        results.append({"check": "backend_health", "status": "fail", "error": str(e)})
+                elif check_type == "api":
+                    url_path = check.get("url", "")
+                    method = check.get("method", "GET").upper()
+                    expected_status = check.get("expected_status", 200)
+                    try:
+                        base_url = "http://localhost:8001"
+                        full_url = f"{base_url}{url_path}"
+                        async with httpx.AsyncClient(timeout=10) as client:
+                            if method == "GET":
+                                resp = await client.get(full_url)
+                            elif method == "POST":
+                                resp = await client.post(full_url, json=check.get("body", {}))
+                            else:
+                                resp = await client.request(method, full_url)
+                        passed = resp.status_code == expected_status
+                        body_preview = resp.text[:500]
+                        try:
+                            body_preview = resp.json()
+                            if isinstance(body_preview, list):
+                                body_preview = {"count": len(body_preview), "sample": body_preview[:2]}
+                        except Exception:
+                            pass
+                        results.append({"check": "api", "url": url_path, "method": method, "http_status": resp.status_code, "expected": expected_status, "status": "pass" if passed else "fail", "response_preview": body_preview})
+                    except Exception as e:
+                        results.append({"check": "api", "url": url_path, "status": "fail", "error": str(e)})
+                elif check_type == "frontend_route":
+                    route = check.get("route", "")
+                    try:
+                        # Check if the route is registered in App.js
+                        with open("/app/frontend/src/App.js", "r") as f:
+                            app_content = f.read()
+                        route_exists = f'path="{route}"' in app_content
+                        results.append({"check": "frontend_route", "route": route, "registered": route_exists, "status": "pass" if route_exists else "fail"})
+                    except Exception as e:
+                        results.append({"check": "frontend_route", "route": route, "status": "fail", "error": str(e)})
+                elif check_type == "file_exists":
+                    path = check.get("path", "")
+                    exists = os.path.isfile(path)
+                    size = os.path.getsize(path) if exists else 0
+                    results.append({"check": "file_exists", "path": path, "exists": exists, "size": size, "status": "pass" if exists else "fail"})
+            all_passed = all(r.get("status") == "pass" for r in results)
+            return {"status": "ok", "all_passed": all_passed, "checks": results, "summary": f"{sum(1 for r in results if r['status']=='pass')}/{len(results)} checks passed"}
+
         else:
             return {"status": "error", "error": f"Unknown tool: {tool_name}"}
     except Exception as e:
@@ -685,7 +756,7 @@ export default function {page_name}() {{
   return (
     <div className="p-6 space-y-6" data-testid="{page_name.lower()}-page">
       <h1 className="text-2xl font-bold text-[#E8EDF2]">{title}</h1>
-      {f'{{loading ? <p className="text-[#4A5B6E]">Loading...</p> : <pre className="text-xs text-[#c8d4e0] bg-[#0D1B2A] p-4 rounded-lg border border-[#1B2D42] overflow-auto">{{JSON.stringify(data, null, 2)}}</pre>}}' if api_endpoints else '<p className="text-[#4A5B6E]">Content goes here</p>'}
+      {'{loading ? <p className="text-[#4A5B6E]">Loading...</p> : <pre className="text-xs text-[#c8d4e0] bg-[#0D1B2A] p-4 rounded-lg border border-[#1B2D42] overflow-auto">{JSON.stringify(data, null, 2)}</pre>}' if api_endpoints else '<p className="text-[#4A5B6E]">Content goes here</p>'}
     </div>
   );
 }}
@@ -839,7 +910,7 @@ def _auto_fix_startup_error(file_path: str, log_output: str) -> bool:
         lines = code.split('\n')
         new_lines = []
         for line in lines:
-            if line.strip() and not line[0] in (' ', '\t', '#', '@', 'd', 'f', 'i', 'r', 'a', '"', "'"):
+            if line.strip() and line[0] not in (' ', '\t', '#', '@', 'd', 'f', 'i', 'r', 'a', '"', "'"):
                 # Line doesn't start with expected char — might need indentation
                 new_lines.append('    ' + line)
             else:
@@ -1200,11 +1271,13 @@ _tasks = {}
 
 
 async def _run_engine_task(task_id, mode, message, session_id, context):
-    """Background coroutine: Agentic loop with PARALLEL tool execution."""
+    """Background coroutine: Agentic loop with PARALLEL tool execution + live thought streaming."""
     try:
         _tasks[task_id]["status"] = "thinking"
         _tasks[task_id]["progress"] = "Step 1: Analyzing your request..."
         _tasks[task_id]["steps"] = []
+        _tasks[task_id]["thinking_text"] = ""
+        _tasks[task_id]["thinking_step"] = 0
 
         system = ENGINE_SYSTEM_PROMPT
         if mode == "ba":
@@ -1256,6 +1329,10 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
             _tasks[task_id]["status"] = "thinking" if iteration == 1 else "iterating"
             _tasks[task_id]["progress"] = f"Step {step_num}: {'Analyzing request' if iteration == 1 else 'Planning next action'}..."
 
+            # Stream thinking status BEFORE LLM call
+            _tasks[task_id]["thinking_text"] = f"Reasoning about {'your request' if iteration == 1 else 'next actions'}..."
+            _tasks[task_id]["thinking_step"] = step_num
+
             response_text, provider = await call_llm(system, loop_messages, preferred=provider_used or "auto")
             provider_used = provider
 
@@ -1264,10 +1341,15 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
             done_summary = parse_done(response_text)
             readable_text = _clean_response_text(response_text)
 
+            # Expose the LLM's reasoning/analysis to the frontend in real-time
+            _tasks[task_id]["thinking_text"] = readable_text[:1500] if readable_text else ""
+            _tasks[task_id]["thinking_step"] = step_num
+
             step_record = {
                 "step": step_num,
                 "type": "thinking" if not tool_calls else "executing",
-                "summary": readable_text[:300] if readable_text else "",
+                "summary": readable_text[:500] if readable_text else "",
+                "thinking": readable_text[:1500] if readable_text else "",
                 "tool_count": len(tool_calls),
                 "tools_used": [tc.get("tool", "") for tc in tool_calls[:10]],
                 "has_questions": len(questions) > 0,
@@ -1290,6 +1372,7 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
 
             # ── PARALLEL TOOL EXECUTION ──
             _tasks[task_id]["status"] = "executing"
+            _tasks[task_id]["thinking_text"] = ""  # Clear thinking while executing tools
             _tasks[task_id]["progress"] = f"Step {step_num}: Running {len(tool_calls)} tool{'s' if len(tool_calls) > 1 else ''} in parallel..."
 
             # Separate tools into parallel-safe and sequential groups
@@ -1426,7 +1509,14 @@ async def get_task_status(task_id: str):
         steps = task.get("steps", [])
         _tasks.pop(task_id, None)
         return {"status": task["status"], "progress": task["progress"], "steps": steps, **result}
-    return {"status": task["status"], "progress": task["progress"], "steps": task.get("steps", [])}
+    # Include live thinking data for in-progress tasks
+    return {
+        "status": task["status"],
+        "progress": task["progress"],
+        "steps": task.get("steps", []),
+        "thinking_text": task.get("thinking_text", ""),
+        "thinking_step": task.get("thinking_step", 0),
+    }
 
 
 @router.get("/providers")

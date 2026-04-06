@@ -4,7 +4,8 @@ import {
   Send, Plus, Trash2, ChevronDown, ChevronRight, Copy, Check, FileText,
   Code, Loader2, FolderOpen, X, Cpu, Wrench, Terminal, Database,
   AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play,
-  Paperclip, Globe, Image, Link2, Search, Activity, GitBranch, Package
+  Paperclip, Globe, Image, Link2, Search, Activity, GitBranch, Package,
+  Brain
 } from 'lucide-react';
 
 const MODES = [
@@ -28,7 +29,7 @@ const TOOL_ICONS = {
   create_file: Code, patch_file: Code, insert_lines: Code,
   delete_lines: Code, get_schema: Database, run_command: Terminal,
   grep_search: Search, check_logs: Activity, install_package: Package,
-  run_tests: Play,
+  run_tests: Play, verify_deployment: CheckCircle2,
 };
 
 const TOOL_COLORS = {
@@ -37,7 +38,7 @@ const TOOL_COLORS = {
   create_file: '#22c55e', patch_file: '#f59e0b', insert_lines: '#22c55e',
   delete_lines: '#ef4444', get_schema: '#06b6d4', run_command: '#60a5fa',
   grep_search: '#f59e0b', check_logs: '#a78bfa', install_package: '#06b6d4',
-  run_tests: '#22c55e',
+  run_tests: '#22c55e', verify_deployment: '#00d4aa',
 };
 
 function ToolResultCard({ result, index }) {
@@ -61,6 +62,7 @@ function ToolResultCard({ result, index }) {
   else if (result.tool === 'scaffold_module') summary = `${result.args?.module_name} (${result.result?.endpoints_created || 0} endpoints)`;
   else if (result.tool === 'create_page') summary = result.args?.page_name || '';
   else if (result.tool === '_auto_restart') summary = result.result?.startup_ok ? 'OK' : 'Failed';
+  else if (result.tool === 'verify_deployment') summary = result.result?.summary || `${result.result?.checks?.length || 0} checks`;
 
   return (
     <div className="border border-[#1B2D42] rounded-lg overflow-hidden bg-[#0D1B2A]" data-testid={`tool-result-${index}`}>
@@ -129,6 +131,17 @@ function StepCard({ step, index, isLast }) {
             </div>
             {step.summary && <p className="text-[10px] text-[#7A8BA0] mt-1 line-clamp-2">{step.summary}</p>}
           </button>
+          {expanded && step.thinking && (
+            <div className="mt-2 rounded-md bg-[#152236]/60 border border-[#1B2D42] p-2.5" data-testid={`step-thinking-${index}`}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Brain size={10} className="text-[#a78bfa]" />
+                <span className="text-[8px] font-bold uppercase tracking-wider text-[#a78bfa]">Reasoning</span>
+              </div>
+              <p className="text-[10px] text-[#8a9bb5] leading-relaxed whitespace-pre-wrap" style={{ maxHeight: '200px', overflow: 'auto' }}>
+                {step.thinking}
+              </p>
+            </div>
+          )}
           {expanded && step.tool_results?.length > 0 && (
             <div className="mt-2 space-y-1">
               {step.tool_results.map((tr, ti) => <ToolResultCard key={ti} result={tr} index={ti} />)}
@@ -179,6 +192,7 @@ export default function AIAgentsPage() {
   const [urlLoading, setUrlLoading] = useState(false);
   const [taskProgress, setTaskProgress] = useState('');
   const [liveSteps, setLiveSteps] = useState([]);
+  const [thinkingText, setThinkingText] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -230,12 +244,14 @@ export default function AIAgentsPage() {
 
         setTaskProgress(data.progress || '');
         if (data.steps) setLiveSteps(data.steps);
+        if (data.thinking_text !== undefined) setThinkingText(data.thinking_text || '');
 
         if (data.status === 'complete' || data.status === 'error') {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
           setTaskProgress('');
           setLiveSteps([]);
+          setThinkingText('');
           setLoading(false);
 
           setMessages(prev => [...prev, {
@@ -258,7 +274,7 @@ export default function AIAgentsPage() {
           ));
         }
       } catch {}
-    }, 1500);
+    }, 1200);
   }, []);
 
   useEffect(() => () => { if (pollingRef.current) clearInterval(pollingRef.current); }, []);
@@ -282,6 +298,7 @@ export default function AIAgentsPage() {
     setLoading(true);
     setTaskProgress('Starting...');
     setLiveSteps([]);
+    setThinkingText('');
 
     try {
       let contextParts = [];
@@ -308,6 +325,7 @@ export default function AIAgentsPage() {
       setLoading(false);
       setTaskProgress('');
       setLiveSteps([]);
+      setThinkingText('');
       setMessages(prev => [...prev, {
         role: 'assistant', content: `Error: ${err.message}`, timestamp: new Date().toISOString(), error: true,
       }]);
@@ -488,7 +506,7 @@ export default function AIAgentsPage() {
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v3</span>
               </div>
               <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5 flex items-center gap-1">
-                <GitBranch size={8} /> Parallel Execution &middot; Compound Tools &middot; Auto-Restart
+                <GitBranch size={8} /> Parallel Execution &middot; Live Thinking &middot; Auto-Verify
               </p>
             </div>
           </div>
@@ -602,8 +620,8 @@ export default function AIAgentsPage() {
               </p>
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Parallel Execution</span>
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">Compound Tools</span>
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">18 Tools + Auto-Restart</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">Live Thought Process</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">19 Tools + Auto-Verify</span>
               </div>
               <div className="flex flex-wrap gap-2 justify-center max-w-xl">
                 {starters.map((s, i) => (
@@ -717,7 +735,7 @@ export default function AIAgentsPage() {
 
           {/* Live execution indicator */}
           {loading && (
-            <div className="flex gap-3">
+            <div className="flex gap-3" data-testid="live-execution-indicator">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00d4aa]/20 to-[#00d4aa]/5 border border-[#00d4aa]/20 flex items-center justify-center shrink-0">
                 <Loader2 size={13} className="animate-spin text-[#00d4aa]" />
               </div>
@@ -729,6 +747,20 @@ export default function AIAgentsPage() {
                       {currentMode.label}
                     </span>
                   </div>
+                  {/* Live Thought Process Panel */}
+                  {thinkingText && (
+                    <div className="mt-1 rounded-md bg-[#152236]/60 border border-[#1B2D42] p-2.5" data-testid="live-thinking-panel">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Brain size={11} className="text-[#a78bfa]" />
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#a78bfa]">Kairos is reasoning</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#a78bfa] animate-pulse" />
+                      </div>
+                      <p className="text-[10px] text-[#8a9bb5] leading-relaxed whitespace-pre-wrap font-mono"
+                         style={{ maxHeight: '120px', overflow: 'auto' }}>
+                        {thinkingText}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {/* Live steps */}
                 {liveSteps.length > 0 && (
@@ -817,7 +849,7 @@ export default function AIAgentsPage() {
               </div>
             </div>
             <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
-              Parallel execution &middot; 18 tools &middot; scaffold_module &middot; Auto-restart &middot; Compressed context
+              Parallel execution &middot; 19 tools &middot; scaffold_module &middot; Auto-restart &middot; Live thought process &middot; Deployment verification
             </p>
           </div>
         </div>
