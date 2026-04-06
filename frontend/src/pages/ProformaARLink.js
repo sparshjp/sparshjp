@@ -1,0 +1,1 @@
+<h1>Link Proforma to AR Credit Check</h1><p>Select a Proforma and link it to the AR Credit-Check system.</p>

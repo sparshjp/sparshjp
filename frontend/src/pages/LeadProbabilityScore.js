@@ -1,0 +1,1 @@
+<h1>Lead Probability Score</h1><p>View and manage the probability score for leads.</p>

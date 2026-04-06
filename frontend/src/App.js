@@ -51,6 +51,10 @@ import { KairosIcon } from './components/KairosIcon';
 import { Toaster } from './components/ui/sonner';
 import ExpenseManagement from './pages/ExpenseManagement';
 import FeedbackPage from './pages/FeedbackPage';
+import LeadEnrichment from './pages/LeadEnrichment';
+import ProformaARLink from './pages/ProformaARLink';
+import ItemSampleTracking from './pages/ItemSampleTracking';
+import LeadProbabilityScore from './pages/LeadProbabilityScore';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -324,6 +328,10 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Route path="/ai-agents" element={<AIAgentsPage />} />
                         <Route path="/expense-management" element={<ExpenseManagement />} />
                             <Route path="/feedback" element={<FeedbackPage />} />
+                            <Route path="/leads/enrich" element={<LeadEnrichment />} />
+                            <Route path="/proformas/ar-link" element={<ProformaARLink />} />
+                            <Route path="/items/sample-tracking" element={<ItemSampleTracking />} />
+                            <Route path="/leads/probability" element={<LeadProbabilityScore />} />
               </Routes>
         </div>
         {!isAIEngine && <UniversalAI />}
