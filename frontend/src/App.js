@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
-  Scale, IndianRupee, Factory
+  Scale, IndianRupee, Factory, Building2, Sparkles
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -28,6 +28,8 @@ import SellingModule from './pages/SellingModule';
 import BuyingModule from './pages/BuyingModule';
 import GSTModule from './pages/GSTModule';
 import ManufacturingModule from './pages/ManufacturingModule';
+import CompanySetup from './pages/CompanySetup';
+import ReportingAI from './pages/ReportingAI';
 import UniversalAI from './components/UniversalAI';
 import { Toaster } from './components/ui/sonner';
 
@@ -36,7 +38,7 @@ export const API = `${BACKEND_URL}/api`;
 
 function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
-  const [expandedSections, setExpandedSections] = useState(['selling', 'buying', 'stock', 'accounting']);
+  const [expandedSections, setExpandedSections] = useState(['core', 'selling', 'buying', 'stock', 'accounting', 'reporting-ai']);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => 
@@ -53,7 +55,8 @@ function Sidebar({ isOpen, setIsOpen }) {
       id: 'core',
       title: 'Core',
       items: [
-        { path: '/', label: 'Dashboard', icon: LayoutDashboard }
+        { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/company-setup', label: 'Company Setup', icon: Building2 },
       ]
     },
     {
@@ -95,6 +98,13 @@ function Sidebar({ isOpen, setIsOpen }) {
         { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
         { path: '/gst-tds', label: 'GST & TDS', icon: Scale },
+      ]
+    },
+    {
+      id: 'reporting-ai',
+      title: 'Reporting AI',
+      items: [
+        { path: '/reporting-ai', label: 'Ask Kairos AI', icon: Sparkles },
       ]
     },
     {
@@ -247,6 +257,8 @@ function App() {
             <Route path="/buying" element={<BuyingModule />} />
             <Route path="/manufacturing" element={<ManufacturingModule />} />
             <Route path="/gst-tds" element={<GSTModule />} />
+            <Route path="/company-setup" element={<CompanySetup />} />
+            <Route path="/reporting-ai" element={<ReportingAI />} />
           </Routes>
           </div>
           
