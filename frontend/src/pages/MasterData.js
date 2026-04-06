@@ -9,6 +9,7 @@ function MasterData() {
   const [loading, setLoading] = useState(false);
   const [entityType, setEntityType] = useState('vendor');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [gstinInfo, setGstinInfo] = useState(null);
   const [newEntity, setNewEntity] = useState({
     entity_type: 'vendor',
     name: '',
@@ -45,15 +46,33 @@ function MasterData() {
     try {
       const res = await axios.post(`${API}/entities`, {...newEntity, entity_type: entityType});
       toast.success(`${entityType === 'vendor' ? 'Vendor' : 'Client'} added successfully`);
-      if (res.data.legal_name) {
-        toast.info(`Auto-filled from GSTIN: ${res.data.legal_name}`);
+      if (res.data.gstin_valid) {
+        toast.info(`GSTIN validated: ${res.data.state_name || ''} | ${res.data.constitution || ''}`);
+      }
+      if (res.data.pan && res.data.pan !== newEntity.pan) {
+        toast.info(`PAN extracted from GSTIN: ${res.data.pan}`);
       }
       setShowAddForm(false);
       setNewEntity({ entity_type: entityType, name: '', gstin: '', pan: '', address: '', contact: '', email: '' });
+      setGstinInfo(null);
       fetchEntities();
     } catch (error) {
       console.error('Failed to add entity:', error);
       toast.error('Failed to add entity');
+    }
+  };
+
+  const validateGSTIN = async (gstin) => {
+    if (gstin.length === 15) {
+      try {
+        const res = await axios.get(`${API}/validate/gstin/${gstin}`);
+        setGstinInfo(res.data);
+        if (res.data.valid && res.data.pan) {
+          setNewEntity(prev => ({ ...prev, pan: res.data.pan }));
+        }
+      } catch { setGstinInfo(null); }
+    } else {
+      setGstinInfo(null);
     }
   };
 
@@ -119,11 +138,19 @@ function MasterData() {
                 <input
                   type="text"
                   value={newEntity.gstin}
-                  onChange={(e) => setNewEntity({...newEntity, gstin: e.target.value})}
+                  onChange={(e) => { setNewEntity({...newEntity, gstin: e.target.value}); validateGSTIN(e.target.value); }}
                   className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-sm px-4 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#00C9A7] mono placeholder:text-[#4A5B6E]"
                   placeholder="22AAAAA0000A1Z5"
                   maxLength="15"
+                  data-testid="gstin-input"
                 />
+                {gstinInfo && (
+                  <div className={`mt-1 text-xs ${gstinInfo.valid ? 'text-[#00C9A7]' : 'text-[#FF4D6A]'}`} data-testid="gstin-validation">
+                    {gstinInfo.valid 
+                      ? `Valid - ${gstinInfo.state_name} | ${gstinInfo.entity_type} | PAN: ${gstinInfo.pan}`
+                      : gstinInfo.errors?.join(', ')}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">PAN</label>
@@ -181,7 +208,7 @@ function MasterData() {
                 Cancel
               </button>
             </div>
-            <p className="text-xs text-[#4A5B6E] mt-3">💡 Enter GSTIN to auto-fetch legal name, constitution, and status</p>
+            <p className="text-xs text-[#4A5B6E] mt-3">Enter GSTIN to auto-extract PAN, state, and entity type</p>
           </div>
         )}
 

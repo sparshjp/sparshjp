@@ -190,15 +190,93 @@ class CSVImportRequest(BaseModel):
     module: str
     csv_data: str
 
-# GSTIN Lookup (Mock implementation - replace with real API)
+# GSTIN/PAN Validation & Intelligence
+GSTIN_STATE_CODES = {
+    "01": "Jammu & Kashmir", "02": "Himachal Pradesh", "03": "Punjab", "04": "Chandigarh",
+    "05": "Uttarakhand", "06": "Haryana", "07": "Delhi", "08": "Rajasthan",
+    "09": "Uttar Pradesh", "10": "Bihar", "11": "Sikkim", "12": "Arunachal Pradesh",
+    "13": "Nagaland", "14": "Manipur", "15": "Mizoram", "16": "Tripura",
+    "17": "Meghalaya", "18": "Assam", "19": "West Bengal", "20": "Jharkhand",
+    "21": "Odisha", "22": "Chhattisgarh", "23": "Madhya Pradesh", "24": "Gujarat",
+    "25": "Daman & Diu", "26": "Dadra & Nagar Haveli", "27": "Maharashtra",
+    "29": "Karnataka", "30": "Goa", "31": "Lakshadweep", "32": "Kerala",
+    "33": "Tamil Nadu", "34": "Puducherry", "35": "Andaman & Nicobar", "36": "Telangana",
+    "37": "Andhra Pradesh", "38": "Ladakh", "97": "Other Territory",
+}
+
+PAN_ENTITY_MAP = {
+    "A": "Association of Persons (AOP)", "B": "Body of Individuals (BOI)",
+    "C": "Company", "F": "Firm / LLP", "G": "Government",
+    "H": "Hindu Undivided Family (HUF)", "J": "Artificial Juridical Person",
+    "L": "Local Authority", "P": "Individual / Proprietor", "T": "Trust",
+}
+
+import re
+
+def validate_gstin(gstin: str) -> Dict[str, Any]:
+    """Validate GSTIN format, extract PAN, state, entity type"""
+    gstin = gstin.strip().upper()
+    result = {"valid": False, "gstin": gstin, "errors": []}
+
+    if len(gstin) != 15:
+        result["errors"].append(f"GSTIN must be 15 characters, got {len(gstin)}")
+        return result
+
+    pattern = r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$'
+    if not re.match(pattern, gstin):
+        result["errors"].append("Invalid GSTIN format")
+        return result
+
+    state_code = gstin[:2]
+    pan = gstin[2:12]
+    entity_char = pan[3]
+
+    state_name = GSTIN_STATE_CODES.get(state_code)
+    if not state_name:
+        result["errors"].append(f"Invalid state code: {state_code}")
+        return result
+
+    result["valid"] = True
+    result["pan"] = pan
+    result["state_code"] = state_code
+    result["state_name"] = state_name
+    result["entity_type"] = PAN_ENTITY_MAP.get(entity_char, "Unknown")
+    result["entity_number"] = gstin[12]
+    return result
+
+def validate_pan(pan: str) -> Dict[str, Any]:
+    """Validate PAN format and extract entity type"""
+    pan = pan.strip().upper()
+    result = {"valid": False, "pan": pan, "errors": []}
+
+    if len(pan) != 10:
+        result["errors"].append(f"PAN must be 10 characters, got {len(pan)}")
+        return result
+
+    pattern = r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
+    if not re.match(pattern, pan):
+        result["errors"].append("Invalid PAN format (AAAAA9999A)")
+        return result
+
+    entity_char = pan[3]
+    result["valid"] = True
+    result["entity_type"] = PAN_ENTITY_MAP.get(entity_char, "Unknown")
+    return result
+
 async def lookup_gstin(gstin: str) -> Dict[str, Any]:
-    """Mock GSTIN lookup - in production, integrate with government API"""
-    # This would call actual GSTIN verification API
+    """Validate GSTIN and return extracted intelligence"""
+    info = validate_gstin(gstin)
+    if not info["valid"]:
+        return {"legal_name": "", "constitution": "", "status": "Invalid GSTIN", "errors": info["errors"]}
+
     return {
-        "legal_name": f"Mock Company for {gstin}",
-        "constitution": "Private Limited",
+        "legal_name": "",
+        "constitution": info.get("entity_type", ""),
         "status": "Active",
-        "address": "Mock Address, India"
+        "state_name": info.get("state_name", ""),
+        "state_code": info.get("state_code", ""),
+        "pan": info.get("pan", ""),
+        "gstin_valid": True
     }
 
 # AI Services
@@ -315,7 +393,7 @@ async def extract_document_data(image_data: bytes, filename: str) -> Dict[str, A
 
 # CSV Validation and Processing
 async def validate_csv_data(csv_data: str, module: str) -> Dict[str, Any]:
-    """Validate CSV data against Zoho-standard headers"""
+    """Validate CSV data against Zoho-standard headers and CoA"""
     required_headers = {
         "purchases": ["Date", "Entity Name", "Item/Service", "Rate", "GST Rate", "Total"],
         "sales": ["Date", "Entity Name", "Item/Service", "Rate", "GST Rate", "Total"],
@@ -331,34 +409,84 @@ async def validate_csv_data(csv_data: str, module: str) -> Dict[str, Any]:
         reader = csv.DictReader(csv_file)
         headers = reader.fieldnames
         
+        if not headers:
+            return {"valid": False, "errors": ["Empty CSV or no headers found"], "warnings": [], "row_count": 0}
+        
         # Check required headers
         module_key = module.replace("-", "")
         if module_key in required_headers:
-            for req_header in required_headers[module_key]:
-                if req_header not in headers:
-                    errors.append(f"Missing required header: {req_header}")
+            missing = [h for h in required_headers[module_key] if h not in headers]
+            if missing:
+                errors.extend([f"Missing required header: {h}" for h in missing])
+        else:
+            warnings.append(f"Unknown module '{module}'. No header validation applied.")
+        
+        # Load CoA ledgers for cross-validation
+        coa_ledgers = set()
+        coa_list = await db.chart_of_accounts.find({}, {"_id": 0, "ledger_name": 1}).to_list(1000)
+        coa_ledgers = {a["ledger_name"] for a in coa_list}
         
         # Validate data rows
         rows = list(reader)
+        if len(rows) == 0:
+            warnings.append("CSV file has headers but no data rows")
+        
+        gstin_seen = set()
         for idx, row in enumerate(rows, start=2):
             # Validate date format
             if "Date" in row and row["Date"]:
                 try:
                     datetime.strptime(row["Date"], "%Y-%m-%d")
-                except:
-                    errors.append(f"Row {idx}: Invalid date format. Use YYYY-MM-DD")
+                except ValueError:
+                    errors.append(f"Row {idx}: Invalid date format '{row['Date']}'. Use YYYY-MM-DD")
+            elif "Date" in row and not row["Date"]:
+                errors.append(f"Row {idx}: Date is empty")
             
             # Validate ledger existence for journals
-            if module == "journals" and "Ledger" in row:
-                ledger_exists = await db.chart_of_accounts.find_one({"ledger_name": row["Ledger"]}, {"_id": 0})
-                if not ledger_exists:
-                    warnings.append(f"Row {idx}: Ledger '{row['Ledger']}' not found in Chart of Accounts")
+            if module == "journals" and "Ledger" in row and row["Ledger"]:
+                if row["Ledger"] not in coa_ledgers:
+                    warnings.append(f"Row {idx}: Ledger '{row['Ledger']}' not in Chart of Accounts (will not update CoA balance)")
+            
+            # Validate numeric fields
+            for num_field in ["Rate", "Total", "Amount", "Debit", "Credit", "GST Rate"]:
+                if num_field in row and row.get(num_field):
+                    try:
+                        float(row[num_field])
+                    except ValueError:
+                        errors.append(f"Row {idx}: '{num_field}' must be a number, got '{row[num_field]}'")
+            
+            # Validate GSTIN format in entity rows if present
+            if "GSTIN" in row and row.get("GSTIN"):
+                gstin_result = validate_gstin(row["GSTIN"])
+                if not gstin_result["valid"]:
+                    warnings.append(f"Row {idx}: Invalid GSTIN '{row['GSTIN']}' - {', '.join(gstin_result['errors'])}")
+            
+            # Validate entity exists for purchases/sales
+            if module in ["purchases", "sales"] and "Entity Name" in row and row.get("Entity Name"):
+                entity = await db.entities.find_one({"name": row["Entity Name"]}, {"_id": 0})
+                if not entity:
+                    warnings.append(f"Row {idx}: Entity '{row['Entity Name']}' not found in Master Data")
+            
+            # Check debit/credit balance for journals
+            if module == "journals":
+                debit = float(row.get("Debit", 0) or 0)
+                credit = float(row.get("Credit", 0) or 0)
+                if debit == 0 and credit == 0:
+                    warnings.append(f"Row {idx}: Both Debit and Credit are zero")
+        
+        # For journals, check total debit == total credit
+        if module == "journals" and len(rows) > 0:
+            total_d = sum(float(r.get("Debit", 0) or 0) for r in rows)
+            total_c = sum(float(r.get("Credit", 0) or 0) for r in rows)
+            if abs(total_d - total_c) > 0.01:
+                errors.append(f"Journal not balanced: Total Debit ({total_d:.2f}) != Total Credit ({total_c:.2f})")
         
         return {
             "valid": len(errors) == 0,
             "errors": errors,
             "warnings": warnings,
-            "row_count": len(rows)
+            "row_count": len(rows),
+            "coa_ledger_count": len(coa_ledgers)
         }
     except Exception as e:
         return {
@@ -432,17 +560,46 @@ async def get_cost_centers():
     return centers
 
 # Vendor/Client Master
+@api_router.get("/validate/gstin/{gstin}")
+async def api_validate_gstin(gstin: str):
+    """Validate GSTIN format and extract PAN, state, entity type"""
+    result = validate_gstin(gstin)
+    return result
+
+@api_router.get("/validate/pan/{pan}")
+async def api_validate_pan(pan: str):
+    """Validate PAN format and extract entity type"""
+    result = validate_pan(pan)
+    return result
+
 @api_router.post("/entities")
 async def create_entity(entity: VendorClient):
-    """Create vendor or client with optional GSTIN lookup"""
+    """Create vendor or client with GSTIN/PAN intelligence"""
     entity_dict = entity.model_dump()
     
-    # Auto-lookup GSTIN if provided
-    if entity.gstin and not entity.legal_name:
-        gstin_data = await lookup_gstin(entity.gstin)
-        entity_dict.update(gstin_data)
+    # Auto-validate and enrich GSTIN if provided
+    if entity.gstin:
+        gstin_info = validate_gstin(entity.gstin)
+        if gstin_info["valid"]:
+            if not entity.pan:
+                entity_dict["pan"] = gstin_info.get("pan", "")
+            if not entity.constitution:
+                entity_dict["constitution"] = gstin_info.get("entity_type", "")
+            entity_dict["state_name"] = gstin_info.get("state_name", "")
+            entity_dict["state_code"] = gstin_info.get("state_code", "")
+            entity_dict["gstin_valid"] = True
+        else:
+            entity_dict["gstin_valid"] = False
+            entity_dict["gstin_errors"] = gstin_info.get("errors", [])
+    
+    # Auto-validate PAN if provided
+    if entity.pan:
+        pan_info = validate_pan(entity.pan)
+        if pan_info["valid"] and not entity.constitution:
+            entity_dict["constitution"] = pan_info.get("entity_type", "")
     
     await db.entities.insert_one(entity_dict)
+    del entity_dict["_id"]
     return entity_dict
 
 @api_router.get("/entities")
