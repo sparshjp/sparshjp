@@ -154,6 +154,8 @@ class VendorClient(BaseModel):
     constitution: Optional[str] = None
     status: str = "Active"
     address: Optional[str] = None
+    state: Optional[str] = None
+    state_code: Optional[str] = None
     contact: Optional[str] = None
     email: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -163,7 +165,9 @@ class InventoryItem(BaseModel):
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     item_name: str
+    hsn_sac: Optional[str] = None
     hsn_code: Optional[str] = None
+    gst_rate: float = 18.0
     unit: str = "pcs"
     current_stock: float = 0.0
     landed_cost: float = 0.0
@@ -591,6 +595,14 @@ async def create_entity(entity: VendorClient):
             entity_dict["state_name"] = gstin_info.get("state_name", "")
             entity_dict["state_code"] = gstin_info.get("state_code", "")
             entity_dict["gstin_valid"] = True
+            # Resolve canonical state info from GST rules engine
+            import gst_rules
+            gst_state_code = gst_rules.extract_state_from_gstin(entity.gstin)
+            if gst_state_code:
+                state_info = gst_rules.get_state_info(gst_state_code)
+                if state_info:
+                    entity_dict["gst_state_code"] = gst_state_code
+                    entity_dict["state"] = state_info["name"]
         else:
             entity_dict["gstin_valid"] = False
             entity_dict["gstin_errors"] = gstin_info.get("errors", [])
@@ -1094,6 +1106,7 @@ try:
     from routes_manufacturing import router as mfg_router, set_db as mfg_set_db
     from routes_company import router as company_router, set_db as company_set_db, set_key as company_set_key
     from routes_audit import router as audit_router, set_db as audit_set_db
+    from routes_gst import router as gst_router
     import audit_trail
     from ai_orchestrator import AIOrchestrator
     
@@ -1158,7 +1171,9 @@ try:
 
         vendor_names = [v.get("name", "") for v in vendors_raw]
         customer_names = [c.get("name", "") for c in customers_raw]
-        item_summaries = [{"code": i.get("item_code",""), "name": i.get("item_name",""), "uom": i.get("uom","KG"), "rate": i.get("valuation_rate",0)} for i in items_raw]
+        item_summaries = [{"code": i.get("item_code",""), "name": i.get("item_name",""), "uom": i.get("uom","KG"), "rate": i.get("valuation_rate",0), "hsn_sac": i.get("hsn_sac",""), "gst_rate": i.get("gst_rate",18)} for i in items_raw]
+        vendor_summaries = [{"name": v.get("name",""), "gstin": v.get("gstin",""), "state": v.get("state",""), "state_code": v.get("gst_state_code","")} for v in vendors_raw]
+        customer_summaries = [{"name": c.get("name",""), "gstin": c.get("gstin",""), "state": c.get("state",""), "state_code": c.get("gst_state_code","")} for c in customers_raw]
         cc_names = [c.get("name","") for c in cost_centers_raw]
         ledger_names = [c.get("ledger_name","") for c in coa_raw]
         po_summaries = [{"id": p["id"], "number": p.get("po_number",""), "vendor": p.get("vendor",""), "total": p.get("grand_total",0)} for p in pending_pos]
@@ -1167,8 +1182,8 @@ try:
         system_msg = f"""You are the AI brain of Kairos AI ERP for PolyMerx Specialty Chemicals Pvt. Ltd.
 
 MASTER DATA (use these exact names when matching):
-- Vendors: {json.dumps(vendor_names)}
-- Customers: {json.dumps(customer_names)}
+- Vendors: {json.dumps(vendor_summaries)}
+- Customers: {json.dumps(customer_summaries)}
 - Items: {json.dumps(item_summaries)}
 - Cost Centers: {json.dumps(cc_names)}
 - Ledger Accounts: {json.dumps(ledger_names[:60])}
@@ -1187,12 +1202,14 @@ Parse the user's prompt and return a JSON object with:
 FIELD SCHEMAS by intent:
 
 purchase_order:
-  required: vendor, items (array of {{item_code, item_name, qty, rate, uom, amount}}), cost_center
-  optional: delivery_date, payment_terms, gst_rate (default 18), vendor_gstin
+  required: vendor, items (array of {{item_code, item_name, qty, rate, uom, amount, hsn_sac, gst_rate}}), cost_center
+  optional: delivery_date, payment_terms
+  auto: vendor_state and company_state used for CGST+SGST vs IGST determination
 
 sales_order:
-  required: customer, items (array of {{item_code, item_name, qty, rate, uom, amount}}), cost_center
-  optional: delivery_date, payment_terms, gst_rate (default 18), customer_gstin, po_no
+  required: customer, items (array of {{item_code, item_name, qty, rate, uom, amount, hsn_sac, gst_rate}}), cost_center
+  optional: delivery_date, payment_terms, po_no
+  auto: customer_state and company_state used for CGST+SGST vs IGST determination
 
 work_order:
   required: production_item (item_code of FG), qty_to_produce, cost_center
@@ -1261,6 +1278,7 @@ RULES:
     api_router.include_router(mfg_router)
     api_router.include_router(company_router, prefix="/company")
     api_router.include_router(audit_router)
+    api_router.include_router(gst_router)
     
     logging.info("ERP modules will be integrated")
 except Exception as e:

@@ -95,6 +95,7 @@ async def list_quotations(status: Optional[str] = None, limit: int = 100):
 # ═══════════════════════════════════════════════════════
 @router.post("/sales-orders")
 async def create_sales_order(data: dict):
+    import gst_rules
     # Validate customer exists in master data
     customer_name = data.get("customer", "")
     customer_doc = await db.entities.find_one({"name": customer_name, "entity_type": "customer"}, {"_id": 0})
@@ -107,25 +108,63 @@ async def create_sales_order(data: dict):
         item_doc = await db.items.find_one({"item_code": item_code}, {"_id": 0})
         if not item_doc:
             raise HTTPException(status_code=400, detail=f"Item '{item_code}' not found in master data. Create the item first in Master Data.")
+        if not it.get("hsn_sac") and item_doc.get("hsn_sac"):
+            it["hsn_sac"] = item_doc["hsn_sac"]
+        if not it.get("gst_rate") and item_doc.get("gst_rate"):
+            it["gst_rate"] = item_doc["gst_rate"]
+
+    # Get company state from settings
+    company_settings = await db.company_settings.find_one({}, {"_id": 0})
+    company_state = (company_settings or {}).get("state", "Maharashtra")
+
+    # Determine customer state from GSTIN or entity record
+    customer_state = customer_doc.get("state") or customer_doc.get("gst_state_code") or ""
+    if not customer_state and customer_doc.get("gstin"):
+        code = gst_rules.extract_state_from_gstin(customer_doc["gstin"])
+        if code:
+            info = gst_rules.get_state_info(code)
+            customer_state = info["name"] if info else ""
+
+    # Compute line-level GST using rules engine
     total = sum(i.get("amount", i.get("qty", 0) * i.get("rate", 0)) for i in items)
-    gst_rate = data.get("gst_rate", 18)
-    gst_amount = round(total * gst_rate / 100, 2)
+    line_items_for_gst = []
+    for it in items:
+        line_items_for_gst.append({
+            "hsn_sac": it.get("hsn_sac", ""),
+            "item": it.get("item_code", ""),
+            "gst_rate": it.get("gst_rate", 18),
+            "taxable_value": it.get("amount", it.get("qty", 0) * it.get("rate", 0)),
+        })
+
+    gst_result = gst_rules.compute_line_item_tax(company_state, customer_state or company_state, line_items_for_gst)
+    tax_breakdown = gst_result.get("totals", {})
+    supply_type = gst_result.get("supply_type", "")
     total_qty = sum(i.get("qty", 0) for i in items)
 
     so = {
         "id": str(uuid.uuid4()),
         "so_number": data.get("so_number", f"SO-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"),
         "customer": data.get("customer"),
-        "customer_gstin": data.get("customer_gstin", ""),
+        "customer_gstin": customer_doc.get("gstin", ""),
+        "customer_state": customer_state,
+        "company_state": company_state,
+        "supply_type": supply_type,
         "customer_po": data.get("po_no", ""),
         "transaction_date": data.get("transaction_date", datetime.now(timezone.utc).date().isoformat()),
         "delivery_date": data.get("delivery_date"),
         "quotation_ref": data.get("quotation_ref"),
         "items": items,
         "subtotal": total,
-        "gst_rate": gst_rate,
-        "gst_amount": gst_amount,
-        "grand_total": round(total + gst_amount, 2),
+        "tax_breakdown": {
+            "supply_type": supply_type,
+            "cgst": tax_breakdown.get("cgst", 0),
+            "sgst": tax_breakdown.get("sgst", 0),
+            "igst": tax_breakdown.get("igst", 0),
+            "utgst": tax_breakdown.get("utgst", 0),
+            "total_tax": tax_breakdown.get("total_tax", 0),
+        },
+        "gst_amount": tax_breakdown.get("total_tax", 0),
+        "grand_total": tax_breakdown.get("grand_total", round(total, 2)),
         "total_qty": total_qty,
         "delivered_qty": 0,
         "invoiced_amount": 0,
@@ -152,7 +191,7 @@ async def create_sales_order(data: dict):
 
     await db.selling_sales_orders.insert_one(so)
     del so["_id"]
-    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_SALES_ORDER, so["id"], so["so_number"], snapshot=so, notes=f"SO created for customer {so['customer']}, total {so['grand_total']}")
+    await audit_trail.log_audit(audit_trail.ACTION_CREATE, audit_trail.DOC_SALES_ORDER, so["id"], so["so_number"], snapshot=so, notes=f"SO created for customer {so['customer']}, {supply_type}, total {so['grand_total']}")
     return so
 
 @router.get("/sales-orders")
