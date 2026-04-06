@@ -35,6 +35,12 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
     - **Full Knowledge Base:** Complete company data (20 employees, 8 projects, 7 clients, 10 vendors, 26 CoA), all API endpoints (16 route modules, 100+ endpoints), complete file structure, design system, code conventions, business rules (GST, TDS, Ind AS 115), MongoDB schemas for all collections
     - **Background Task Engine** — Async task execution with polling (bypasses K8s gateway timeout). No size/time limits on code generation.
     - **Rich Prompt Box** (ChatGPT-style): File attachments (PDF, Word, Excel, PowerPoint, images, CSV, code), URL crawling (paste any link), multiline auto-expanding textarea, attachment preview chips with remove
+    - **Multi-Provider LLM** (Completed 2026-04-06) — Groq (Llama 3.3 70B, primary), OpenRouter (free models, secondary), Claude Sonnet 4.5 (tertiary). Auto-fallback chain. Provider badge on responses.
+
+### Bank Reconciliation (Completed 2026-04-06 — Backend written by AI Engine via Groq)
+- `routes_bank_recon.py` — CSV upload, auto-match (amount+date within 3 days), manual match/unmatch, reconciliation summary
+- `BankReconciliation.js` — Account selector (HDFC/Axis/EEFC), upload, 5 summary cards, matched/unmatched tables with click-to-match
+- API: `/api/bank-recon/statements`, `/api/bank-recon/summary`, `/api/bank-recon/unmatched`, `/api/bank-recon/match`, `/api/bank-recon/unmatch`
 
 ### Accounting & Compliance
 13. Journal Entries, Chart of Accounts (balanced TB 2,81,42,000)
@@ -54,4 +60,4 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 
 ## Backlog
 ### P1: Inventory Landed Cost, Fixed Asset Depreciation
-### P2: E-Way Bill, Bank Reconciliation, Mobile Responsiveness
+### P2: E-Way Bill, Mobile Responsiveness
