@@ -1,79 +1,69 @@
-# Kairos Advisory - AI-Native ERP (India Localization)
-## Product Requirements Document
+# Kairos AI ERP - Product Requirements Document
 
-### Original Problem Statement
-Build an AI-Native ERP called "Kairos Advisory" with India localization, operating on a "Zero-Touch" UI with NLP-driven data entry. Must follow Ind AS / Indian GAAP, Schedule III Companies Act 2013 compliant Financial Statements.
+## Original Problem Statement
+Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating heavily on a "Zero-Touch" UI where data entry is performed via Natural Language Processing (NLP).
 
-### Company
-PolyMerx Specialty Chemicals Pvt. Ltd.
+## Core Modules
+- Purchase-to-Pay, Order-to-Cash, Inventory & Fixed Assets, Payroll & TDS, Banking, Conversational Reporting
+- Follow Ind AS / Indian GAAP, Schedule III Companies Act 2013 compliant Financial Statements
+- Auto-accounting: Sales and Purchase modules auto-generate journal entries and post to ledgers
+- Strict Linked Document Flow: PO -> GRN -> Invoice -> Payment
+- Master Data lookup (GSTIN/PAN automation) and Smart CSV validation
+- AI-First Data Entry: Natural language prompts → smart verification popups
 
-### Tech Stack
-- Frontend: React, Tailwind CSS, Shadcn UI
-- Backend: FastAPI, Motor (async MongoDB), reportlab, openpyxl
-- AI: Claude Sonnet 4.5 (text parsing), Gemini 3 Vision (OCR) via Emergent LLM Key
-- Theme: Navy (#0D1B2A) / Teal (#00C9A7)
+## Architecture
+- Frontend: React, Tailwind CSS, Shadcn UI, Recharts
+- Backend: FastAPI, Motor (PyMongo)
+- AI: Claude Sonnet 4.5 via Emergent LLM Key
+- DB: MongoDB
 
-### Architecture
-Modular monolith with strict Linked Document Flow:
-- Purchase: PO → GRN → Purchase Invoice → Vendor Payment
-- Selling: SO → Delivery Note → Sales Invoice → Customer Receipt
-- Manufacturing: Work Order (consume RM → WIP → FG) with auto-JEs
+## What's Been Implemented
 
-### Core Differentiator: AI-First Entry (Zero-Touch UI)
-ALL data entry across the entire ERP is AI-first. No dropdown forms anywhere.
-- **Global prompt bar** (bottom center, all pages) — for any entry type
-- **Module-level prompt bars** (inline in Buying, Selling, Manufacturing, JournalEntry)
-- **Smart popup** with pre-filled fields from AI parsing + strict master data dropdowns
-- **Backend enforces** master data validation (vendor/customer/item must exist in master)
-- **Shared component**: `AISmartEntry.js` (SmartFormPopup, ModuleAIPrompt, StrictDropdown)
+### Completed Features
+1. **AI-First Data Entry** (AISmartEntry.js) - Unified NLP prompt bar replacing all forms across Buying, Selling, Manufacturing, Journals ✅
+2. **Master Data Lock** - POs/SOs reject free-text entities; must match existing vendors/customers/items ✅
+3. **Schedule III Financial Statements** - Dynamic CoA-based Trial Balance, Balance Sheet, P&L (perfectly balanced) ✅
+4. **200 PolyMerx Test Transactions** - Seeded and balanced via seed_polymerx.py ✅
+5. **Company Setup Module** - Core identification, contact, financial, statutory, document settings ✅
+6. **Reporting AI** - Conversational data querying with charts & tables (Claude-powered) ✅
+7. **Kairos Branding** - Custom SVG KairosIcon (K mark), "Kairos AI ERP" throughout ✅
+8. **Audit Trail (Companies Act 2013)** - Append-only, tamper-proof, field-level change tracking ✅ (Apr 2026)
+   - Compliant with Rule 3(1), Companies (Accounts) Rules, 2014
+   - Logs CREATE/UPDATE/DELETE/SUBMIT/CANCEL/POST actions
+   - Before/after field-level diff for UPDATE events
+   - Full document snapshots for CREATE events
+   - CSV export for auditor handoff
+   - Filterable by date, doc type, action, search
+   - Integrated into: Purchase, Selling, Manufacturing, Journal Entries, CoA, Entities, Company Settings
 
-**Supported intents**: purchase_order, sales_order, work_order, journal_entry, goods_receipt, delivery_note, crm_lead
-
-### Master Data Enforcement
-- PO/SO can ONLY use vendors/customers/items from master data
-- StrictDropdown component prevents free-text entry
-- Backend validates existence before creation (returns 400 if not in master)
-- CRM leads are exempt (not converted yet, no statutory info needed)
-
-### Modules Implemented
-1. **Dashboard** - Module stats (CRM, Selling, Buying, Stock, HR)
-2. **Chart of Accounts** - 77 ledgers, category-based classification
-3. **Buying (Purchase-to-Pay)** - AI-first PO creation + linked flow
-4. **Selling (Order-to-Cash)** - AI-first SO creation + linked flow
-5. **Financial Statements** - Schedule III BS, P&L, TB (dynamic classification)
-6. **Manufacturing** - AI-first WO creation + BOM + auto-accounting
-7. **Journal Entries** - AI-first JE creation
-8. **CRM** - Leads, Customers
-9. **HR & Payroll** - Employees, attendance, leave, salary processing
-10. **GST & TDS** - Statutory compliance modules
-11. **Master Data** - Entities, items, cost centers
-12. **Reports** - TB, BS, P&L exports (PDF/Excel)
-13. **CSV Import** - Smart validation with CoA cross-checking
-14. **GSTIN/PAN Validation** - Format checking, state code mapping
-
-### Upcoming Tasks (P1)
-- Conversational Reporting (P0 priority: "Show me top 5 vendors by purchase value")
-- AP/AR Aging Report (0-30, 30-60, 60-90, 90+ days)
-- Inventory landed cost calculation
-- Fixed asset auto-depreciation
-
-### Backlog (P2)
-- Bank reconciliation / statement matching
-- General Ledger drill-down
-- Mobile responsiveness polish
-- Multi-company support
-- Subcontracting module
+### Key Collections
+- `audit_trail`: Immutable append-only audit log (no edit/delete)
+- `company_settings`, `chart_of_accounts`, `journal_entries`, `manual_journal_entries`
+- `purchase_orders`, `selling_sales_orders`, `items`, `vendors`, `customers`
+- `purchase_invoices`, `selling_invoices`, `work_orders`
 
 ### Key API Endpoints
-- `/api/ai/parse-prompt` - AI prompt parsing (POST)
-- `/api/coa` - Chart of Accounts
-- `/api/purchase/*` - Purchase module (with master data validation)
-- `/api/selling/*` - Selling module (with master data validation)
-- `/api/financial-statements/*` - BS, P&L, TB
-- `/api/manufacturing/*` - Work Orders
-- `/api/crm/*` - Leads, Customers
-- `/api/hr/*` - Employees, Payroll
+- `/api/audit-trail` (GET) - List with filters, pagination
+- `/api/audit-trail/stats` (GET) - Summary counts
+- `/api/audit-trail/document-types` (GET) - Distinct types for dropdowns
+- `/api/audit-trail/export` (GET) - CSV download
+- `/api/company/settings` (GET/PUT)
+- `/api/company/reporting-ai` (POST)
+- `/api/ai/parse-prompt` (POST)
 
-### Key Frontend Components
-- `AISmartEntry.js` - SmartFormPopup, ModuleAIPrompt, StrictDropdown (shared)
-- `UniversalAI.js` - Global prompt bar (imports SmartFormPopup from AISmartEntry)
+## Backlog
+
+### P0 (High Priority)
+- GST Module enhancements (GSTR-1 B2C/HSN, GSTR-3B detail, GSTR-2B ITC matching) — User requested
+
+### P1
+- Wire Company Setup to downstream docs (Financial Statement headers, Invoice PDFs)
+- AP/AR Aging Report (0-30, 30-60, 60-90, 90+ day buckets)
+- Verify Company Logo Upload end-to-end
+
+### P2
+- Inventory landed cost calculation
+- Fixed asset automatic depreciation logic
+- Bank reconciliation / statement matching
+- E-Invoice / E-Way Bill format generation
+- Mobile responsiveness polish
