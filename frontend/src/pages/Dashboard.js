@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { API } from '../App';
-import { Users, TrendingUp, Package, UserSquare, Sparkles, ShoppingCart, Warehouse } from 'lucide-react';
+import { Users, TrendingUp, Package, UserSquare, Sparkles, ShoppingCart, Warehouse, FolderKanban, Clock } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -12,7 +12,9 @@ function Dashboard() {
     selling: { salesOrders: 0, invoices: 0 },
     buying: { purchaseOrders: 0, invoices: 0 },
     stock: { items: 0, lowStock: 0 },
-    hr: { employees: 0, attendance: 0 }
+    hr: { employees: 0, attendance: 0 },
+    projects: { active: 0, total: 0 },
+    timesheets: { total: 0, utilization: 0 }
   });
   const [company, setCompany] = useState({});
 
@@ -23,7 +25,7 @@ function Dashboard() {
 
   const fetchModuleStats = async () => {
     try {
-      const [leadsRes, customersRes, sosRes, siRes, posRes, piRes, itemsRes, empsRes] = await Promise.all([
+      const [leadsRes, customersRes, sosRes, siRes, posRes, piRes, itemsRes, empsRes, projectsRes, utilRes] = await Promise.all([
         axios.get(`${API}/crm/leads`).catch(() => ({ data: [] })),
         axios.get(`${API}/crm/customers`).catch(() => ({ data: [] })),
         axios.get(`${API}/selling/sales-orders`).catch(() => ({ data: [] })),
@@ -31,15 +33,22 @@ function Dashboard() {
         axios.get(`${API}/purchase/orders`).catch(() => ({ data: [] })),
         axios.get(`${API}/purchase/invoices`).catch(() => ({ data: [] })),
         axios.get(`${API}/stock/items`).catch(() => ({ data: [] })),
-        axios.get(`${API}/hr/employees`).catch(() => ({ data: [] }))
+        axios.get(`${API}/hr/employees`).catch(() => ({ data: [] })),
+        axios.get(`${API}/projects/health/dashboard`).catch(() => ({ data: [] })),
+        axios.get(`${API}/timesheets/utilization`).catch(() => ({ data: { summary: {} } })),
       ]);
+
+      const projData = Array.isArray(projectsRes.data) ? projectsRes.data : [];
+      const utilSummary = utilRes.data?.summary || {};
 
       setModuleStats({
         crm: { leads: leadsRes.data.length, customers: customersRes.data.length },
         selling: { salesOrders: sosRes.data.length, invoices: siRes.data.length },
         buying: { purchaseOrders: posRes.data.length, invoices: piRes.data.length },
         stock: { items: itemsRes.data.length, lowStock: itemsRes.data.filter(i => (i.current_stock || 0) <= (i.reorder_level || 0)).length },
-        hr: { employees: empsRes.data.length, attendance: 0 }
+        hr: { employees: empsRes.data.length, attendance: 0 },
+        projects: { active: projData.filter(p => p.status !== 'CLOSED').length, total: projData.length },
+        timesheets: { total: utilSummary.total_billable || 0, utilization: utilSummary.avg_utilization || 0 }
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -96,6 +105,26 @@ function Dashboard() {
         { label: 'Employees', value: moduleStats.hr.employees },
         { label: 'Today Attendance', value: moduleStats.hr.attendance }
       ]
+    },
+    {
+      title: 'Projects',
+      icon: FolderKanban,
+      color: 'bg-[#38bdf8]',
+      link: '/projects-module',
+      stats: [
+        { label: 'Active', value: moduleStats.projects.active },
+        { label: 'Total', value: moduleStats.projects.total }
+      ]
+    },
+    {
+      title: 'Timesheets',
+      icon: Clock,
+      color: 'bg-[#00d4aa]',
+      link: '/timesheets',
+      stats: [
+        { label: 'Billable Hrs', value: moduleStats.timesheets.total },
+        { label: 'Utilization', value: `${moduleStats.timesheets.utilization}%` }
+      ]
     }
   ];
 
@@ -125,9 +154,9 @@ function Dashboard() {
               Simply describe what you need in natural language. AI will understand and create the right document in the right module.
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Create PO for 5000 KG Epoxy Resin from Aditya Birla at 195/KG"</span>
-              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Sales order for Asian Paints - 3000 KG EP-2500"</span>
-              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Record salary expense 2 lakh"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Raise PO for Azure cloud infra to Microsoft India - Rs.2,36,600"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Invoice HDFC AMC for PRJ-003 M2 milestone Rs.7,00,000"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Process March payroll for 21 employees"</span>
             </div>
           </div>
           <div className="absolute right-0 top-0 w-64 h-64 bg-[#152236]/10 rounded-full blur-3xl" />

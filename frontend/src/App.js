@@ -5,7 +5,8 @@ import {
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
-  Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock
+  Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock,
+  FolderKanban
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -35,6 +36,10 @@ import VendorsPage from './pages/VendorsPage';
 import CustomersPage from './pages/CustomersPage';
 import ItemsPage from './pages/ItemsPage';
 import AgingReport from './pages/AgingReport';
+import ProjectsModule from './pages/ProjectsModule';
+import TimesheetsPage from './pages/TimesheetsPage';
+import RevenueRecognition from './pages/RevenueRecognition';
+import TransactionExplorer from './pages/TransactionExplorer';
 import ManufacturingModule from './pages/ManufacturingModule';
 import CompanySetup from './pages/CompanySetup';
 import ReportingAI from './pages/ReportingAI';
@@ -108,7 +113,14 @@ function Sidebar({ isOpen, setIsOpen }) {
       title: 'HR',
       items: [
         { path: '/hr', label: 'HR & Payroll', icon: UserSquare },
-        { path: '/projects', label: 'Projects', icon: Briefcase },
+      ]
+    },
+    {
+      id: 'delivery',
+      title: 'Delivery',
+      items: [
+        { path: '/projects-module', label: 'Project Management', icon: FolderKanban },
+        { path: '/timesheets', label: 'Timesheets', icon: Clock },
       ]
     },
     {
@@ -116,6 +128,7 @@ function Sidebar({ isOpen, setIsOpen }) {
       title: 'Accounting',
       items: [
         { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
+        { path: '/revenue-recognition', label: 'Revenue (Ind AS 115)', icon: TrendingUp },
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
         { path: '/aging-report', label: 'AP / AR Aging', icon: Clock },
         { path: '/audit-trail', label: 'Audit Trail', icon: Shield },
@@ -149,6 +162,7 @@ function Sidebar({ isOpen, setIsOpen }) {
       id: 'reports',
       title: 'Reports & Settings',
       items: [
+        { path: '/transaction-explorer', label: 'Transaction Explorer', icon: FileText },
         { path: '/reports', label: 'Reports', icon: FileText },
         { path: '/admin/tables', label: 'Data Tables', icon: Database },
       ]
@@ -298,6 +312,10 @@ function App() {
             <Route path="/company-setup" element={<CompanySetup />} />
             <Route path="/reporting-ai" element={<ReportingAI />} />
             <Route path="/audit-trail" element={<AuditTrail />} />
+            <Route path="/projects-module" element={<ProjectsModule />} />
+            <Route path="/timesheets" element={<TimesheetsPage />} />
+            <Route path="/revenue-recognition" element={<RevenueRecognition />} />
+            <Route path="/transaction-explorer" element={<TransactionExplorer />} />
           </Routes>
           </div>
           

@@ -1284,6 +1284,14 @@ RULES:
     api_router.include_router(gst_router)
     api_router.include_router(aging_router)
     
+    # New modules: Projects, Timesheets, Revenue Recognition
+    from routes_projects import router as projects_router
+    from routes_timesheets import router as timesheets_router
+    from routes_revenue import router as revenue_router
+    api_router.include_router(projects_router)
+    api_router.include_router(timesheets_router)
+    api_router.include_router(revenue_router)
+    
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")
