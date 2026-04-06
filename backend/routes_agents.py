@@ -448,10 +448,16 @@ async def execute_tool(tool_name, args):
                 return {"status": "error", "error": "pattern is required"}
             if not is_safe_path(directory):
                 return {"status": "error", "error": "Access denied"}
-            include = f"--include='*.{file_ext}'" if file_ext else "--include='*.py' --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx' --include='*.css' --include='*.json'"
-            cmd = f"grep -rn {include} '{pattern}' {directory} 2>/dev/null | head -60"
+            # Build grep args list (avoids shell quoting issues)
+            grep_args = ["grep", "-rn", "-E", "-i"]
+            if file_ext:
+                grep_args.extend(["--include", f"*.{file_ext}"])
+            else:
+                for ext in ["py", "js", "jsx", "ts", "tsx", "css", "json"]:
+                    grep_args.extend(["--include", f"*.{ext}"])
+            grep_args.extend([pattern, directory])
             try:
-                proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                proc = subprocess.run(grep_args, capture_output=True, text=True, timeout=10, cwd="/app")
                 lines = proc.stdout.strip().split("\n") if proc.stdout.strip() else []
                 matches = []
                 for line in lines[:60]:
@@ -950,23 +956,22 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
             all_questions.extend(questions)
             if readable_text:
                 all_response_parts.append(readable_text)
-
-            # If DONE signal or no tool calls, we're finished
+            # Also capture DONE summary as response content
             if done_summary:
-                step_record["type"] = "complete"
-                step_record["summary"] = done_summary[:300]
-                _tasks[task_id]["steps"].append(step_record)
-                _tasks[task_id]["progress"] = f"Step {step_num}: Complete"
-                break
+                all_response_parts.append(done_summary)
 
+            # If no tool calls at all, check for DONE or treat as final answer
             if not tool_calls:
-                # No tool calls and no DONE = final answer
-                step_record["type"] = "answer"
+                if done_summary:
+                    step_record["type"] = "complete"
+                    step_record["summary"] = done_summary[:300]
+                else:
+                    step_record["type"] = "answer"
                 _tasks[task_id]["steps"].append(step_record)
-                _tasks[task_id]["progress"] = f"Step {step_num}: Response ready"
+                _tasks[task_id]["progress"] = f"Step {step_num}: {'Complete' if done_summary else 'Response ready'}"
                 break
 
-            # Execute tool calls
+            # Execute tool calls FIRST (even if DONE was signaled — tools take priority)
             _tasks[task_id]["status"] = "executing"
             step_tool_results = []
             step_files_modified = []
@@ -987,6 +992,11 @@ async def _run_engine_task(task_id, mode, message, session_id, context):
             step_record["tool_results"] = step_tool_results
             step_record["files_modified"] = step_files_modified
             _tasks[task_id]["steps"].append(step_record)
+
+            # If DONE was signaled alongside tool calls, stop after executing tools
+            if done_summary:
+                _tasks[task_id]["progress"] = f"Step {step_num}: Complete (tools executed + done)"
+                break
 
             # Feed tool results back to the LLM for the next iteration
             tool_summary = json.dumps(step_tool_results, indent=1, default=str)

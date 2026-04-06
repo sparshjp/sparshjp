@@ -1302,6 +1302,11 @@ RULES:
     set_bank_recon_db(db)
     api_router.include_router(bank_recon_router)
     
+    # Employee Analytics
+    from routes_employee_analytics import router as emp_analytics_router, set_db as set_emp_analytics_db
+    set_emp_analytics_db(db)
+    api_router.include_router(emp_analytics_router)
+    
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

@@ -183,7 +183,7 @@ async def get_unmatched_entries(account: str):
                     continue
                 
                 book_date = datetime.strptime(book_entry['date'], '%Y-%m-%d')
-                book_amount = book_entry['credit'] - book_entry['debit']  # Net amount
+                book_amount = book_entry.get('amount', 0)  # Net amount from erp_transactions
                 
                 # Check if amounts match
                 if abs(bank_amount - book_amount) < 0.01:  # Floating point tolerance
