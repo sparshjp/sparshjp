@@ -1120,6 +1120,123 @@ try:
         except Exception as e:
             logging.error(f"Universal prompt error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+
+    # ═══════════════════════════════════════════════════
+    # AI PARSE PROMPT — the core of the AI-first entry
+    # ═══════════════════════════════════════════════════
+    @api_router.post("/ai/parse-prompt")
+    async def ai_parse_prompt(body: dict):
+        """Parse a natural language prompt into structured ERP form data"""
+        prompt = body.get("prompt", "").strip()
+        if not prompt:
+            raise HTTPException(status_code=400, detail="Prompt is required")
+
+        # 1. Fetch master data for context
+        vendors_raw = await db.entities.find({"type": "Vendor"}, {"_id": 0}).to_list(200)
+        customers_raw = await db.entities.find({"type": "Customer"}, {"_id": 0}).to_list(200)
+        items_raw = await db.items.find({}, {"_id": 0}).to_list(200)
+        cost_centers_raw = await db.cost_centers.find({}, {"_id": 0}).to_list(50)
+        coa_raw = await db.chart_of_accounts.find({"is_active": {"$ne": False}}, {"_id": 0, "ledger_name": 1, "category": 1}).to_list(500)
+        pending_pos = await db.purchase_orders.find(
+            {"grn_status": "Pending"}, {"_id": 0, "id": 1, "po_number": 1, "vendor": 1, "items": 1, "grand_total": 1}
+        ).to_list(100)
+        pending_sos = await db.selling_sales_orders.find(
+            {"delivery_status": {"$ne": "Fully Delivered"}, "status": {"$ne": "Cancelled"}},
+            {"_id": 0, "id": 1, "so_number": 1, "customer": 1, "items": 1, "grand_total": 1}
+        ).to_list(100)
+
+        vendor_names = [v.get("name", "") for v in vendors_raw]
+        customer_names = [c.get("name", "") for c in customers_raw]
+        item_summaries = [{"code": i.get("item_code",""), "name": i.get("item_name",""), "uom": i.get("uom","KG"), "rate": i.get("valuation_rate",0)} for i in items_raw]
+        cc_names = [c.get("name","") for c in cost_centers_raw]
+        ledger_names = [c.get("ledger_name","") for c in coa_raw]
+        po_summaries = [{"id": p["id"], "number": p.get("po_number",""), "vendor": p.get("vendor",""), "total": p.get("grand_total",0)} for p in pending_pos]
+        so_summaries = [{"id": s["id"], "number": s.get("so_number",""), "customer": s.get("customer",""), "total": s.get("grand_total",0)} for s in pending_sos]
+
+        system_msg = f"""You are the AI brain of Kairos Advisory ERP for PolyMerx Specialty Chemicals Pvt. Ltd.
+
+MASTER DATA (use these exact names when matching):
+- Vendors: {json.dumps(vendor_names)}
+- Customers: {json.dumps(customer_names)}
+- Items: {json.dumps(item_summaries)}
+- Cost Centers: {json.dumps(cc_names)}
+- Ledger Accounts: {json.dumps(ledger_names[:60])}
+- Pending POs (for GRN): {json.dumps(po_summaries)}
+- Pending SOs (for Delivery): {json.dumps(so_summaries)}
+
+Parse the user's prompt and return a JSON object with:
+{{
+  "intent": "<one of: purchase_order, sales_order, work_order, journal_entry, goods_receipt, delivery_note, purchase_invoice, sales_invoice, vendor_payment, customer_receipt, crm_lead>",
+  "confidence": 0.0 to 1.0,
+  "summary": "One-line summary of what will be created",
+  "extracted": {{ <fields extracted from the prompt, matching master data names exactly> }},
+  "missing": ["<list of required field keys that were NOT in the prompt>"]
+}}
+
+FIELD SCHEMAS by intent:
+
+purchase_order:
+  required: vendor, items (array of {{item_code, item_name, qty, rate, uom, amount}}), cost_center
+  optional: delivery_date, payment_terms, gst_rate (default 18), vendor_gstin
+
+sales_order:
+  required: customer, items (array of {{item_code, item_name, qty, rate, uom, amount}}), cost_center
+  optional: delivery_date, payment_terms, gst_rate (default 18), customer_gstin, po_no
+
+work_order:
+  required: production_item (item_code of FG), qty_to_produce, cost_center
+  optional: bom_items (array of {{item_code, qty, rate}}), planned_start, planned_end
+
+journal_entry:
+  required: entries (array of {{account, debit, credit, description}}), narration
+  optional: posting_date, cost_center
+
+goods_receipt:
+  required: po_id (from pending POs list)
+  optional: received_qty (per item, defaults to PO qty)
+
+delivery_note:
+  required: so_id (from pending SOs list)
+  optional: delivered_qty (per item, defaults to SO qty)
+
+crm_lead:
+  required: company, contact_name
+  optional: phone, email, interest, source, est_value
+
+RULES:
+- Fuzzy match entity/item names to the closest master data entry. E.g. "Aditya Birla" → match to vendor list.
+- If an item name like "Epoxy Resin" is mentioned, find the closest item_code from master data.
+- For items array, always compute amount = qty * rate.
+- Default cost_center to the most relevant one. Default gst_rate to 18.
+- Use today's date ({datetime.now(timezone.utc).date().isoformat()}) if dates aren't specified.
+- For goods_receipt/delivery_note, match PO/SO by number or vendor/customer name.
+- Return ONLY valid JSON. No markdown fences."""
+
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_KEY,
+                session_id=f"parse-{uuid.uuid4()}",
+                system_message=system_msg
+            ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+
+            raw = await chat.send_message(UserMessage(text=prompt))
+            from ai_orchestrator import clean_json_response
+            parsed = clean_json_response(raw)
+
+            # Enrich response with master data lists for frontend dropdowns
+            parsed["master_data"] = {
+                "vendors": vendor_names,
+                "customers": customer_names,
+                "items": item_summaries,
+                "cost_centers": cc_names,
+                "ledgers": ledger_names,
+                "pending_pos": po_summaries,
+                "pending_sos": so_summaries,
+            }
+            return parsed
+        except Exception as e:
+            logging.error(f"AI parse-prompt error: {e}")
+            raise HTTPException(status_code=500, detail=f"AI parsing failed: {str(e)}")
     
     # Include routers
     api_router.include_router(crm_router)

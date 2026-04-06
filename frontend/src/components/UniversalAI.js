@@ -1,316 +1,567 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, X, Send, Loader2, ChevronDown, Zap, FileText, ShoppingCart, Package } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Zap, X, Send, Loader2, Check, AlertCircle, ChevronDown, Plus, Trash2, Sparkles } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-const MODULE_FIELDS = {
-  sales: {
-    label: 'Sales Entry',
-    icon: '📊',
-    required: [
-      { key: 'customer', label: 'Customer Name', type: 'text', placeholder: 'e.g. AutoDrive Systems Ltd.' },
-      { key: 'customer_gstin', label: 'Customer GSTIN', type: 'text', placeholder: 'e.g. 27AABCA4567G1Z9' },
-      { key: 'item', label: 'Item / Product', type: 'text', placeholder: 'e.g. MCU-X1' },
-      { key: 'qty', label: 'Quantity', type: 'number', placeholder: '0' },
-      { key: 'rate', label: 'Rate (INR)', type: 'number', placeholder: '0' },
-    ],
-    optional: [
-      { key: 'gst_rate', label: 'GST Rate %', type: 'number', placeholder: '18' },
-      { key: 'cost_center', label: 'Cost Center', type: 'text', placeholder: 'Sales & Marketing' },
-    ],
-  },
-  purchase: {
-    label: 'Purchase Entry',
-    icon: '🛒',
-    required: [
-      { key: 'vendor', label: 'Vendor Name', type: 'text', placeholder: 'e.g. SiliconCore Supplies' },
-      { key: 'vendor_gstin', label: 'Vendor GSTIN', type: 'text', placeholder: 'e.g. 27AABCS5678B1Z3' },
-      { key: 'item', label: 'Item / Material', type: 'text', placeholder: 'e.g. RM-WAFER-6' },
-      { key: 'qty', label: 'Quantity', type: 'number', placeholder: '0' },
-      { key: 'rate', label: 'Rate (INR)', type: 'number', placeholder: '0' },
-    ],
-    optional: [
-      { key: 'gst_rate', label: 'GST Rate %', type: 'number', placeholder: '18' },
-      { key: 'cost_center', label: 'Cost Center', type: 'text', placeholder: 'Manufacturing' },
-    ],
-  },
-  inventory: {
-    label: 'Stock Entry',
-    icon: '📦',
-    required: [
-      { key: 'item', label: 'Item Code', type: 'text', placeholder: 'e.g. MCU-X1' },
-      { key: 'qty', label: 'Quantity', type: 'number', placeholder: '0' },
-      { key: 'warehouse', label: 'Warehouse', type: 'text', placeholder: 'e.g. Main Warehouse' },
-    ],
-    optional: [
-      { key: 'entry_type', label: 'Type', type: 'select', options: ['Material Receipt', 'Material Issue', 'Transfer'] },
-      { key: 'rate', label: 'Valuation Rate', type: 'number', placeholder: '0' },
-    ],
-  },
-  general: {
-    label: 'General / Journal',
-    icon: '📝',
-    required: [],
-    optional: [],
-  }
+// Intent display config
+const INTENT_CONFIG = {
+  purchase_order: { label: 'Purchase Order', color: '#F59E0B', api: '/api/purchase/orders' },
+  sales_order: { label: 'Sales Order', color: '#10B981', api: '/api/selling/sales-orders' },
+  work_order: { label: 'Work Order', color: '#8B5CF6', api: '/api/manufacturing/work-orders' },
+  journal_entry: { label: 'Journal Entry', color: '#EC4899', api: '/api/journal-entries/manual' },
+  goods_receipt: { label: 'Goods Receipt (GRN)', color: '#F97316', api: null },
+  delivery_note: { label: 'Delivery Note', color: '#06B6D4', api: null },
+  purchase_invoice: { label: 'Purchase Invoice', color: '#EF4444', api: null },
+  sales_invoice: { label: 'Sales Invoice', color: '#22C55E', api: null },
+  vendor_payment: { label: 'Vendor Payment', color: '#A855F7', api: null },
+  customer_receipt: { label: 'Customer Receipt', color: '#14B8A6', api: null },
+  crm_lead: { label: 'CRM Lead', color: '#3B82F6', api: '/api/crm/leads' },
 };
 
-export default function UniversalAI() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [module, setModule] = useState('general');
-  const [formData, setFormData] = useState({});
-  const [prompt, setPrompt] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [showModuleSelector, setShowModuleSelector] = useState(false);
+// Field schemas for each intent
+const FIELD_SCHEMAS = {
+  purchase_order: {
+    simple: [
+      { key: 'vendor', label: 'Vendor', type: 'suggest', source: 'vendors', required: true },
+      { key: 'cost_center', label: 'Cost Center', type: 'suggest', source: 'cost_centers', required: true },
+      { key: 'delivery_date', label: 'Delivery Date', type: 'date' },
+      { key: 'gst_rate', label: 'GST %', type: 'number', default: 18 },
+      { key: 'payment_terms', label: 'Payment Terms', type: 'text' },
+    ],
+    items: true,
+  },
+  sales_order: {
+    simple: [
+      { key: 'customer', label: 'Customer', type: 'suggest', source: 'customers', required: true },
+      { key: 'cost_center', label: 'Cost Center', type: 'suggest', source: 'cost_centers', required: true },
+      { key: 'delivery_date', label: 'Delivery Date', type: 'date' },
+      { key: 'gst_rate', label: 'GST %', type: 'number', default: 18 },
+      { key: 'payment_terms', label: 'Payment Terms', type: 'text' },
+      { key: 'po_no', label: 'Customer PO #', type: 'text' },
+    ],
+    items: true,
+  },
+  work_order: {
+    simple: [
+      { key: 'production_item', label: 'FG Item Code', type: 'suggest', source: 'items_code', required: true },
+      { key: 'qty_to_produce', label: 'Qty to Produce', type: 'number', required: true },
+      { key: 'cost_center', label: 'Cost Center', type: 'suggest', source: 'cost_centers', required: true },
+      { key: 'planned_start', label: 'Planned Start', type: 'date' },
+      { key: 'planned_end', label: 'Planned End', type: 'date' },
+    ],
+    items: false,
+  },
+  journal_entry: {
+    simple: [
+      { key: 'narration', label: 'Narration', type: 'text', required: true },
+      { key: 'posting_date', label: 'Date', type: 'date' },
+      { key: 'cost_center', label: 'Cost Center', type: 'suggest', source: 'cost_centers' },
+    ],
+    entries: true,
+  },
+  goods_receipt: {
+    simple: [
+      { key: 'po_id', label: 'Purchase Order', type: 'select_po', required: true },
+    ],
+  },
+  delivery_note: {
+    simple: [
+      { key: 'so_id', label: 'Sales Order', type: 'select_so', required: true },
+    ],
+  },
+  crm_lead: {
+    simple: [
+      { key: 'company', label: 'Company', type: 'text', required: true },
+      { key: 'contact_name', label: 'Contact Name', type: 'text', required: true },
+      { key: 'phone', label: 'Phone', type: 'text' },
+      { key: 'email', label: 'Email', type: 'text' },
+      { key: 'interest', label: 'Interest / Requirement', type: 'text' },
+      { key: 'source', label: 'Source', type: 'text' },
+      { key: 'est_value', label: 'Est. Value (INR)', type: 'number' },
+    ],
+  },
+};
 
-  function buildPromptFromForm() {
-    const fields = MODULE_FIELDS[module];
-    let parts = [];
-    if (module === 'sales') {
-      parts.push(`Create Sales Invoice for customer ${formData.customer || '___'} (GSTIN: ${formData.customer_gstin || '___'})`);
-      parts.push(`Item: ${formData.item || '___'}, Qty: ${formData.qty || 0}, Rate: Rs ${formData.rate || 0}`);
-      if (formData.gst_rate) parts.push(`GST: ${formData.gst_rate}%`);
-      if (formData.cost_center) parts.push(`Cost Center: ${formData.cost_center}`);
-    } else if (module === 'purchase') {
-      parts.push(`Create Purchase from vendor ${formData.vendor || '___'} (GSTIN: ${formData.vendor_gstin || '___'})`);
-      parts.push(`Item: ${formData.item || '___'}, Qty: ${formData.qty || 0}, Rate: Rs ${formData.rate || 0}`);
-      if (formData.gst_rate) parts.push(`GST: ${formData.gst_rate}%`);
-      if (formData.cost_center) parts.push(`Cost Center: ${formData.cost_center}`);
-    } else if (module === 'inventory') {
-      parts.push(`${formData.entry_type || 'Stock Entry'}: ${formData.item || '___'}, Qty: ${formData.qty || 0}`);
-      parts.push(`Warehouse: ${formData.warehouse || 'Main Warehouse'}`);
-      if (formData.rate) parts.push(`Rate: Rs ${formData.rate}`);
-    }
-    return parts.join('. ');
-  }
+function SuggestInput({ value, onChange, suggestions, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+  const ref = useRef(null);
 
-  function validateForm() {
-    const fields = MODULE_FIELDS[module];
-    for (const f of fields.required) {
-      if (!formData[f.key] || formData[f.key] === '' || formData[f.key] === '0') return false;
-    }
-    return true;
-  }
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-  async function handleSend() {
-    const finalPrompt = module === 'general' ? prompt : (prompt || buildPromptFromForm());
-    if (!finalPrompt.trim()) return;
-
-    setLoading(true);
-    setMessages(prev => [...prev, { role: 'user', content: finalPrompt, module }]);
-
-    try {
-      if (module === 'general') {
-        const r = await fetch(`${API}/api/ai/universal-prompt`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: finalPrompt, context: {} })
-        });
-        const data = await r.json();
-        setMessages(prev => [...prev, { role: 'ai', content: JSON.stringify(data, null, 2), module: data.module || 'unknown' }]);
-      } else if (module === 'sales') {
-        const r = await fetch(`${API}/api/selling/invoices`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customer: formData.customer,
-            customer_gstin: formData.customer_gstin,
-            items: [{ item_code: formData.item, qty: parseFloat(formData.qty) || 0, rate: parseFloat(formData.rate) || 0, amount: (parseFloat(formData.qty) || 0) * (parseFloat(formData.rate) || 0) }],
-            gst_rate: parseFloat(formData.gst_rate) || 18,
-            cost_center: formData.cost_center || 'Sales & Marketing',
-          })
-        });
-        const data = await r.json();
-        setMessages(prev => [...prev, {
-          role: 'ai',
-          content: `Sales Invoice ${data.invoice_number} created!\nCustomer: ${data.customer}\nSubtotal: Rs ${data.subtotal?.toLocaleString('en-IN')}\nGST: Rs ${data.gst_amount?.toLocaleString('en-IN')}\nTotal: Rs ${data.grand_total?.toLocaleString('en-IN')}\nCOGS: Rs ${data.cogs_total?.toLocaleString('en-IN')}\n\nJournal Entry auto-posted.`,
-          module: 'sales'
-        }]);
-      } else if (module === 'purchase') {
-        const r = await fetch(`${API}/api/purchase/grn`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            vendor: formData.vendor,
-            items: [{ item_code: formData.item, qty: parseFloat(formData.qty) || 0, rate: parseFloat(formData.rate) || 0, amount: (parseFloat(formData.qty) || 0) * (parseFloat(formData.rate) || 0) }],
-            gst_rate: parseFloat(formData.gst_rate) || 18,
-            cost_center: formData.cost_center || 'Manufacturing',
-          })
-        });
-        const data = await r.json();
-        setMessages(prev => [...prev, {
-          role: 'ai',
-          content: `GRN ${data.grn_number} created!\nVendor: ${data.vendor}\nSubtotal: Rs ${data.subtotal?.toLocaleString('en-IN')}\nGST: Rs ${data.gst_amount?.toLocaleString('en-IN')}\nTotal: Rs ${data.grand_total?.toLocaleString('en-IN')}\n\nInventory updated + Journal Entry auto-posted.`,
-          module: 'purchase'
-        }]);
-      } else if (module === 'inventory') {
-        const r = await fetch(`${API}/api/stock/stock-entries`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            stock_entry_type: formData.entry_type || 'Material Receipt',
-            posting_date: new Date().toISOString().split('T')[0],
-            to_warehouse: formData.warehouse || 'Main Warehouse',
-            items: [{ item: formData.item, qty: parseFloat(formData.qty) || 0, rate: parseFloat(formData.rate) || 0 }]
-          })
-        });
-        const data = await r.json();
-        setMessages(prev => [...prev, { role: 'ai', content: `Stock entry created for ${formData.item} (${formData.qty} units).`, module: 'inventory' }]);
-      }
-    } catch (e) {
-      setMessages(prev => [...prev, { role: 'ai', content: `Error: ${e.message}`, module: 'error' }]);
-    }
-
-    setLoading(false);
-    setPrompt('');
-    setFormData({});
-  }
-
-  const fields = MODULE_FIELDS[module];
+  const filtered = (suggestions || []).filter(s => {
+    const label = typeof s === 'string' ? s : s.code || s.name || '';
+    return label.toLowerCase().includes((filter || value || '').toLowerCase());
+  });
 
   return (
-    <>
-      {/* FAB Button */}
-      {!isOpen && (
-        <button
-          data-testid="ai-fab-button"
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-24 w-14 h-14 bg-[#00C9A7] text-[#0D1B2A] rounded-full shadow-lg shadow-[#00C9A7]/30 flex items-center justify-center hover:bg-[#00B396] transition-all hover:scale-105 z-50"
-        >
-          <Zap className="w-6 h-6" />
-        </button>
-      )}
-
-      {/* AI Panel */}
-      {isOpen && (
-        <div className="fixed bottom-4 right-4 w-[420px] max-h-[80vh] bg-[#0D1B2A] border border-[#1B2D42] rounded-xl shadow-2xl shadow-black/40 z-50 flex flex-col" data-testid="ai-panel">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#1B2D42]">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#00C9A7] animate-pulse" />
-              <span className="text-sm font-semibold text-[#E8EDF2]">Kairos AI</span>
-              <span className="text-[10px] text-[#4A5B6E] bg-[#152236] px-2 py-0.5 rounded-full">{fields.label}</span>
-            </div>
-            <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-[#152236] rounded text-[#7A8BA0]"><X className="w-4 h-4" /></button>
-          </div>
-
-          {/* Module Selector */}
-          <div className="flex gap-1 px-3 py-2 border-b border-[#1B2D42] bg-[#152236]/50">
-            {Object.entries(MODULE_FIELDS).map(([key, val]) => (
-              <button
-                key={key}
-                data-testid={`ai-module-${key}`}
-                onClick={() => { setModule(key); setFormData({}); }}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                  module === key ? 'bg-[#00C9A7]/15 text-[#00C9A7] border border-[#00C9A7]/30' : 'text-[#4A5B6E] hover:text-[#7A8BA0] hover:bg-[#1B2D42]'
-                }`}
-              >
-                {val.icon} {val.label.split(' ')[0]}
+    <div ref={ref} className="relative">
+      <input
+        value={value || ''}
+        onChange={e => { onChange(e.target.value); setFilter(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2.5 py-1.5 text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:border-[#00C9A7] focus:ring-1 focus:ring-[#00C9A7]/20 outline-none"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[#152236] border border-[#1B2D42] rounded shadow-lg max-h-36 overflow-y-auto">
+          {filtered.slice(0, 8).map((s, i) => {
+            const label = typeof s === 'string' ? s : `${s.code} — ${s.name}`;
+            const val = typeof s === 'string' ? s : s.code;
+            return (
+              <button key={i} onClick={() => { onChange(val); setOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 text-xs text-[#E8EDF2] hover:bg-[#00C9A7]/10 hover:text-[#00C9A7] transition-colors">
+                {label}
               </button>
-            ))}
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SmartPopup({ parsed, masterData, onConfirm, onCancel, loading }) {
+  const intent = parsed.intent;
+  const config = INTENT_CONFIG[intent] || { label: intent, color: '#00C9A7' };
+  const schema = FIELD_SCHEMAS[intent] || { simple: [] };
+
+  // Initialize form state from extracted data
+  const [formData, setFormData] = useState(() => {
+    const ext = parsed.extracted || {};
+    const data = { ...ext };
+    // Set defaults for missing fields
+    (schema.simple || []).forEach(f => {
+      if (f.default && !data[f.key]) data[f.key] = f.default;
+    });
+    return data;
+  });
+
+  const [items, setItems] = useState(() => {
+    const ext = parsed.extracted || {};
+    return ext.items || [{ item_code: '', item_name: '', qty: '', rate: '', uom: 'KG', amount: 0 }];
+  });
+
+  const [entries, setEntries] = useState(() => {
+    const ext = parsed.extracted || {};
+    return ext.entries || [{ account: '', debit: '', credit: '', description: '' }];
+  });
+
+  const missing = parsed.missing || [];
+
+  const set = (key, val) => setFormData(prev => ({ ...prev, [key]: val }));
+
+  const updateItem = (idx, key, val) => {
+    setItems(prev => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [key]: val };
+      if (key === 'qty' || key === 'rate') {
+        copy[idx].amount = (parseFloat(copy[idx].qty) || 0) * (parseFloat(copy[idx].rate) || 0);
+      }
+      return copy;
+    });
+  };
+
+  const updateEntry = (idx, key, val) => {
+    setEntries(prev => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [key]: val };
+      return copy;
+    });
+  };
+
+  const addItem = () => setItems(prev => [...prev, { item_code: '', item_name: '', qty: '', rate: '', uom: 'KG', amount: 0 }]);
+  const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
+
+  const addEntry = () => setEntries(prev => [...prev, { account: '', debit: '', credit: '', description: '' }]);
+  const removeEntry = (idx) => setEntries(prev => prev.filter((_, i) => i !== idx));
+
+  const getSuggestions = (source) => {
+    if (!masterData) return [];
+    if (source === 'vendors') return masterData.vendors || [];
+    if (source === 'customers') return masterData.customers || [];
+    if (source === 'cost_centers') return masterData.cost_centers || [];
+    if (source === 'items_code') return (masterData.items || []).map(i => ({ code: i.code, name: i.name }));
+    if (source === 'ledgers') return masterData.ledgers || [];
+    return [];
+  };
+
+  const itemSuggestions = (masterData?.items || []).map(i => ({ code: i.code, name: i.name, rate: i.rate }));
+
+  const handleConfirm = () => {
+    const payload = { ...formData };
+    if (schema.items) payload.items = items.map(i => ({ ...i, qty: parseFloat(i.qty) || 0, rate: parseFloat(i.rate) || 0, amount: (parseFloat(i.qty) || 0) * (parseFloat(i.rate) || 0) }));
+    if (schema.entries) payload.entries = entries.map(e => ({ ...e, debit: parseFloat(e.debit) || 0, credit: parseFloat(e.credit) || 0 }));
+    onConfirm(intent, payload);
+  };
+
+  const subtotal = items.reduce((s, i) => s + ((parseFloat(i.qty) || 0) * (parseFloat(i.rate) || 0)), 0);
+  const gstRate = parseFloat(formData.gst_rate) || 18;
+  const gstAmount = subtotal * gstRate / 100;
+  const grandTotal = subtotal + gstAmount;
+
+  const totalDebit = entries.reduce((s, e) => s + (parseFloat(e.debit) || 0), 0);
+  const totalCredit = entries.reduce((s, e) => s + (parseFloat(e.credit) || 0), 0);
+  const jeBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" data-testid="ai-smart-popup">
+      <div className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#1B2D42]">
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: config.color }} />
+            <span className="text-sm font-bold text-[#E8EDF2]">{config.label}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: config.color + '20', color: config.color }}>
+              {Math.round((parsed.confidence || 0) * 100)}% match
+            </span>
+          </div>
+          <button onClick={onCancel} className="p-1.5 hover:bg-[#152236] rounded-lg text-[#7A8BA0]"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* AI Summary */}
+        <div className="px-5 py-2.5 bg-[#152236]/50 border-b border-[#1B2D42] flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-[#00C9A7] flex-shrink-0" />
+          <p className="text-xs text-[#7A8BA0]">{parsed.summary}</p>
+        </div>
+
+        {/* Form Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+          {/* Simple fields */}
+          <div className="grid grid-cols-2 gap-3">
+            {(schema.simple || []).map(f => {
+              const isMissing = missing.includes(f.key);
+              const isFilled = formData[f.key] !== undefined && formData[f.key] !== '' && formData[f.key] !== null;
+              return (
+                <div key={f.key} className="space-y-1">
+                  <label className="text-[10px] font-medium tracking-wider uppercase flex items-center gap-1.5" style={{ color: isMissing && !isFilled ? '#F59E0B' : '#7A8BA0' }}>
+                    {f.label} {f.required && <span className="text-red-400">*</span>}
+                    {isFilled && !isMissing && <Check className="w-3 h-3 text-[#00C9A7]" />}
+                    {isMissing && !isFilled && <AlertCircle className="w-3 h-3 text-amber-400" />}
+                  </label>
+                  {f.type === 'suggest' ? (
+                    <SuggestInput value={formData[f.key] || ''} onChange={v => set(f.key, v)} suggestions={getSuggestions(f.source)} placeholder={`Select ${f.label.toLowerCase()}`} />
+                  ) : f.type === 'select_po' ? (
+                    <select value={formData[f.key] || ''} onChange={e => set(f.key, e.target.value)} className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2.5 py-1.5 text-xs text-[#E8EDF2] focus:border-[#00C9A7] outline-none">
+                      <option value="">Select PO</option>
+                      {(masterData?.pending_pos || []).map(p => <option key={p.id} value={p.id}>{p.number} — {p.vendor}</option>)}
+                    </select>
+                  ) : f.type === 'select_so' ? (
+                    <select value={formData[f.key] || ''} onChange={e => set(f.key, e.target.value)} className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2.5 py-1.5 text-xs text-[#E8EDF2] focus:border-[#00C9A7] outline-none">
+                      <option value="">Select SO</option>
+                      {(masterData?.pending_sos || []).map(s => <option key={s.id} value={s.id}>{s.number} — {s.customer}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type={f.type}
+                      value={formData[f.key] ?? ''}
+                      onChange={e => set(f.key, f.type === 'number' ? e.target.value : e.target.value)}
+                      className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2.5 py-1.5 text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:border-[#00C9A7] focus:ring-1 focus:ring-[#00C9A7]/20 outline-none"
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[100px] max-h-[300px]">
-            {messages.length === 0 && (
-              <div className="text-center text-[#4A5B6E] text-xs py-4">
-                {module === 'general'
-                  ? 'Type anything — AI will route to the right module.'
-                  : `Fill the required fields below to create a ${fields.label.toLowerCase()}.`}
+          {/* Items table (for PO/SO) */}
+          {schema.items && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-medium tracking-wider uppercase text-[#7A8BA0]">Line Items</p>
+                <button onClick={addItem} className="flex items-center gap-1 text-[10px] text-[#00C9A7] hover:text-[#00B396]">
+                  <Plus className="w-3 h-3" /> Add Item
+                </button>
               </div>
-            )}
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
-                  msg.role === 'user' ? 'bg-[#00C9A7]/15 text-[#00C9A7]' : 'bg-[#152236] text-[#E8EDF2]'
-                }`}>
-                  <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+              <div className="border border-[#1B2D42] rounded overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#152236] text-[#7A8BA0]">
+                      <th className="px-2 py-1.5 text-left font-medium">Item</th>
+                      <th className="px-2 py-1.5 text-right font-medium w-20">Qty</th>
+                      <th className="px-2 py-1.5 text-left font-medium w-14">UOM</th>
+                      <th className="px-2 py-1.5 text-right font-medium w-24">Rate</th>
+                      <th className="px-2 py-1.5 text-right font-medium w-28">Amount</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, idx) => (
+                      <tr key={idx} className="border-t border-[#1B2D42]/50">
+                        <td className="px-1 py-1">
+                          <SuggestInput
+                            value={item.item_code || ''}
+                            onChange={v => {
+                              const match = itemSuggestions.find(s => s.code === v);
+                              updateItem(idx, 'item_code', v);
+                              if (match) {
+                                updateItem(idx, 'item_name', match.name);
+                                if (!item.rate) updateItem(idx, 'rate', match.rate);
+                              }
+                            }}
+                            suggestions={itemSuggestions}
+                            placeholder="Item code"
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <input type="number" value={item.qty || ''} onChange={e => updateItem(idx, 'qty', e.target.value)}
+                            className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1 text-xs text-right text-[#E8EDF2] outline-none focus:border-[#00C9A7]" />
+                        </td>
+                        <td className="px-1 py-1">
+                          <input value={item.uom || 'KG'} onChange={e => updateItem(idx, 'uom', e.target.value)}
+                            className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1 text-xs text-[#E8EDF2] outline-none focus:border-[#00C9A7]" />
+                        </td>
+                        <td className="px-1 py-1">
+                          <input type="number" value={item.rate || ''} onChange={e => updateItem(idx, 'rate', e.target.value)}
+                            className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1 text-xs text-right text-[#E8EDF2] outline-none focus:border-[#00C9A7]" />
+                        </td>
+                        <td className="px-2 py-1 text-right text-[#E8EDF2] font-mono">{((parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0)).toLocaleString('en-IN')}</td>
+                        <td className="px-1">
+                          {items.length > 1 && <button onClick={() => removeItem(idx)} className="text-red-400/60 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Totals */}
+              <div className="flex justify-end">
+                <div className="w-64 space-y-1 text-xs">
+                  <div className="flex justify-between text-[#7A8BA0]"><span>Subtotal</span><span className="font-mono">{subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                  <div className="flex justify-between text-[#7A8BA0]"><span>GST ({gstRate}%)</span><span className="font-mono">{gstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                  <div className="flex justify-between text-[#E8EDF2] font-bold border-t border-[#1B2D42] pt-1"><span>Grand Total</span><span className="font-mono">{grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
                 </div>
               </div>
-            ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="bg-[#152236] rounded-lg px-3 py-2 flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 animate-spin text-[#00C9A7]" />
-                  <span className="text-xs text-[#4A5B6E]">Processing...</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Smart Form (for non-general modules) */}
-          {module !== 'general' && fields.required.length > 0 && (
-            <div className="px-3 py-2 border-t border-[#1B2D42] bg-[#152236]/30 space-y-2 max-h-[250px] overflow-y-auto">
-              <p className="text-[10px] text-[#00C9A7] font-semibold tracking-wider uppercase">Required Fields</p>
-              {fields.required.map(f => (
-                <div key={f.key} className="flex items-center gap-2">
-                  <label className="text-[10px] text-[#7A8BA0] w-24 flex-shrink-0">{f.label} *</label>
-                  <input
-                    data-testid={`ai-field-${f.key}`}
-                    type={f.type}
-                    placeholder={f.placeholder}
-                    value={formData[f.key] || ''}
-                    onChange={e => setFormData({...formData, [f.key]: e.target.value})}
-                    className="flex-1 bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1.5 text-xs text-[#E8EDF2] placeholder-[#4A5B6E] focus:border-[#00C9A7] focus:ring-1 focus:ring-[#00C9A7]/20"
-                  />
-                </div>
-              ))}
-              {fields.optional.length > 0 && (
-                <>
-                  <p className="text-[10px] text-[#4A5B6E] tracking-wider uppercase mt-2">Optional</p>
-                  {fields.optional.map(f => (
-                    <div key={f.key} className="flex items-center gap-2">
-                      <label className="text-[10px] text-[#4A5B6E] w-24 flex-shrink-0">{f.label}</label>
-                      {f.type === 'select' ? (
-                        <select
-                          data-testid={`ai-field-${f.key}`}
-                          value={formData[f.key] || ''}
-                          onChange={e => setFormData({...formData, [f.key]: e.target.value})}
-                          className="flex-1 bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1.5 text-xs text-[#E8EDF2]"
-                        >
-                          <option value="">Select</option>
-                          {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                      ) : (
-                        <input
-                          data-testid={`ai-field-${f.key}`}
-                          type={f.type}
-                          placeholder={f.placeholder}
-                          value={formData[f.key] || ''}
-                          onChange={e => setFormData({...formData, [f.key]: e.target.value})}
-                          className="flex-1 bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1.5 text-xs text-[#E8EDF2] placeholder-[#4A5B6E]"
-                        />
-                      )}
-                    </div>
-                  ))}
-                </>
-              )}
             </div>
           )}
 
-          {/* Input */}
-          <div className="p-3 border-t border-[#1B2D42]">
-            <div className="flex gap-2">
-              <input
-                data-testid="ai-prompt-input"
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !loading && handleSend()}
-                placeholder={module === 'general' ? 'Type anything...' : 'Add notes or just click Send'}
-                className="flex-1 bg-[#152236] border border-[#1B2D42] rounded-lg px-3 py-2 text-sm text-[#E8EDF2] placeholder-[#4A5B6E] focus:border-[#00C9A7]"
-                disabled={loading}
-              />
-              <button
-                data-testid="ai-send-btn"
-                onClick={handleSend}
-                disabled={loading || (module !== 'general' && !validateForm())}
-                className="px-3 py-2 bg-[#00C9A7] text-[#0D1B2A] rounded-lg font-semibold text-sm hover:bg-[#00B396] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </button>
+          {/* Journal Entries table */}
+          {schema.entries && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-medium tracking-wider uppercase text-[#7A8BA0]">Journal Lines</p>
+                <button onClick={addEntry} className="flex items-center gap-1 text-[10px] text-[#00C9A7] hover:text-[#00B396]"><Plus className="w-3 h-3" /> Add Line</button>
+              </div>
+              <div className="border border-[#1B2D42] rounded overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#152236] text-[#7A8BA0]">
+                      <th className="px-2 py-1.5 text-left font-medium">Account</th>
+                      <th className="px-2 py-1.5 text-right font-medium w-28">Debit</th>
+                      <th className="px-2 py-1.5 text-right font-medium w-28">Credit</th>
+                      <th className="px-2 py-1.5 text-left font-medium w-32">Description</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.map((e, idx) => (
+                      <tr key={idx} className="border-t border-[#1B2D42]/50">
+                        <td className="px-1 py-1">
+                          <SuggestInput value={e.account || ''} onChange={v => updateEntry(idx, 'account', v)} suggestions={masterData?.ledgers || []} placeholder="Account" />
+                        </td>
+                        <td className="px-1 py-1">
+                          <input type="number" value={e.debit || ''} onChange={ev => updateEntry(idx, 'debit', ev.target.value)}
+                            className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1 text-xs text-right text-[#E8EDF2] outline-none focus:border-[#00C9A7]" />
+                        </td>
+                        <td className="px-1 py-1">
+                          <input type="number" value={e.credit || ''} onChange={ev => updateEntry(idx, 'credit', ev.target.value)}
+                            className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1 text-xs text-right text-[#E8EDF2] outline-none focus:border-[#00C9A7]" />
+                        </td>
+                        <td className="px-1 py-1">
+                          <input value={e.description || ''} onChange={ev => updateEntry(idx, 'description', ev.target.value)}
+                            className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1 text-xs text-[#E8EDF2] outline-none focus:border-[#00C9A7]" placeholder="Desc" />
+                        </td>
+                        <td className="px-1">
+                          {entries.length > 1 && <button onClick={() => removeEntry(idx)} className="text-red-400/60 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-[#1B2D42] bg-[#152236]/50">
+                      <td className="px-2 py-1.5 text-right font-medium text-[#7A8BA0]">Total</td>
+                      <td className="px-2 py-1.5 text-right font-mono text-[#E8EDF2]">{totalDebit.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                      <td className="px-2 py-1.5 text-right font-mono text-[#E8EDF2]">{totalCredit.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                      <td colSpan={2} className="px-2 py-1.5">
+                        {jeBalanced ? <span className="text-[#00C9A7] text-[10px] font-medium">Balanced</span> : <span className="text-red-400 text-[10px] font-medium">Diff: {(totalDebit - totalCredit).toLocaleString('en-IN')}</span>}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-[#1B2D42] bg-[#152236]/30">
+          <div className="flex items-center gap-2 text-[10px] text-[#4A5B6E]">
+            {missing.length > 0 && <AlertCircle className="w-3.5 h-3.5 text-amber-400" />}
+            {missing.length > 0 ? <span className="text-amber-400">{missing.length} field{missing.length > 1 ? 's' : ''} need your input</span> : <span className="text-[#00C9A7]">All fields parsed from prompt</span>}
           </div>
+          <div className="flex gap-2">
+            <button onClick={onCancel} data-testid="ai-popup-cancel" className="px-4 py-2 text-xs font-medium text-[#7A8BA0] hover:text-[#E8EDF2] border border-[#1B2D42] rounded-lg hover:bg-[#152236] transition-colors">Cancel</button>
+            <button onClick={handleConfirm} disabled={loading} data-testid="ai-popup-confirm"
+              className="px-5 py-2 text-xs font-bold bg-[#00C9A7] text-[#0D1B2A] rounded-lg hover:bg-[#00B396] disabled:opacity-50 transition-colors flex items-center gap-2">
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Confirm & Create
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+export default function UniversalAI() {
+  const [prompt, setPrompt] = useState('');
+  const [parsing, setParsing] = useState(false);
+  const [parsed, setParsed] = useState(null);
+  const [masterData, setMasterData] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [history, setHistory] = useState([]);
+  const inputRef = useRef(null);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleParse = async () => {
+    if (!prompt.trim() || parsing) return;
+    setParsing(true);
+    try {
+      const res = await fetch(`${API}/api/ai/parse-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Parse failed');
+      const data = await res.json();
+      setParsed(data);
+      setMasterData(data.master_data || {});
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+    setParsing(false);
+  };
+
+  const handleConfirm = async (intent, payload) => {
+    setSubmitting(true);
+    try {
+      let url = '';
+      let body = payload;
+
+      switch (intent) {
+        case 'purchase_order':
+          url = `${API}/api/purchase/orders`;
+          break;
+        case 'sales_order':
+          url = `${API}/api/selling/sales-orders`;
+          break;
+        case 'work_order':
+          url = `${API}/api/manufacturing/work-orders`;
+          body = { ...payload, bom_items: payload.bom_items || [] };
+          break;
+        case 'journal_entry':
+          url = `${API}/api/journal-entries/manual`;
+          body = { posting_date: payload.posting_date || new Date().toISOString().split('T')[0], cost_center: payload.cost_center || 'General', journal_entries: payload.entries, narration: payload.narration };
+          break;
+        case 'goods_receipt':
+          url = `${API}/api/purchase/grn/from-po/${payload.po_id}`;
+          body = {};
+          break;
+        case 'delivery_note':
+          url = `${API}/api/selling/delivery-notes/from-so/${payload.so_id}`;
+          body = {};
+          break;
+        case 'crm_lead':
+          url = `${API}/api/crm/leads`;
+          body = { lead_name: payload.contact_name, company_name: payload.company, ...payload };
+          break;
+        default:
+          throw new Error(`Unsupported intent: ${intent}`);
+      }
+
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || JSON.stringify(err));
+      }
+      const result = await res.json();
+
+      const docId = result.po_number || result.so_number || result.wo_number || result.grn_number || result.id || 'Created';
+      const msg = `${INTENT_CONFIG[intent]?.label || intent} ${docId} created successfully!`;
+      showToast(msg, 'success');
+      setHistory(prev => [{ prompt, intent, result: docId, time: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]);
+      setParsed(null);
+      setPrompt('');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <>
+      {/* Prompt Bar — fixed at bottom center */}
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4" data-testid="ai-prompt-bar">
+        <div className="relative group">
+          <div className="absolute -inset-[1px] bg-gradient-to-r from-[#00C9A7]/40 via-transparent to-[#00C9A7]/40 rounded-2xl opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative flex items-center bg-[#0D1B2A]/95 backdrop-blur-xl border border-[#1B2D42] rounded-2xl shadow-2xl shadow-black/40">
+            <div className="flex items-center pl-4 pr-2">
+              <Zap className="w-4 h-4 text-[#00C9A7]" />
+            </div>
+            <input
+              ref={inputRef}
+              data-testid="ai-prompt-input"
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleParse()}
+              placeholder="Type a command... e.g. &quot;Create PO for 5000 KG Epoxy Resin from Aditya Birla at 195/KG&quot;"
+              className="flex-1 bg-transparent py-3.5 text-sm text-[#E8EDF2] placeholder-[#4A5B6E] outline-none"
+              disabled={parsing}
+            />
+            <button
+              data-testid="ai-send-btn"
+              onClick={handleParse}
+              disabled={parsing || !prompt.trim()}
+              className="mr-2 px-4 py-2 bg-[#00C9A7] text-[#0D1B2A] rounded-xl font-bold text-xs hover:bg-[#00B396] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+            >
+              {parsing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {parsing ? 'Parsing...' : 'Go'}
+            </button>
+          </div>
+        </div>
+
+        {/* Recent history chips */}
+        {history.length > 0 && !parsed && (
+          <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
+            {history.slice(0, 4).map((h, i) => (
+              <button key={i} onClick={() => setPrompt(h.prompt)}
+                className="flex-shrink-0 px-3 py-1 rounded-full text-[10px] bg-[#152236]/80 border border-[#1B2D42] text-[#7A8BA0] hover:text-[#00C9A7] hover:border-[#00C9A7]/30 transition-colors">
+                <span style={{ color: INTENT_CONFIG[h.intent]?.color }}>{INTENT_CONFIG[h.intent]?.label?.split(' ')[0]}</span> — {h.result}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Smart Popup */}
+      {parsed && <SmartPopup parsed={parsed} masterData={masterData} onConfirm={handleConfirm} onCancel={() => setParsed(null)} loading={submitting} />}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-5 right-5 z-[200] px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 animate-in slide-in-from-right ${
+          toast.type === 'success' ? 'bg-[#00C9A7] text-[#0D1B2A]' : 'bg-red-500 text-white'
+        }`} data-testid="ai-toast">
+          {toast.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {toast.msg}
         </div>
       )}
     </>

@@ -116,9 +116,9 @@ function Dashboard() {
               Simply describe what you need in natural language. AI will understand and create the right document in the right module.
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Customer ABC wants 100 laptops"</span>
-              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Mark attendance for all"</span>
-              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Create PO for Vendor X"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Create PO for 5000 KG Epoxy Resin from Aditya Birla at 195/KG"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Sales order for Asian Paints - 3000 KG EP-2500"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Record salary expense 2 lakh"</span>
             </div>
           </div>
           <div className="absolute right-0 top-0 w-64 h-64 bg-[#152236]/10 rounded-full blur-3xl" />
