@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, Download, Table2, BarChart3, MessageSquare } from 'lucide-react';
+import { Send, Loader2, Download, Table2, BarChart3, MessageSquare } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 
@@ -184,7 +184,7 @@ export default function ReportingAI() {
       <div className="flex-shrink-0 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-[#00C9A7]/10 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-[#00C9A7]" />
+            <span className="text-[#00C9A7] font-black text-lg leading-none tracking-tight select-none">K.</span>
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#E8EDF2]">Reporting AI</h1>
@@ -236,7 +236,7 @@ export default function ReportingAI() {
               <div className="space-y-3">
                 {/* AI header */}
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#00C9A7]" />
+                  <span className="text-[#00C9A7] font-black text-xs leading-none tracking-tight select-none">K.</span>
                   <span className="text-xs font-bold text-[#00C9A7] tracking-wider uppercase">Kairos AI</span>
                 </div>
 
@@ -277,7 +277,7 @@ export default function ReportingAI() {
 
         {loading && (
           <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#00C9A7] animate-pulse" />
+            <span className="text-[#00C9A7] font-black text-xs leading-none tracking-tight select-none animate-pulse">K.</span>
             <span className="text-xs text-[#7A8BA0]">Querying your data...</span>
             <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00C9A7]" />
           </div>

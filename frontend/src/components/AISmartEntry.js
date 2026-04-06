@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, Send, Loader2, X, Check, AlertCircle, Plus, Trash2, Sparkles } from 'lucide-react';
+import { Send, Loader2, X, Check, AlertCircle, Plus, Trash2 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -262,7 +262,7 @@ export function SmartFormPopup({ parsed, masterData, onConfirm, onCancel, loadin
 
         {/* AI Summary */}
         <div className="px-5 py-2.5 bg-[#152236]/50 border-b border-[#1B2D42] flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-[#00C9A7] flex-shrink-0" />
+          <span className="text-[#00C9A7] font-black text-xs leading-none tracking-tight select-none">K.</span>
           <p className="text-xs text-[#7A8BA0]">{parsed.summary}</p>
         </div>
 
@@ -514,7 +514,7 @@ export function ModuleAIPrompt({ placeholder, defaultIntent, onCreated }) {
       <div className="bg-[#152236] border border-[#1B2D42] rounded-lg p-3" data-testid="module-ai-prompt">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#00C9A7]/10 border border-[#00C9A7]/20 rounded-lg">
-            <Zap className="w-3.5 h-3.5 text-[#00C9A7]" />
+            <span className="text-[#00C9A7] font-black text-xs leading-none tracking-tight select-none">K.</span>
             <span className="text-[10px] font-bold text-[#00C9A7] tracking-wider uppercase">AI</span>
           </div>
           <input
