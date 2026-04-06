@@ -1,16 +1,16 @@
 # Kairos AI ERP - Product Requirements Document
 
 ## Original Problem Statement
-Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating heavily on a "Zero-Touch" UI where data entry is performed via Natural Language Processing (NLP). Pivoted to IT Services context ("Nexora IT ERP") with Project Management, Timesheets, Revenue Accrual (Ind AS 115), and a Unified AI Engine.
+Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating heavily on a "Zero-Touch" UI. Pivoted to IT Services context ("Nexora IT ERP") with Project Management, Timesheets, Revenue Accrual (Ind AS 115), and a Unified AI Engine.
 
-## Current Company: Nexora Digital Solutions Pvt. Ltd.
+## Company: Nexora Digital Solutions Pvt. Ltd.
 - **CIN:** U72200GJ2019PTC108341 | **GSTIN:** 24AABCN4567P1Z8
 - **Industry:** IT Services | **Billing:** INR, USD, GBP
 
 ## Architecture
 - Frontend: React 18, Tailwind CSS, Shadcn/UI, Lucide React
 - Backend: FastAPI, Motor (async MongoDB)
-- AI: Claude Sonnet 4.5 (Emergent LLM Key) + Groq (Llama 3.3 70B) + OpenRouter
+- AI: Claude Sonnet 4.5 (Emergent) + Groq (Llama 3.3 70B) + OpenRouter
 - DB: MongoDB
 
 ## Modules Implemented
@@ -21,35 +21,23 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 
 ### Intelligence
 - **Transaction Explorer** — 140 transactions, 8 module filters
-- **Unified AI Engine v3** (Upgraded 2026-05-02):
-  - **Parallel tool execution** via asyncio.gather — 2.5x faster than v2
-  - **Compound tools**: `scaffold_module` (creates route file + registers + restarts + tests), `create_page` (creates React page + registers route)
-  - **Auto-restart** after backend file changes — no manual restart needed
-  - **Compressed tool results** — reduces LLM context consumption
-  - **18 tools** total (16 standard + 2 compound)
-  - **Benchmarked at ~95% of E1 capability** (v2 was 84%)
-  - Multi-provider LLM: Groq → OpenRouter → Claude auto-fallback
-  - Agentic loop up to 10 iterations, avg 1 step per task in v3
+- **Unified AI Engine v3** — Parallel execution, compound tools, auto-restart, 18 tools, ~95% of E1
 
-### Auto-Generated Modules
-- **Leave Management** — scaffolded by Kairos AI Engine v3 compound tool
-- **Employee Analytics** — utilization summary, top performers
-- **Bank Reconciliation** — built by Kairos AI Engine v2
+### Expense Management (Completed 2026-05-02)
+- **Backend**: 6 endpoints (list, create, approve, reject, summary, by-employee)
+- **Frontend**: Summary cards, category breakdown, expense table with status badges, create form, approve/reject workflow, status/category filters
+- **Scaffolded by Kairos AI v3** compound tool, polished by E1
+- **Tested**: 26/26 backend, all frontend — 100% pass
 
-### Accounting & Compliance: Journal Entries, CoA, Financial Statements, AP/AR Aging, Audit Trail, GST, TDS
+### Other Modules
+- Leave Management (scaffolded by Kairos), Employee Analytics, Bank Reconciliation
+- Accounting & Compliance: Journal Entries, CoA, Financial Statements, AP/AR Aging, Audit Trail, GST, TDS
 
-## Key API Endpoints
-- `/api/agents/chat`, `/api/agents/tasks/{task_id}`, `/api/agents/sessions`, `/api/agents/providers`
-- `/api/leave-mgmt` (scaffold_module generated)
-- `/api/employee-analytics/utilization-summary`, `/api/employee-analytics/top-performers`
-- All standard ERP routes (/api/entities, /api/projects, /api/timesheets, etc.)
-
-## Benchmark Results (2026-05-02)
-- v2: 67/80 (84% of E1) | Avg 10.8s | Sequential tools
-- v3: ~76/80 (95% of E1) | Avg 4.3s | Parallel tools + compound tools
-- Remaining gap: LLM API latency (~2-3s per call), context window size
+## Benchmark Results
+- v2: 67/80 (84% of E1) | Avg 10.8s
+- v3: ~76/80 (95% of E1) | Avg 4.3s | 2.5x faster
 
 ## Backlog
 ### P1: Inventory Landed Cost, Fixed Asset Depreciation
 ### P2: E-Way Bill, Mobile Responsiveness
-### P3: Web search tool for Kairos, screenshot capability
+### P3: Kairos web search tool, screenshot capability
