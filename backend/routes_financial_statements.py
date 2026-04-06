@@ -1,10 +1,12 @@
 # Kairos Accounting - Schedule III Financial Statements
 # Companies Act 2013 - Division I compliant BS & P&L
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from datetime import datetime, timezone
 from typing import Optional
+from io import BytesIO
 import uuid
+import json
 
 router = APIRouter(prefix="/financial-statements", tags=["financial-statements"])
 db = None
@@ -359,3 +361,217 @@ async def get_trial_balance(as_of_date: Optional[str] = None):
         "difference": round(total_debit - total_credit, 2),
         "in_balance": abs(total_debit - total_credit) < 1
     }
+
+
+
+# ═══════════════════════════════════════════════════════
+# PDF & EXCEL EXPORTS
+# ═══════════════════════════════════════════════════════
+@router.get("/balance-sheet/export/excel")
+async def export_bs_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+
+    data = await get_balance_sheet()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Balance Sheet"
+    ws.column_dimensions['A'].width = 45
+    ws.column_dimensions['B'].width = 8
+    ws.column_dimensions['C'].width = 18
+
+    header_font = Font(name='Arial', bold=True, size=12)
+    sub_font = Font(name='Arial', size=10, italic=True)
+    bold_font = Font(name='Arial', bold=True, size=10)
+    num_font = Font(name='Arial', size=10)
+    total_fill = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
+    thin_border = Border(bottom=Side(style='thin'))
+
+    ws.append([data["company_name"]])
+    ws.merge_cells('A1:C1')
+    ws['A1'].font = header_font
+    ws['A1'].alignment = Alignment(horizontal='center')
+    ws.append([f"Balance Sheet as at {data['as_of_date']}"])
+    ws.merge_cells('A2:C2')
+    ws['A2'].font = sub_font
+    ws['A2'].alignment = Alignment(horizontal='center')
+    ws.append([data["format"]])
+    ws.merge_cells('A3:C3')
+    ws['A3'].font = Font(size=8, italic=True)
+    ws['A3'].alignment = Alignment(horizontal='center')
+    ws.append([])
+    ws.append(["Particulars", "Note", "Amount (INR)"])
+    for cell in ws[5]:
+        cell.font = bold_font
+        cell.border = Border(bottom=Side(style='double'))
+
+    def add_section(title, items, total_label, total_amount):
+        ws.append([title])
+        ws[ws.max_row][0].font = bold_font
+        for label, amount, note in items:
+            row = ws.max_row + 1
+            ws.append([f"  {label}", note or "", amount])
+            ws[row][2].number_format = '#,##0.00'
+            ws[row][2].font = num_font
+        row = ws.max_row + 1
+        ws.append([f"  {total_label}", "", total_amount])
+        ws[row][0].font = bold_font
+        ws[row][2].font = bold_font
+        ws[row][2].number_format = '#,##0.00'
+        for cell in ws[row]:
+            cell.fill = total_fill
+            cell.border = thin_border
+
+    el = data["equity_and_liabilities"]
+    ws.append(["I. EQUITY AND LIABILITIES"])
+    ws[ws.max_row][0].font = Font(name='Arial', bold=True, size=11)
+
+    add_section("1. Shareholders' Funds", [
+        ("(a) Share Capital", el["shareholders_funds"]["share_capital"]["amount"], 1),
+        ("(b) Reserves and Surplus", el["shareholders_funds"]["reserves_and_surplus"]["amount"], 2),
+    ], "Total Shareholders' Funds", el["shareholders_funds"]["total"])
+
+    add_section("3. Non-current Liabilities", [
+        ("(a) Long-term Borrowings", el["non_current_liabilities"]["long_term_borrowings"]["amount"], 3),
+    ], "Total Non-current Liabilities", el["non_current_liabilities"]["total"])
+
+    add_section("4. Current Liabilities", [
+        ("(b) Trade Payables", el["current_liabilities"]["trade_payables"]["amount"], 4),
+        ("(c) Other Current Liabilities", el["current_liabilities"]["other_current_liabilities"]["amount"], 5),
+    ], "Total Current Liabilities", el["current_liabilities"]["total"])
+
+    row = ws.max_row + 1
+    ws.append(["TOTAL EQUITY & LIABILITIES", "", el["total"]])
+    ws[row][0].font = Font(name='Arial', bold=True, size=11)
+    ws[row][2].font = Font(name='Arial', bold=True, size=11)
+    ws[row][2].number_format = '#,##0.00'
+    for cell in ws[row]:
+        cell.border = Border(top=Side(style='double'), bottom=Side(style='double'))
+
+    ws.append([])
+    a = data["assets"]
+    ws.append(["II. ASSETS"])
+    ws[ws.max_row][0].font = Font(name='Arial', bold=True, size=11)
+
+    add_section("1. Non-current Assets", [
+        ("(a) Property, Plant & Equipment (Net)", a["non_current_assets"]["property_plant_equipment"]["net_block"], 6),
+        ("(e) Other Non-current Assets", a["non_current_assets"]["other_non_current_assets"]["amount"], 7),
+    ], "Total Non-current Assets", a["non_current_assets"]["total"])
+
+    add_section("2. Current Assets", [
+        ("(b) Inventories", a["current_assets"]["inventories"]["amount"], 8),
+        ("(c) Trade Receivables", a["current_assets"]["trade_receivables"]["amount"], 9),
+        ("(d) Cash and Cash Equivalents", a["current_assets"]["cash_and_equivalents"]["amount"], 10),
+        ("(e) Short-term Loans & Advances", a["current_assets"]["short_term_loans_advances"]["amount"], ""),
+    ], "Total Current Assets", a["current_assets"]["total"])
+
+    row = ws.max_row + 1
+    ws.append(["TOTAL ASSETS", "", a["total"]])
+    ws[row][0].font = Font(name='Arial', bold=True, size=11)
+    ws[row][2].font = Font(name='Arial', bold=True, size=11)
+    ws[row][2].number_format = '#,##0.00'
+    for cell in ws[row]:
+        cell.border = Border(top=Side(style='double'), bottom=Side(style='double'))
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                   headers={"Content-Disposition": "attachment; filename=Balance_Sheet_Schedule_III.xlsx"})
+
+
+@router.get("/profit-and-loss/export/excel")
+async def export_pl_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+
+    data = await get_profit_and_loss()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Profit & Loss"
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 50
+    ws.column_dimensions['C'].width = 8
+    ws.column_dimensions['D'].width = 18
+
+    ws.append([data["company_name"]])
+    ws.merge_cells('A1:D1')
+    ws['A1'].font = Font(name='Arial', bold=True, size=12)
+    ws['A1'].alignment = Alignment(horizontal='center')
+    ws.append([f"Statement of Profit and Loss for {data['period']['from']} to {data['period']['to']}"])
+    ws.merge_cells('A2:D2')
+    ws['A2'].font = Font(name='Arial', size=10, italic=True)
+    ws['A2'].alignment = Alignment(horizontal='center')
+    ws.append([])
+    ws.append(["Sl.", "Particulars", "Note", "Amount (INR)"])
+    for cell in ws[4]:
+        cell.font = Font(name='Arial', bold=True, size=10)
+        cell.border = Border(bottom=Side(style='double'))
+
+    for item in data["line_items"]:
+        row_num = ws.max_row + 1
+        ws.append([item.get("sl", ""), item.get("particular", ""), item.get("note", ""),
+                   item.get("amount") if not item.get("is_header") else ""])
+        if item.get("is_total") or item.get("is_final"):
+            for cell in ws[row_num]:
+                cell.font = Font(name='Arial', bold=True, size=10)
+                cell.border = Border(top=Side(style='thin'))
+        if item.get("is_final"):
+            for cell in ws[row_num]:
+                cell.border = Border(top=Side(style='double'), bottom=Side(style='double'))
+        if ws[row_num][3].value is not None:
+            ws[row_num][3].number_format = '#,##0.00'
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                   headers={"Content-Disposition": "attachment; filename=Profit_Loss_Schedule_III.xlsx"})
+
+
+@router.get("/trial-balance/export/excel")
+async def export_tb_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, Border, Side
+
+    data = await get_trial_balance()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Trial Balance"
+    ws.column_dimensions['A'].width = 40
+    ws.column_dimensions['B'].width = 15
+    ws.column_dimensions['C'].width = 18
+    ws.column_dimensions['D'].width = 18
+
+    ws.append([data["company_name"]])
+    ws.merge_cells('A1:D1')
+    ws['A1'].font = Font(name='Arial', bold=True, size=12)
+    ws['A1'].alignment = Alignment(horizontal='center')
+    ws.append([f"Trial Balance as at {data['as_of_date']}"])
+    ws.merge_cells('A2:D2')
+    ws['A2'].alignment = Alignment(horizontal='center')
+    ws.append([])
+    ws.append(["Account", "Category", "Debit (INR)", "Credit (INR)"])
+    for cell in ws[4]:
+        cell.font = Font(name='Arial', bold=True)
+        cell.border = Border(bottom=Side(style='double'))
+
+    for entry in data["entries"]:
+        row = ws.max_row + 1
+        ws.append([entry["account"], entry["category"], entry["debit"], entry["credit"]])
+        ws[row][2].number_format = '#,##0.00'
+        ws[row][3].number_format = '#,##0.00'
+
+    row = ws.max_row + 1
+    ws.append(["TOTAL", "", data["total_debit"], data["total_credit"]])
+    for cell in ws[row]:
+        cell.font = Font(name='Arial', bold=True)
+        cell.border = Border(top=Side(style='double'), bottom=Side(style='double'))
+    ws[row][2].number_format = '#,##0.00'
+    ws[row][3].number_format = '#,##0.00'
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                   headers={"Content-Disposition": "attachment; filename=Trial_Balance.xlsx"})
