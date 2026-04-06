@@ -142,7 +142,7 @@ function Sidebar({ isOpen, setIsOpen }) {
               <KairosIcon size={28} />
               <div className="border-l border-[#1B2D42] pl-3 h-8 flex flex-col justify-center">
                 <span className="text-sm font-bold tracking-[3px] text-white leading-none">KAIROS</span>
-                <span className="text-[8px] tracking-[4px] text-[#00C9A7] uppercase leading-none mt-1">Advisory</span>
+                <span className="text-[8px] tracking-[4px] text-[#00C9A7] uppercase leading-none mt-1">AI ERP</span>
               </div>
             </Link>
             <button 
@@ -194,7 +194,7 @@ function Sidebar({ isOpen, setIsOpen }) {
 
           {/* Footer */}
           <div className="p-3 border-t border-[#1B2D42] text-xs text-[#4A5B6E]">
-            <p className="font-semibold tracking-wider">Kairos Advisory</p>
+            <p className="font-semibold tracking-wider">Kairos AI ERP</p>
             <p className="text-[10px] mt-1 text-[#00C9A7]">AI-Powered ERP</p>
           </div>
         </div>

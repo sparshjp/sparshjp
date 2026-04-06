@@ -1156,7 +1156,7 @@ try:
         po_summaries = [{"id": p["id"], "number": p.get("po_number",""), "vendor": p.get("vendor",""), "total": p.get("grand_total",0)} for p in pending_pos]
         so_summaries = [{"id": s["id"], "number": s.get("so_number",""), "customer": s.get("customer",""), "total": s.get("grand_total",0)} for s in pending_sos]
 
-        system_msg = f"""You are the AI brain of Kairos Advisory ERP for PolyMerx Specialty Chemicals Pvt. Ltd.
+        system_msg = f"""You are the AI brain of Kairos AI ERP for PolyMerx Specialty Chemicals Pvt. Ltd.
 
 MASTER DATA (use these exact names when matching):
 - Vendors: {json.dumps(vendor_names)}

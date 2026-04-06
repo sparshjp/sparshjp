@@ -99,7 +99,7 @@ async def reporting_ai_query(body: dict):
 
     coa_summary = json.dumps(sorted([{"name": c["ledger_name"], "cat": c["category"], "bal": c.get("current_balance",0)} for c in coa_cats], key=lambda x: abs(x["bal"]), reverse=True)[:20])
 
-    system_msg = f"""You are the Reporting AI for Kairos Advisory ERP (PolyMerx Specialty Chemicals Pvt. Ltd.).
+    system_msg = f"""You are the Reporting AI for Kairos AI ERP (PolyMerx Specialty Chemicals Pvt. Ltd.).
 
 DATABASE OVERVIEW:
 - purchase_orders: {po_count} docs. Fields: {list(sample_po.keys()) if sample_po else 'empty'}
