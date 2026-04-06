@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 import requests
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 import base64
 import io
 from PIL import Image
@@ -230,7 +230,7 @@ async def parse_prompt_with_ai(prompt: str, module: str, extracted_ocr: Optional
             - Identify salary payments and apply appropriate TDS
             - Include TDS Payable account
             
-            Return ONLY a valid JSON object with these fields. No markdown, no explanations."""
+            Return ONLY a valid JSON object with these fields. No markdown, no explanations, no code fences."""
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         prompt_text = f"Module: {module}\nCost Center: {cost_center}\nPrompt: {prompt}"
@@ -240,7 +240,15 @@ async def parse_prompt_with_ai(prompt: str, module: str, extracted_ocr: Optional
         user_message = UserMessage(text=prompt_text)
         response = await chat.send_message(user_message)
         
-        result = json.loads(response)
+        # Clean response: strip markdown code fences if present
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        
+        result = json.loads(cleaned)
         return result
     except Exception as e:
         logging.error(f"AI parsing error: {e}")
@@ -277,10 +285,21 @@ async def extract_document_data(image_data: bytes, filename: str) -> Dict[str, A
             Return ONLY valid JSON. No markdown."""
         ).with_model("gemini", "gemini-3-flash-preview")
         
-        user_message = UserMessage(text=f"Extract all data from this invoice/receipt image. Return JSON only.")
+        user_message = UserMessage(
+            text="Extract all data from this invoice/receipt image. Return JSON only.",
+            file_contents=[ImageContent(image_base64=img_base64)]
+        )
         response = await chat.send_message(user_message)
         
-        result = json.loads(response)
+        # Clean response: strip markdown code fences if present
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        
+        result = json.loads(cleaned)
         return result
     except Exception as e:
         logging.error(f"OCR extraction error: {e}")
@@ -944,6 +963,125 @@ try:
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")
+
+# ==================== MANUAL JOURNAL ENTRIES ====================
+@api_router.post("/journal-entries/manual")
+async def create_manual_journal_entry(data: dict):
+    """Create manual journal entry for corrections, adjustments, or audit entries"""
+    entry = {
+        "id": str(uuid.uuid4()),
+        "entry_type": data.get("entry_type", "Manual Entry"),
+        "posting_date": data.get("posting_date", datetime.now(timezone.utc).date().isoformat()),
+        "reference_date": data.get("reference_date"),
+        "cost_center": data.get("cost_center", "General"),
+        "journal_entries": data.get("journal_entries", []),
+        "narration": data.get("narration", ""),
+        "reference_transaction_id": data.get("reference_transaction_id"),
+        "voucher_type": data.get("voucher_type", "Journal Entry"),
+        "status": "Draft",
+        "user_id": data.get("user_id", "default_user"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    total_debit = sum(je.get("debit", 0) for je in entry["journal_entries"])
+    total_credit = sum(je.get("credit", 0) for je in entry["journal_entries"])
+    
+    if abs(total_debit - total_credit) > 0.01:
+        raise HTTPException(status_code=400, detail=f"Not balanced. Debit: {total_debit}, Credit: {total_credit}")
+    
+    await db.manual_journal_entries.insert_one(entry)
+    del entry["_id"]
+    return entry
+
+@api_router.get("/journal-entries/manual")
+async def get_manual_journal_entries(entry_type: Optional[str] = None, status: Optional[str] = None, limit: int = 100):
+    query = {}
+    if entry_type:
+        query["entry_type"] = entry_type
+    if status:
+        query["status"] = status
+    entries = await db.manual_journal_entries.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return entries
+
+@api_router.post("/journal-entries/manual/{entry_id}/post")
+async def post_manual_journal_entry(entry_id: str):
+    entry = await db.manual_journal_entries.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    if entry["status"] != "Draft":
+        raise HTTPException(status_code=400, detail="Already posted")
+    
+    for je in entry["journal_entries"]:
+        journal_entry = JournalEntry(
+            transaction_id=entry_id,
+            account=je.get("account"),
+            debit=je.get("debit", 0.0),
+            credit=je.get("credit", 0.0),
+            description=je.get("description", entry.get("narration", "")),
+            posting_date=entry["posting_date"],
+            cost_center=entry["cost_center"]
+        )
+        await db.journal_entries.insert_one(journal_entry.model_dump())
+        net_change = je.get("debit", 0.0) - je.get("credit", 0.0)
+        await db.chart_of_accounts.update_one(
+            {"ledger_name": je.get("account")},
+            {"$inc": {"current_balance": net_change}},
+            upsert=False
+        )
+    
+    await db.manual_journal_entries.update_one(
+        {"id": entry_id},
+        {"$set": {"status": "Posted", "posted_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Posted successfully"}
+
+# ==================== ADMIN DATA TABLES ====================
+@api_router.get("/admin/tables")
+async def get_all_tables():
+    collections = await db.list_collection_names()
+    tables = [c for c in collections if not c.startswith('system.')]
+    table_info = []
+    for table in tables:
+        count = await db[table].count_documents({})
+        table_info.append({"name": table, "count": count})
+    return sorted(table_info, key=lambda x: x['name'])
+
+@api_router.get("/admin/tables/{table_name}")
+async def get_table_data(table_name: str, skip: int = 0, limit: int = 100, search: Optional[str] = None):
+    try:
+        query = {}
+        if search:
+            query = {
+                "$or": [
+                    {"id": {"$regex": search, "$options": "i"}},
+                    {"name": {"$regex": search, "$options": "i"}},
+                    {"customer_name": {"$regex": search, "$options": "i"}},
+                    {"employee_name": {"$regex": search, "$options": "i"}},
+                ]
+            }
+        total = await db[table_name].count_documents(query)
+        records = await db[table_name].find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+        return {"table": table_name, "total": total, "skip": skip, "limit": limit, "records": records}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.get("/admin/tables/{table_name}/export")
+async def export_table_data(table_name: str):
+    try:
+        records = await db[table_name].find({}, {"_id": 0}).to_list(10000)
+        if not records:
+            return {"message": "No data"}
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=records[0].keys())
+        writer.writeheader()
+        writer.writerows(records)
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={table_name}.csv"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # Include router
 app.include_router(api_router)

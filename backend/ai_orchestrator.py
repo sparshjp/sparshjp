@@ -3,12 +3,37 @@
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 import json
+import re
 import logging
 from typing import Dict, Any, Optional, List
 import uuid
 from datetime import datetime, timezone
 
 EMERGENT_KEY = None  # Will be set from main server
+
+
+def clean_json_response(response: str) -> dict:
+    """Extract JSON from AI response, handling markdown code fences and extra text."""
+    cleaned = response.strip()
+    # Strip markdown code fences
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+    # Try direct parse
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+    # Try to find JSON object or array in the text
+    match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', cleaned)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            pass
+    raise ValueError(f"Could not parse JSON from response: {cleaned[:200]}")
 
 class AIOrchestrator:
     """Central AI orchestrator for all ERP modules"""
@@ -92,7 +117,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_sales(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process sales cycle: quotations, sales orders, delivery notes, invoices"""
@@ -118,7 +143,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_purchase(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process purchase cycle: material requests, RFQ, PO, purchase receipts"""
@@ -143,7 +168,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_stock(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process stock entries, transfers, reconciliation"""
@@ -170,7 +195,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_hr(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process HR: attendance, leave, payroll, timesheets"""
@@ -199,7 +224,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_projects(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process projects and tasks"""
@@ -228,7 +253,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_manufacturing(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process manufacturing: BOM, work orders, production"""
@@ -255,7 +280,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_quality(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process quality inspections"""
@@ -285,7 +310,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def process_accounting(self, prompt: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Process general accounting transactions"""
@@ -308,7 +333,7 @@ class AIOrchestrator:
         ).with_model("anthropic", "claude-sonnet-4-5-20250929")
         
         response = await chat.send_message(UserMessage(text=f"Context: {context}\n\nPrompt: {prompt}"))
-        return json.loads(response)
+        return clean_json_response(response)
     
     async def analyze_image_for_quality(self, image_data: bytes) -> Dict[str, Any]:
         """Analyze product image for quality inspection"""
@@ -329,7 +354,7 @@ class AIOrchestrator:
             ).with_model("gemini", "gemini-3-flash-preview")
             
             response = await chat.send_message(UserMessage(text="Analyze this product for quality inspection"))
-            return json.loads(response)
+            return clean_json_response(response)
         except Exception as e:
             logging.error(f"Quality image analysis error: {e}")
             return {
@@ -360,7 +385,7 @@ class AIOrchestrator:
             ).with_model("anthropic", "claude-sonnet-4-5-20250929")
             
             response = await chat.send_message(UserMessage(text=f"Stock Data: {json.dumps(stock_data)}"))
-            return json.loads(response)
+            return clean_json_response(response)
         except Exception as e:
             logging.error(f"Reorder suggestion error: {e}")
             return []
@@ -391,7 +416,7 @@ class AIOrchestrator:
             ).with_model("anthropic", "claude-sonnet-4-5-20250929")
             
             response = await chat.send_message(UserMessage(text=f"Lead: {json.dumps(lead_data)}"))
-            return json.loads(response)
+            return clean_json_response(response)
         except Exception as e:
             logging.error(f"Lead qualification error: {e}")
             return {

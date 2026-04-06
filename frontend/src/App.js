@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { 
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
-  Menu, X, TrendingUp, Boxes, FileText, Receipt
+  Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -20,6 +20,8 @@ import ChartOfAccounts from './pages/ChartOfAccounts';
 import CostCenters from './pages/CostCenters';
 import MasterData from './pages/MasterData';
 import CSVImport from './pages/CSVImport';
+import JournalEntry from './pages/JournalEntry';
+import AdminDataTables from './pages/AdminDataTables';
 import UniversalAI from './components/UniversalAI';
 import { Toaster } from './components/ui/sonner';
 
@@ -28,7 +30,7 @@ export const API = `${BACKEND_URL}/api`;
 
 function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
-  const [expandedSections, setExpandedSections] = useState(['selling', 'buying', 'stock']);
+  const [expandedSections, setExpandedSections] = useState(['selling', 'buying', 'stock', 'accounting']);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => 
@@ -81,10 +83,18 @@ function Sidebar({ isOpen, setIsOpen }) {
       ]
     },
     {
+      id: 'accounting',
+      title: 'Accounting',
+      items: [
+        { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
+      ]
+    },
+    {
       id: 'reports',
       title: 'Reports & Settings',
       items: [
         { path: '/reports', label: 'Reports', icon: FileText },
+        { path: '/admin/tables', label: 'Data Tables', icon: Database },
         { path: '/settings', label: 'Settings', icon: Settings },
       ]
     }
@@ -210,6 +220,8 @@ function App() {
             <Route path="/settings/cost-centers" element={<CostCenters />} />
             <Route path="/settings/master-data" element={<MasterData />} />
             <Route path="/settings/import" element={<CSVImport />} />
+            <Route path="/journal-entries" element={<JournalEntry />} />
+            <Route path="/admin/tables" element={<AdminDataTables />} />
           </Routes>
           
           <UniversalAI />
