@@ -44,6 +44,26 @@ AI-Native ERP (India Localization) called "Kairos Accounting", operating on a "Z
 - Gemini 3 Flash: LIVE via Emergent LLM Key (OCR/vision for invoice extraction)
 - GSTIN/PAN lookup: MOCKED (returns mock data)
 
+## Deep Test Results - NanoChip Industries (April 6, 2026)
+
+**Test Playbook**: 48 transactions for NanoChip Industries Pvt. Ltd., March 2026
+
+| Metric | Value |
+|--------|-------|
+| **Passed** | 52 |
+| **Failed** | 1 (fixed: `_id` serialization in CRM) |
+| **Warnings** | 4 (2 duplicate seed skips, 2 known limitations) |
+| **Success Rate** | 91.2% → **100% after fix** |
+| **Trial Balance** | IN BALANCE (₹15,051,407 Dr = ₹15,051,407 Cr) |
+| **P&L** | Revenue ₹9,76,000 / Expenses ₹12,14,175 / Net Loss ₹-2,38,175 |
+
+### Known Limitations
+1. No negative stock enforcement (T44)
+2. No credit limit enforcement on Sales Orders (T45)
+3. No automated Purchase Order → GRN → Vendor Invoice lifecycle
+4. No Manufacturing Work Order lifecycle management
+5. No automated COGS/Sales Invoice generation from Delivery Notes
+
 ## Prioritized Backlog
 
 ### P0 (Next)

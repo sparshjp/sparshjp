@@ -37,7 +37,8 @@ async def create_lead(data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.leads.insert_one(lead)
-    return {**lead, "_id": None}
+    del lead["_id"]
+    return lead
 
 @router.get("/leads")
 async def get_leads(status: Optional[str] = None, limit: int = 50):
@@ -92,6 +93,7 @@ async def convert_lead_to_customer(lead_id: str):
     }
     await db.customers.insert_one(customer)
     await db.leads.update_one({"id": lead_id}, {"$set": {"status": "Converted"}})
+    del customer["_id"]
     return customer
 
 # ==================== OPPORTUNITIES ====================
@@ -137,7 +139,8 @@ async def create_customer(data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.customers.insert_one(customer)
-    return {**customer, "_id": None}
+    del customer["_id"]
+    return customer
 
 @router.get("/customers")
 async def get_customers(limit: int = 100):

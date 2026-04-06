@@ -30,7 +30,8 @@ async def create_employee(data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.employees.insert_one(emp)
-    return {**emp, "_id": None}
+    del emp["_id"]
+    return emp
 
 @router.get("/employees")
 async def get_employees(status: Optional[str] = None, limit: int = 100):
@@ -68,7 +69,8 @@ async def mark_attendance(data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.attendance.insert_one(att)
-    return {**att, "_id": None}
+    del att["_id"]
+    return att
 
 @router.get("/attendance")
 async def get_attendance(employee: Optional[str] = None, date: Optional[str] = None, limit: int = 100):
@@ -120,7 +122,8 @@ async def create_leave_application(data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.leave_applications.insert_one(leave)
-    return {**leave, "_id": None}
+    del leave["_id"]
+    return leave
 
 @router.get("/leave-applications")
 async def get_leave_applications(employee: Optional[str] = None, status: Optional[str] = None, limit: int = 50):
@@ -165,7 +168,8 @@ async def create_salary_slip(data: dict):
     }
     slip["net_pay"] = slip["gross_pay"] - slip["total_deduction"]
     await db.salary_slips.insert_one(slip)
-    return {**slip, "_id": None}
+    del slip["_id"]
+    return slip
 
 @router.get("/salary-slips")
 async def get_salary_slips(employee: Optional[str] = None, month: Optional[str] = None, limit: int = 50):

@@ -39,7 +39,8 @@ async def create_quotation(data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.quotations.insert_one(quot)
-    return {**quot, "_id": None}
+    del quot["_id"]
+    return quot
 
 @router.get("/quotations")
 async def get_quotations(status: Optional[str] = None, limit: int = 50):
@@ -81,7 +82,8 @@ async def convert_to_sales_order(quot_id: str):
     }
     await db.sales_orders.insert_one(so)
     await db.quotations.update_one({"id": quot_id}, {"$set": {"status": "Ordered"}})
-    return {**so, "_id": None}
+    del so["_id"]
+    return so
 
 # ==================== SALES ORDERS ====================
 @router.post("/sales-orders")
@@ -154,7 +156,8 @@ async def create_delivery_note(data: dict):
                 {"$set": {"per_delivered": per_delivered}}
             )
     
-    return {**dn, "_id": None}
+    del dn["_id"]
+    return dn
 
 @router.get("/delivery-notes")
 async def get_delivery_notes(status: Optional[str] = None, limit: int = 50):

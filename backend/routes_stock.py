@@ -96,7 +96,8 @@ async def create_stock_entry(data: dict):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.stock_entries.insert_one(entry)
-    return {**entry, "_id": None}
+    del entry["_id"]
+    return entry
 
 @router.get("/stock-entries")
 async def get_stock_entries(entry_type: Optional[str] = None, limit: int = 50):
@@ -156,7 +157,8 @@ async def create_stock_reconciliation(data: dict):
     
     recon["difference_amount"] = total_diff
     await db.stock_reconciliation.insert_one(recon)
-    return {**recon, "_id": None}
+    del recon["_id"]
+    return recon
 
 @router.get("/stock-reconciliation")
 async def get_stock_reconciliations(limit: int = 50):

@@ -1,0 +1,627 @@
+{
+  "test_name": "NanoChip Industries Deep Test - March 2026",
+  "run_at": "2026-04-06T07:22:50.864499",
+  "summary": {
+    "passed": 52,
+    "failed": 1,
+    "warnings": 4,
+    "total": 57
+  },
+  "results": [
+    {
+      "status": "INFO",
+      "message": "Phase 0: API Health Check",
+      "timestamp": "2026-04-06T07:21:39.452600"
+    },
+    {
+      "status": "PASS",
+      "message": "API alive: {'message': 'Kairos Accounting API', 'version': '2.0.0'}",
+      "timestamp": "2026-04-06T07:21:39.728065"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 1: SEED MASTER DATA",
+      "timestamp": "2026-04-06T07:21:39.728078"
+    },
+    {
+      "status": "SEED",
+      "message": "Seeding Chart of Accounts...",
+      "timestamp": "2026-04-06T07:21:39.728084"
+    },
+    {
+      "status": "WARN",
+      "message": "Created 0/31 CoA accounts",
+      "timestamp": "2026-04-06T07:21:43.175967"
+    },
+    {
+      "status": "SEED",
+      "message": "Seeding Cost Centers...",
+      "timestamp": "2026-04-06T07:21:43.176712"
+    },
+    {
+      "status": "PASS",
+      "message": "Created 5/5 cost centers",
+      "timestamp": "2026-04-06T07:21:43.677006"
+    },
+    {
+      "status": "SEED",
+      "message": "Seeding Employees...",
+      "timestamp": "2026-04-06T07:21:43.677519"
+    },
+    {
+      "status": "PASS",
+      "message": "Created 6/6 employees",
+      "timestamp": "2026-04-06T07:21:44.266999"
+    },
+    {
+      "status": "SEED",
+      "message": "Seeding Vendors & Clients...",
+      "timestamp": "2026-04-06T07:21:44.267555"
+    },
+    {
+      "status": "WARN",
+      "message": "Created 0 vendors, 0 clients",
+      "timestamp": "2026-04-06T07:21:45.803497"
+    },
+    {
+      "status": "SEED",
+      "message": "Seeding Products/SKUs...",
+      "timestamp": "2026-04-06T07:21:45.804048"
+    },
+    {
+      "status": "PASS",
+      "message": "Created 6/6 products",
+      "timestamp": "2026-04-06T07:21:46.403763"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 2: OPENING BALANCES",
+      "timestamp": "2026-04-06T07:21:46.404489"
+    },
+    {
+      "status": "INFO",
+      "message": "T36: Posting Opening Balances for March 2026...",
+      "timestamp": "2026-04-06T07:21:46.404499"
+    },
+    {
+      "status": "PASS",
+      "message": "T36: Opening balance entry created (ID: f7459e5b...)",
+      "timestamp": "2026-04-06T07:21:46.497142"
+    },
+    {
+      "status": "PASS",
+      "message": "T36: Opening balances POSTED to ledger",
+      "timestamp": "2026-04-06T07:21:46.604939"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 3: CRM TRANSACTIONS (T01-T05)",
+      "timestamp": "2026-04-06T07:21:46.606116"
+    },
+    {
+      "status": "INFO",
+      "message": "T01: CRM - Create Lead: AutoDrive Systems",
+      "timestamp": "2026-04-06T07:21:46.606127"
+    },
+    {
+      "status": "PASS",
+      "message": "T01: Lead created (ID: fa7464b2...)",
+      "timestamp": "2026-04-06T07:21:46.715958"
+    },
+    {
+      "status": "INFO",
+      "message": "T02: CRM - Qualify Lead: AutoDrive",
+      "timestamp": "2026-04-06T07:21:46.715967"
+    },
+    {
+      "status": "PASS",
+      "message": "T02: Lead qualified",
+      "timestamp": "2026-04-06T07:21:46.814644"
+    },
+    {
+      "status": "INFO",
+      "message": "T03: CRM - Create Lead: SmartHome Devices",
+      "timestamp": "2026-04-06T07:21:46.814654"
+    },
+    {
+      "status": "PASS",
+      "message": "T03: Lead created (ID: a9a85fc5...)",
+      "timestamp": "2026-04-06T07:21:46.916457"
+    },
+    {
+      "status": "INFO",
+      "message": "T04: CRM - Convert Lead to Opportunity: AutoDrive",
+      "timestamp": "2026-04-06T07:21:46.916467"
+    },
+    {
+      "status": "PASS",
+      "message": "T04: Opportunity created",
+      "timestamp": "2026-04-06T07:21:47.017229"
+    },
+    {
+      "status": "INFO",
+      "message": "T05: CRM - Mark Won + Convert to Customer",
+      "timestamp": "2026-04-06T07:21:47.017239"
+    },
+    {
+      "status": "FAIL",
+      "message": "T05: Lead conversion failed",
+      "timestamp": "2026-04-06T07:21:47.120383"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 4: BUYING TRANSACTIONS (T06-T12)",
+      "timestamp": "2026-04-06T07:21:47.121055"
+    },
+    {
+      "status": "INFO",
+      "message": "T06: Buying - PO: SiliconCore (50 Silicon Wafers @ \u20b93200)",
+      "timestamp": "2026-04-06T07:21:47.121064"
+    },
+    {
+      "status": "PASS",
+      "message": "T06: PO processed via AI (4 journal entries)",
+      "timestamp": "2026-04-06T07:21:55.932966"
+    },
+    {
+      "status": "INFO",
+      "message": "T07: Buying - PO: Resistors & Co (Caps + Resistors)",
+      "timestamp": "2026-04-06T07:21:55.932975"
+    },
+    {
+      "status": "PASS",
+      "message": "T07: PO processed via AI (4 journal entries)",
+      "timestamp": "2026-04-06T07:22:05.845303"
+    },
+    {
+      "status": "INFO",
+      "message": "T08: Buying - Petty Cash: Cleanroom Gases \u20b922,000 + GST",
+      "timestamp": "2026-04-06T07:22:05.845315"
+    },
+    {
+      "status": "PASS",
+      "message": "T08: Petty cash purchase posted",
+      "timestamp": "2026-04-06T07:22:06.074879"
+    },
+    {
+      "status": "INFO",
+      "message": "T09: Buying - GRN: Resistors & Co (20 reels caps + 15 reels resistors)",
+      "timestamp": "2026-04-06T07:22:06.074890"
+    },
+    {
+      "status": "PASS",
+      "message": "T09: GRN posted with journal entry",
+      "timestamp": "2026-04-06T07:22:06.317271"
+    },
+    {
+      "status": "INFO",
+      "message": "T10: Buying - GRN: SiliconCore Wafers (Under QC)",
+      "timestamp": "2026-04-06T07:22:06.439174"
+    },
+    {
+      "status": "PASS",
+      "message": "T10: Wafers received, marked Under QC",
+      "timestamp": "2026-04-06T07:22:06.541292"
+    },
+    {
+      "status": "INFO",
+      "message": "T11: Stock/Quality - QC Inspection: 48 PASS, 2 REJECT",
+      "timestamp": "2026-04-06T07:22:06.541304"
+    },
+    {
+      "status": "PASS",
+      "message": "T11: QC entries posted (48 accepted, 2 rejected)",
+      "timestamp": "2026-04-06T07:22:06.742154"
+    },
+    {
+      "status": "INFO",
+      "message": "T12: Buying - Vendor Invoice: Resistors & Co (matched to GRN)",
+      "timestamp": "2026-04-06T07:22:06.742167"
+    },
+    {
+      "status": "PASS",
+      "message": "T12: Invoice matched to GRN T09 - AP already recorded. Marking as reconciled.",
+      "timestamp": "2026-04-06T07:22:06.742171"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 5: STOCK TRANSACTIONS (T13-T15)",
+      "timestamp": "2026-04-06T07:22:06.742838"
+    },
+    {
+      "status": "INFO",
+      "message": "T13: Stock - Internal Transfer: Store \u2192 Production floor",
+      "timestamp": "2026-04-06T07:22:06.742848"
+    },
+    {
+      "status": "PASS",
+      "message": "T13: Internal transfer posted",
+      "timestamp": "2026-04-06T07:22:06.940357"
+    },
+    {
+      "status": "INFO",
+      "message": "T14: Stock - Surplus Adjustment: 3 extra reels SMD Capacitors",
+      "timestamp": "2026-04-06T07:22:06.940368"
+    },
+    {
+      "status": "PASS",
+      "message": "T14: Stock surplus adjustment posted",
+      "timestamp": "2026-04-06T07:22:07.162674"
+    },
+    {
+      "status": "INFO",
+      "message": "T15: Stock - FG Receipt: 180 MCU-X1 from WO-001 @ \u20b9850",
+      "timestamp": "2026-04-06T07:22:07.162684"
+    },
+    {
+      "status": "PASS",
+      "message": "T15: FG receipt posted",
+      "timestamp": "2026-04-06T07:22:07.355158"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 6: MANUFACTURING (T16-T19)",
+      "timestamp": "2026-04-06T07:22:07.355729"
+    },
+    {
+      "status": "INFO",
+      "message": "T16: Manufacturing - WO MFG-WO-001 opened (200 MCU-X1)",
+      "timestamp": "2026-04-06T07:22:07.355738"
+    },
+    {
+      "status": "PASS",
+      "message": "T16: Work Order opened - no accounting entry (commitment only)",
+      "timestamp": "2026-04-06T07:22:07.355741"
+    },
+    {
+      "status": "INFO",
+      "message": "T17: Manufacturing - 20 MCU-X1 scrapped (wafer bonding failure)",
+      "timestamp": "2026-04-06T07:22:07.355745"
+    },
+    {
+      "status": "PASS",
+      "message": "T17: Scrap entry posted",
+      "timestamp": "2026-04-06T07:22:07.562444"
+    },
+    {
+      "status": "INFO",
+      "message": "T18: Manufacturing - WO MFG-WO-002 opened (100 MCU-X2-PRO)",
+      "timestamp": "2026-04-06T07:22:07.562455"
+    },
+    {
+      "status": "PASS",
+      "message": "T18: Work Order opened - no accounting entry",
+      "timestamp": "2026-04-06T07:22:07.562458"
+    },
+    {
+      "status": "INFO",
+      "message": "T19: Manufacturing - WO-002 closed: 95 MCU-X2-PRO + 5 scrap",
+      "timestamp": "2026-04-06T07:22:07.562462"
+    },
+    {
+      "status": "PASS",
+      "message": "T19: WO-002 closure with FG + scrap posted",
+      "timestamp": "2026-04-06T07:22:07.767739"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 7: SALES TRANSACTIONS (T20-T28)",
+      "timestamp": "2026-04-06T07:22:07.768251"
+    },
+    {
+      "status": "INFO",
+      "message": "T20: Selling - SO-2026-001: AutoDrive (MCU-X1 500 + PWR-IC 200)",
+      "timestamp": "2026-04-06T07:22:07.768260"
+    },
+    {
+      "status": "PASS",
+      "message": "T20: Sales Order created",
+      "timestamp": "2026-04-06T07:22:07.874924"
+    },
+    {
+      "status": "INFO",
+      "message": "T21: Selling - Advance receipt \u20b94,10,800 from AutoDrive",
+      "timestamp": "2026-04-06T07:22:07.874933"
+    },
+    {
+      "status": "PASS",
+      "message": "T21: Advance receipt posted",
+      "timestamp": "2026-04-06T07:22:08.071249"
+    },
+    {
+      "status": "INFO",
+      "message": "T22: Selling - SO-2026-002: IoTech (MCU-X2-PRO 80 units)",
+      "timestamp": "2026-04-06T07:22:08.071260"
+    },
+    {
+      "status": "PASS",
+      "message": "T22: Sales Order IoTech created",
+      "timestamp": "2026-04-06T07:22:08.168051"
+    },
+    {
+      "status": "INFO",
+      "message": "T23: Selling - SO-2026-003: SmartHome (MCU-X2-PRO 60 units)",
+      "timestamp": "2026-04-06T07:22:08.168060"
+    },
+    {
+      "status": "PASS",
+      "message": "T23: Sales Order SmartHome created",
+      "timestamp": "2026-04-06T07:22:08.265952"
+    },
+    {
+      "status": "INFO",
+      "message": "T24: Selling - Delivery + Invoice: MCU-X1 500 to AutoDrive",
+      "timestamp": "2026-04-06T07:22:08.265963"
+    },
+    {
+      "status": "PASS",
+      "message": "T24: Delivery + Invoice + COGS posted",
+      "timestamp": "2026-04-06T07:22:08.563691"
+    },
+    {
+      "status": "INFO",
+      "message": "T25: Selling - Partial delivery: PWR-IC-01 150 units to AutoDrive",
+      "timestamp": "2026-04-06T07:22:08.563703"
+    },
+    {
+      "status": "PASS",
+      "message": "T25: Partial delivery + Invoice posted",
+      "timestamp": "2026-04-06T07:22:08.768843"
+    },
+    {
+      "status": "INFO",
+      "message": "T26: Selling - Final payment \u20b95,43,240 + advance adjustment",
+      "timestamp": "2026-04-06T07:22:08.768855"
+    },
+    {
+      "status": "PASS",
+      "message": "T26: Final payment + advance settlement posted",
+      "timestamp": "2026-04-06T07:22:08.992950"
+    },
+    {
+      "status": "INFO",
+      "message": "T27: Selling - Delivery + Invoice: MCU-X2-PRO 80 to IoTech",
+      "timestamp": "2026-04-06T07:22:08.992962"
+    },
+    {
+      "status": "PASS",
+      "message": "T27: IoTech delivery + invoice posted",
+      "timestamp": "2026-04-06T07:22:09.194751"
+    },
+    {
+      "status": "INFO",
+      "message": "T28: Selling - Advance refund \u20b930,000 to SmartHome",
+      "timestamp": "2026-04-06T07:22:09.194763"
+    },
+    {
+      "status": "PASS",
+      "message": "T28: Advance refund posted",
+      "timestamp": "2026-04-06T07:22:09.422776"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 8: HR & PAYROLL (T29-T33)",
+      "timestamp": "2026-04-06T07:22:09.423515"
+    },
+    {
+      "status": "INFO",
+      "message": "T29: HR - Bulk attendance marking for 01-Mar-2026",
+      "timestamp": "2026-04-06T07:22:09.423524"
+    },
+    {
+      "status": "PASS",
+      "message": "T29: Attendance marked for 6 employees",
+      "timestamp": "2026-04-06T07:22:09.542905"
+    },
+    {
+      "status": "INFO",
+      "message": "T30: HR - Leave: Rahul Desai 2 days CL (13-14 Mar)",
+      "timestamp": "2026-04-06T07:22:09.542916"
+    },
+    {
+      "status": "PASS",
+      "message": "T30: Leave approved",
+      "timestamp": "2026-04-06T07:22:09.783889"
+    },
+    {
+      "status": "INFO",
+      "message": "T31: HR - New Hire: Amit Joshi (EMP007, QC Inspector)",
+      "timestamp": "2026-04-06T07:22:09.783901"
+    },
+    {
+      "status": "PASS",
+      "message": "T31: New employee created",
+      "timestamp": "2026-04-06T07:22:09.885682"
+    },
+    {
+      "status": "PASS",
+      "message": "T31: Joining bonus JE posted",
+      "timestamp": "2026-04-06T07:22:10.093282"
+    },
+    {
+      "status": "INFO",
+      "message": "T32: HR - March Payroll for 7 employees",
+      "timestamp": "2026-04-06T07:22:10.093294"
+    },
+    {
+      "status": "PASS",
+      "message": "T32: Payroll journal posted",
+      "timestamp": "2026-04-06T07:22:10.293818"
+    },
+    {
+      "status": "INFO",
+      "message": "T33: HR - Salary disbursement via bank",
+      "timestamp": "2026-04-06T07:22:10.293829"
+    },
+    {
+      "status": "PASS",
+      "message": "T33: Salary disbursement posted",
+      "timestamp": "2026-04-06T07:22:10.490645"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 9: PROJECTS (T34-T35)",
+      "timestamp": "2026-04-06T07:22:10.491325"
+    },
+    {
+      "status": "INFO",
+      "message": "T34: Projects - MCU-X3 Design Sprint created (budget \u20b93,50,000)",
+      "timestamp": "2026-04-06T07:22:10.491335"
+    },
+    {
+      "status": "PASS",
+      "message": "T34: Budget allocated - no accounting entry",
+      "timestamp": "2026-04-06T07:22:10.491338"
+    },
+    {
+      "status": "INFO",
+      "message": "T35: Projects - EDA software subscription \u20b945,000 + GST",
+      "timestamp": "2026-04-06T07:22:10.491343"
+    },
+    {
+      "status": "PASS",
+      "message": "T35: Project expense + prepaid posted",
+      "timestamp": "2026-04-06T07:22:10.728561"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 10: ACCOUNTING ENTRIES (T37-T43)",
+      "timestamp": "2026-04-06T07:22:10.729167"
+    },
+    {
+      "status": "INFO",
+      "message": "T37: Accounting - Pay Feb salary payable \u20b92,40,000",
+      "timestamp": "2026-04-06T07:22:10.729177"
+    },
+    {
+      "status": "PASS",
+      "message": "T37: Feb salary paid",
+      "timestamp": "2026-04-06T07:22:10.923132"
+    },
+    {
+      "status": "INFO",
+      "message": "T38: Accounting - Pay Feb GST \u20b91,80,000",
+      "timestamp": "2026-04-06T07:22:10.923143"
+    },
+    {
+      "status": "PASS",
+      "message": "T38: GST payment posted",
+      "timestamp": "2026-04-06T07:22:11.141815"
+    },
+    {
+      "status": "INFO",
+      "message": "T39: Accounting - EMI: Principal \u20b932,000 + Interest \u20b920,000",
+      "timestamp": "2026-04-06T07:22:11.141828"
+    },
+    {
+      "status": "PASS",
+      "message": "T39: EMI posted",
+      "timestamp": "2026-04-06T07:22:11.341220"
+    },
+    {
+      "status": "INFO",
+      "message": "T40: Accounting - Monthly depreciation \u20b97,500",
+      "timestamp": "2026-04-06T07:22:11.341231"
+    },
+    {
+      "status": "PASS",
+      "message": "T40: Depreciation posted",
+      "timestamp": "2026-04-06T07:22:11.539849"
+    },
+    {
+      "status": "INFO",
+      "message": "T41: Accounting - Electricity \u20b985,000 + GST (Mfg 70%, Admin 30%)",
+      "timestamp": "2026-04-06T07:22:11.539860"
+    },
+    {
+      "status": "PASS",
+      "message": "T41: Electricity posted",
+      "timestamp": "2026-04-06T07:22:32.496300"
+    },
+    {
+      "status": "INFO",
+      "message": "T42: Accounting - Accrue audit fees \u20b925,000",
+      "timestamp": "2026-04-06T07:22:32.496310"
+    },
+    {
+      "status": "PASS",
+      "message": "T42: Accrual posted",
+      "timestamp": "2026-04-06T07:22:42.019483"
+    },
+    {
+      "status": "INFO",
+      "message": "T43: Accounting - Pay SiliconCore AP \u20b91,55,520",
+      "timestamp": "2026-04-06T07:22:42.019495"
+    },
+    {
+      "status": "PASS",
+      "message": "T43: Vendor payment posted",
+      "timestamp": "2026-04-06T07:22:42.287509"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 11: EDGE CASES (T44-T45)",
+      "timestamp": "2026-04-06T07:22:42.288194"
+    },
+    {
+      "status": "INFO",
+      "message": "T44: EDGE CASE - Negative stock: dispatch 600 MCU-X1 (only ~180 avail)",
+      "timestamp": "2026-04-06T07:22:42.288203"
+    },
+    {
+      "status": "WARN",
+      "message": "T44: LIMITATION - System does not currently enforce negative stock checks. No blocking.",
+      "timestamp": "2026-04-06T07:22:42.288208"
+    },
+    {
+      "status": "INFO",
+      "message": "T45: EDGE CASE - Credit limit: SO \u20b912L for SmartHome (limit \u20b98L)",
+      "timestamp": "2026-04-06T07:22:42.288211"
+    },
+    {
+      "status": "WARN",
+      "message": "T45: LIMITATION - System does not currently enforce credit limits on sales orders.",
+      "timestamp": "2026-04-06T07:22:42.288214"
+    },
+    {
+      "status": "INFO",
+      "message": "PHASE 12: REPORTS (T46-T48)",
+      "timestamp": "2026-04-06T07:22:42.288219"
+    },
+    {
+      "status": "INFO",
+      "message": "T46: Reports - Trial Balance for March 2026",
+      "timestamp": "2026-04-06T07:22:42.288225"
+    },
+    {
+      "status": "PASS",
+      "message": "T46: TB - Total Debit: \u20b915,051,407 | Total Credit: \u20b915,051,407 | Diff: \u20b90",
+      "timestamp": "2026-04-06T07:22:43.413743"
+    },
+    {
+      "status": "PASS",
+      "message": "T46: Trial Balance IN BALANCE \u2713",
+      "timestamp": "2026-04-06T07:22:43.413754"
+    },
+    {
+      "status": "INFO",
+      "message": "T47: Reports - Profit & Loss for March 2026",
+      "timestamp": "2026-04-06T07:22:43.413758"
+    },
+    {
+      "status": "PASS",
+      "message": "T47: P&L - Revenue: \u20b9976,000 | Expenses: \u20b91,214,175 | Net: \u20b9-238,175",
+      "timestamp": "2026-04-06T07:22:50.730146"
+    },
+    {
+      "status": "INFO",
+      "message": "T48: Reports - Balance Sheet as at 31-Mar-2026",
+      "timestamp": "2026-04-06T07:22:50.730156"
+    },
+    {
+      "status": "PASS",
+      "message": "T48: BS - Total entries: 90 | Suspense: False",
+      "timestamp": "2026-04-06T07:22:50.863877"
+    }
+  ]
+}
