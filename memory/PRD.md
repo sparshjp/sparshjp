@@ -11,80 +11,104 @@ AI-Native ERP (India Localization) called "Kairos Advisory", operating on a "Zer
 - **Exports**: reportlab (PDF), openpyxl (Excel)
 - **Brand**: Navy #0D1B2A, Teal #00C9A7, Off-white #F4F3EF
 
-## Core Modules
-1. **Dashboard** - Overview metrics
-2. **Selling** - CRM, Sales Module (SO > DN > Invoice > Payment) with auto-accounting
-3. **Buying** - Purchase Module (PO > GRN > Invoice > Payment) with auto-accounting
-4. **Stock & Manufacturing** - Inventory, Quality, Work Orders (BOM, lifecycle, FG receipt)
-5. **HR** - Employees, Attendance, Leave, Payroll
-6. **Accounting** - Journal Entries, Financial Statements (Schedule III), GST & TDS
-7. **Reports & Admin** - Data Tables, Settings (CoA, Cost Centers, Master Data, CSV Import)
+## Core Modules (ERPNext-inspired)
+
+### 1. Accounting
+- Flexible Chart of Accounts (tree categories)
+- General Ledger (auto-posted from all modules)
+- Journal Entry module (manual + corrections)
+- Financial Statements: Balance Sheet, P&L, Trial Balance (Schedule III compliant, Excel export)
+- GST & TDS statutory reports (GSTR-1, GSTR-3B, TDS Return)
+- Cost Centers & Dimensions
+
+### 2. Procurement (Linked Document Flow)
+**PO → Goods Receipt (from PO) → Purchase Invoice (from GRN) → Vendor Payment (from Invoice)**
+- Purchase Order with GST, items, payment terms
+- GRN: "Pending Deliveries" shows POs not yet received → "Confirm Receipt" creates GRN + auto JE (DR RM Inventory, DR GST Input, CR AP) + stock update
+- Purchase Invoice: "Pending Invoices" shows GRNs not yet invoiced → "Create Invoice" attaches vendor invoice
+- Vendor Payment: Outstanding invoices sorted by days outstanding with full document trail (PO#, GRN#, Invoice#) → "Pay" posts JE (DR AP, CR Bank)
+
+### 3. Sales (Linked Document Flow)
+**SO → Delivery Note (from SO) → Sales Invoice (from DN) → Customer Payment (from Invoice)**
+- Sales Order with credit limit check, GST
+- Delivery Note: "Pending Dispatch" shows SOs not yet delivered → "Confirm Delivery" creates DN + stock reduction + negative stock warning
+- Sales Invoice: "Pending Invoices" from DNs → "Create Invoice" posts JE (DR AR, CR Revenue, CR GST Output, DR COGS, CR FG Inventory)
+- Customer Payment: Outstanding AR sorted by days → "Receive" posts JE (DR Bank, CR AR)
+
+### 4. Stock & Manufacturing
+- Inventory with stock levels, auto re-order
+- Work Orders with BOM, lifecycle (Draft → In Progress → Completed), auto-accounting
+- Quality inspection
+
+### 5. CRM
+- Leads, Opportunities, Customers
+
+### 6. HR & Payroll
+- Employees, Attendance, Leave, Payroll
+
+### 7. Settings
+- Chart of Accounts, Cost Centers, Master Data (GSTIN/PAN validation), CSV Import
 
 ## What's Implemented
 
 ### Completed (Apr 6, 2026)
-- [x] Full Kairos Advisory brand: Navy/Teal theme across ALL pages (Settings, Reports, etc.)
-- [x] Selling Module: Quotation > SO > DN > Sales Invoice > Customer Payment (auto JE)
-- [x] Buying Module: PO > GRN > Purchase Invoice > Vendor Payment (auto JE)
-- [x] **Manufacturing Module**: Work Orders with BOM, lifecycle (Draft > In Progress > Completed), auto-accounting (material issue, FG receipt, scrap/loss)
-- [x] **Schedule III Financial Statements**: Balance Sheet + P&L + Trial Balance with Excel export
-- [x] **GST & TDS Statutory Reports**: GSTR-1, GSTR-3B, TDS Return with CSV/JSON export
-- [x] **GSTIN/PAN Intelligence**: Format validation, PAN extraction from GSTIN, state code mapping, entity type detection
-- [x] **Enhanced CSV Import Validation**: Header validation, CoA cross-check, journal balance check, numeric/date validation, entity lookup
-- [x] **Smart AI Prompt Forms**: Module-specific compulsory fields
-- [x] **Negative Stock Enforcement**: Warning when delivery exceeds available stock
-- [x] **Credit Limit Checks**: Warning when SO exceeds customer credit limit
-- [x] Journal Entry module (manual entries, corrections, audit)
-- [x] Admin Data Tables (view all DB collections)
-- [x] CRM (Leads, Opportunities, Customers)
-- [x] Chart of Accounts, Cost Centers, Master Data, CSV Import
-- [x] Claude Sonnet 4.5 NLP integration (LIVE)
-- [x] Gemini 3 Flash OCR integration (LIVE)
-- [x] Deep tested with 48 NanoChip Industries transactions
+- [x] Full Navy/Teal theme across ALL pages
+- [x] **Linked Purchase Flow**: PO → GRN (from-po) → Invoice (from-grn) → Payment (for-invoice) with auto JE
+- [x] **Linked Selling Flow**: SO → DN (from-so) → Invoice (from-dn) → Payment (for-invoice) with auto JE
+- [x] Pending sections with badge counts and action buttons (ERPNext-style)
+- [x] Outstanding invoices sorted by days outstanding with aging colors
+- [x] Manufacturing Module with BOM, WO lifecycle, auto-accounting
+- [x] Schedule III Financial Statements with Excel export
+- [x] GST & TDS Statutory Reports with CSV/JSON export
+- [x] GSTIN/PAN Intelligence (format validation, PAN extraction, state mapping)
+- [x] Enhanced CSV Import Validation (CoA cross-check, journal balance, numeric/date)
+- [x] Smart AI Prompt Forms, Negative Stock Enforcement, Credit Limit Checks
+- [x] Claude Sonnet 4.5 NLP + Gemini 3 Flash OCR (LIVE)
 
 ### Auto-Accounting Flows
-- Sales Invoice -> DR AR, CR Revenue, CR GST Output, DR COGS, CR FG Inventory
-- Customer Payment -> DR Bank, CR AR (or Advance)
-- GRN -> DR RM Inventory, DR GST Input, CR AP + stock update
-- Purchase Invoice -> DR Expense/Inventory, DR GST Input, CR AP
-- Vendor Payment -> DR AP, CR Bank
-- Work Order Start -> DR WIP, CR Raw Material (material issue)
-- Work Order Complete -> DR Finished Goods, CR WIP (FG receipt); DR Scrap/Loss, CR WIP (scrap)
+- GRN: DR Raw Material Inventory, DR GST Input, CR Accounts Payable
+- Vendor Payment: DR Accounts Payable, CR Bank
+- Sales Invoice: DR AR, CR Revenue, CR GST Output, DR COGS, CR FG Inventory
+- Customer Payment: DR Bank, CR AR
+- Work Order Start: DR WIP, CR Raw Material
+- Work Order Complete: DR Finished Goods, CR WIP; DR Scrap/Loss, CR WIP
 
 ### Testing Status
-- Deep test: 48 transactions, TB balanced at ₹15M+
-- Iteration 4: 100% pass (23/23 backend + all frontend)
-- Iteration 5: 100% pass (Manufacturing + Excel exports, 14/14 backend + all frontend)
-- Iteration 6: 100% pass (GSTIN/PAN + CSV validation, 22/22 backend + all frontend)
+- Iteration 5: 100% (Manufacturing + Excel exports)
+- Iteration 6: 100% (GSTIN/PAN + CSV validation)
+- Iteration 7: 100% (Linked Purchase + Selling flow, 21 backend + all frontend)
 
 ## Architecture
 ```
 /app/backend/
   server.py, ai_orchestrator.py
-  routes_crm.py, routes_sales.py, routes_selling.py
-  routes_purchase.py, routes_stock.py, routes_hr.py
-  routes_financial_statements.py, routes_statutory.py
-  routes_manufacturing.py (NEW - Work Orders with auto-accounting)
+  routes_purchase.py (Linked: PO→GRN→Invoice→Payment)
+  routes_selling.py (Linked: SO→DN→Invoice→Payment)
+  routes_manufacturing.py (WO with auto-accounting)
+  routes_financial_statements.py (Schedule III + Excel)
+  routes_statutory.py (GST + TDS)
+  routes_crm.py, routes_sales.py, routes_stock.py, routes_hr.py
 
 /app/frontend/src/
-  App.js, index.css (Kairos Advisory brand)
-  components/UniversalAI.js (Smart forms)
+  App.js (Sidebar + Routes)
   pages/
-    ManufacturingModule.js (NEW - WO lifecycle UI)
-    FinancialStatements.js (Excel download buttons)
-    SellingModule.js, BuyingModule.js, GSTModule.js
-    JournalEntry.js, AdminDataTables.js
-    Dashboard, CRM, Stock, HR, etc.
+    BuyingModule.js (Linked flow tabs with pending sections)
+    SellingModule.js (Linked flow tabs with pending sections)
+    ManufacturingModule.js, FinancialStatements.js, GSTModule.js
+    JournalEntry.js, Dashboard.js, etc.
 ```
 
 ## Remaining Backlog
 
 ### P2
-- Bank reconciliation statement matching
-- Fixed asset register with auto depreciation
+- Bank reconciliation / statement matching
+- Fixed asset register with auto depreciation (WDV/SLM/DDB)
 - Inventory landed cost calculation
-- Mobile responsiveness polish
+- General Ledger drill-down report
+- Accounts Receivable / Payable aging reports (standalone)
 
 ### P3
-- Built-in test runner UI
-- Real GSTIN government API integration (paid service)
+- Mobile responsiveness polish
+- Multi-company support
+- Stock reservation for specific orders
+- Subcontracting module
