@@ -65,20 +65,20 @@ function Reports() {
     <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
-          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="reports-title">
+          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="reports-title">
             Reports & Analytics
           </h1>
-          <p className="text-slate-500 mt-2">AI-powered conversational reporting and financial statements</p>
+          <p className="text-[#4A5B6E] mt-2">AI-powered conversational reporting and financial statements</p>
         </div>
 
-        <div className="bg-white border border-slate-200 p-6 rounded-sm tracing-beam" data-testid="ai-report-bot">
+        <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm tracing-beam" data-testid="ai-report-bot">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-[#002FA7]/10 rounded-sm">
-              <MessageSquare className="text-[#002FA7]" size={24} />
+            <div className="p-3 bg-[#00C9A7]/10 rounded-sm">
+              <MessageSquare className="text-[#00C9A7]" size={24} />
             </div>
             <div>
-              <h2 className="heading-font text-xl font-bold text-slate-900">AI Insight Bot</h2>
-              <p className="text-xs text-slate-500">Ask questions about your financial data</p>
+              <h2 className="heading-font text-xl font-bold text-[#E8EDF2]">AI Insight Bot</h2>
+              <p className="text-xs text-[#4A5B6E]">Ask questions about your financial data</p>
             </div>
           </div>
 
@@ -89,14 +89,14 @@ function Reports() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Example: Show me all electricity spends for Gujarat plant in 2025"
-                className="flex-1 border border-slate-200 rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                className="flex-1 border border-[#1B2D42] rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
                 data-testid="ai-query-input"
                 onKeyPress={(e) => e.key === 'Enter' && handleQuery()}
               />
               <button
                 onClick={handleQuery}
                 disabled={loading}
-                className="bg-[#002FA7] hover:bg-[#002480] text-white px-6 py-3 rounded-sm font-medium transition-colors flex items-center space-x-2 disabled:opacity-50"
+                className="bg-[#00C9A7] hover:bg-[#002480] text-white px-6 py-3 rounded-sm font-medium transition-colors flex items-center space-x-2 disabled:opacity-50"
                 data-testid="submit-query-button"
               >
                 <Send size={18} />
@@ -104,10 +104,10 @@ function Reports() {
             </div>
 
             {response && (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-sm" data-testid="ai-response">
-                <p className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2">AI Response</p>
-                <p className="text-sm text-slate-700 leading-relaxed">{response.answer}</p>
-                <p className="text-xs text-slate-400 mt-2 mono">Based on {response.data_points} transactions</p>
+              <div className="p-4 bg-[#152236] border border-[#1B2D42] rounded-sm" data-testid="ai-response">
+                <p className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2">AI Response</p>
+                <p className="text-sm text-[#7A8BA0] leading-relaxed">{response.answer}</p>
+                <p className="text-xs text-[#4A5B6E] mt-2 mono">Based on {response.data_points} transactions</p>
               </div>
             )}
           </div>
@@ -116,42 +116,42 @@ function Reports() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <button
             onClick={fetchBalanceSheet}
-            className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all text-left"
+            className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm hover:shadow-sm transition-all text-left"
             data-testid="balance-sheet-button"
           >
-            <BarChart3 className="text-[#002FA7] mb-3" size={32} />
-            <h3 className="heading-font text-lg font-bold text-slate-900">Balance Sheet</h3>
-            <p className="text-sm text-slate-500 mt-1">Assets, Liabilities, Equity</p>
+            <BarChart3 className="text-[#00C9A7] mb-3" size={32} />
+            <h3 className="heading-font text-lg font-bold text-[#E8EDF2]">Balance Sheet</h3>
+            <p className="text-sm text-[#4A5B6E] mt-1">Assets, Liabilities, Equity</p>
           </button>
 
           <button
             onClick={fetchProfitLoss}
-            className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all text-left"
+            className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm hover:shadow-sm transition-all text-left"
             data-testid="profit-loss-button"
           >
             <TrendingUp className="text-[#10B981] mb-3" size={32} />
-            <h3 className="heading-font text-lg font-bold text-slate-900">Profit & Loss</h3>
-            <p className="text-sm text-slate-500 mt-1">Revenue, Expenses, Net Profit</p>
+            <h3 className="heading-font text-lg font-bold text-[#E8EDF2]">Profit & Loss</h3>
+            <p className="text-sm text-[#4A5B6E] mt-1">Revenue, Expenses, Net Profit</p>
           </button>
 
           <button
             onClick={fetchTrialBalance}
-            className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-sm transition-all text-left"
+            className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm hover:shadow-sm transition-all text-left"
             data-testid="trial-balance-button"
           >
             <DollarSign className="text-[#FFCC00] mb-3" size={32} />
-            <h3 className="heading-font text-lg font-bold text-slate-900">Trial Balance</h3>
-            <p className="text-sm text-slate-500 mt-1">All Account Balances</p>
+            <h3 className="heading-font text-lg font-bold text-[#E8EDF2]">Trial Balance</h3>
+            <p className="text-sm text-[#4A5B6E] mt-1">All Account Balances</p>
           </button>
         </div>
 
         {balanceSheet && (
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="balance-sheet-data">
-            <h3 className="heading-font text-xl font-bold text-slate-900 mb-4">Balance Sheet</h3>
-            <p className="text-xs text-slate-500 mono mb-4">As of: {balanceSheet.as_of_date}</p>
+          <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm" data-testid="balance-sheet-data">
+            <h3 className="heading-font text-xl font-bold text-[#E8EDF2] mb-4">Balance Sheet</h3>
+            <p className="text-xs text-[#4A5B6E] mono mb-4">As of: {balanceSheet.as_of_date}</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <p className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2">Assets</p>
+                <p className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2">Assets</p>
                 <div className="space-y-1 text-sm">
                   {Object.entries(balanceSheet.assets).length > 0 ? (
                     Object.entries(balanceSheet.assets).map(([acc, bal]) => (
@@ -161,12 +161,12 @@ function Reports() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-slate-400">No assets</p>
+                    <p className="text-[#4A5B6E]">No assets</p>
                   )}
                 </div>
               </div>
               <div>
-                <p className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2">Liabilities</p>
+                <p className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2">Liabilities</p>
                 <div className="space-y-1 text-sm">
                   {Object.entries(balanceSheet.liabilities).length > 0 ? (
                     Object.entries(balanceSheet.liabilities).map(([acc, bal]) => (
@@ -176,12 +176,12 @@ function Reports() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-slate-400">No liabilities</p>
+                    <p className="text-[#4A5B6E]">No liabilities</p>
                   )}
                 </div>
               </div>
               <div>
-                <p className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2">Equity</p>
+                <p className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2">Equity</p>
                 <div className="space-y-1 text-sm">
                   {Object.entries(balanceSheet.equity).length > 0 ? (
                     Object.entries(balanceSheet.equity).map(([acc, bal]) => (
@@ -191,7 +191,7 @@ function Reports() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-slate-400">No equity</p>
+                    <p className="text-[#4A5B6E]">No equity</p>
                   )}
                 </div>
               </div>
@@ -200,14 +200,14 @@ function Reports() {
         )}
 
         {profitLoss && (
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="profit-loss-data">
-            <h3 className="heading-font text-xl font-bold text-slate-900 mb-4">Profit & Loss Statement</h3>
-            <p className="text-xs text-slate-500 mono mb-4">
+          <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm" data-testid="profit-loss-data">
+            <h3 className="heading-font text-xl font-bold text-[#E8EDF2] mb-4">Profit & Loss Statement</h3>
+            <p className="text-xs text-[#4A5B6E] mono mb-4">
               Period: {profitLoss.period.start} to {profitLoss.period.end}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2">Revenue</p>
+                <p className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2">Revenue</p>
                 <div className="space-y-1 text-sm mono">
                   {Object.entries(profitLoss.revenue).map(([acc, amt]) => (
                     <div key={acc} className="flex justify-between">
@@ -215,14 +215,14 @@ function Reports() {
                       <span className="text-green-600">₹{amt.toFixed(2)}</span>
                     </div>
                   ))}
-                  <div className="border-t border-slate-200 pt-1 flex justify-between font-bold">
+                  <div className="border-t border-[#1B2D42] pt-1 flex justify-between font-bold">
                     <span>Total Revenue</span>
                     <span className="text-green-600">₹{profitLoss.total_revenue.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
               <div>
-                <p className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2">Expenses</p>
+                <p className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2">Expenses</p>
                 <div className="space-y-1 text-sm mono">
                   {Object.entries(profitLoss.expenses).map(([acc, amt]) => (
                     <div key={acc} className="flex justify-between">
@@ -230,17 +230,17 @@ function Reports() {
                       <span className="text-red-600">₹{amt.toFixed(2)}</span>
                     </div>
                   ))}
-                  <div className="border-t border-slate-200 pt-1 flex justify-between font-bold">
+                  <div className="border-t border-[#1B2D42] pt-1 flex justify-between font-bold">
                     <span>Total Expenses</span>
                     <span className="text-red-600">₹{profitLoss.total_expenses.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-6 p-4 bg-[#002FA7]/5 border border-[#002FA7] rounded-sm">
+            <div className="mt-6 p-4 bg-[#00C9A7]/5 border border-[#002FA7] rounded-sm">
               <div className="flex justify-between items-center">
-                <span className="heading-font text-lg font-bold text-slate-900">Net Profit</span>
-                <span className="heading-font text-2xl font-bold text-[#002FA7] mono">
+                <span className="heading-font text-lg font-bold text-[#E8EDF2]">Net Profit</span>
+                <span className="heading-font text-2xl font-bold text-[#00C9A7] mono">
                   ₹{profitLoss.net_profit.toFixed(2)}
                 </span>
               </div>
@@ -249,30 +249,30 @@ function Reports() {
         )}
 
         {trialBalance && (
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="trial-balance-data">
-            <h3 className="heading-font text-xl font-bold text-slate-900 mb-4">Trial Balance</h3>
-            <p className="text-xs text-slate-500 mono mb-4">As of: {trialBalance.as_of_date}</p>
+          <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm" data-testid="trial-balance-data">
+            <h3 className="heading-font text-xl font-bold text-[#E8EDF2] mb-4">Trial Balance</h3>
+            <p className="text-xs text-[#4A5B6E] mono mb-4">As of: {trialBalance.as_of_date}</p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-slate-500">Account</th>
-                    <th className="pb-2 text-right font-bold text-xs tracking-widest uppercase text-slate-500">Debit</th>
-                    <th className="pb-2 text-right font-bold text-xs tracking-widest uppercase text-slate-500">Credit</th>
+                  <tr className="border-b border-[#1B2D42]">
+                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-[#4A5B6E]">Account</th>
+                    <th className="pb-2 text-right font-bold text-xs tracking-widest uppercase text-[#4A5B6E]">Debit</th>
+                    <th className="pb-2 text-right font-bold text-xs tracking-widest uppercase text-[#4A5B6E]">Credit</th>
                   </tr>
                 </thead>
                 <tbody className="mono">
                   {Object.entries(trialBalance.accounts).map(([acc, bal]) => (
                     <tr key={acc} className="border-b border-slate-100">
-                      <td className="py-2 text-slate-700">{acc}</td>
-                      <td className="py-2 text-right text-slate-900">₹{bal.debit.toFixed(2)}</td>
-                      <td className="py-2 text-right text-slate-900">₹{bal.credit.toFixed(2)}</td>
+                      <td className="py-2 text-[#7A8BA0]">{acc}</td>
+                      <td className="py-2 text-right text-[#E8EDF2]">₹{bal.debit.toFixed(2)}</td>
+                      <td className="py-2 text-right text-[#E8EDF2]">₹{bal.credit.toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-slate-300 font-bold">
-                    <td className="py-2 text-slate-900">Total</td>
-                    <td className="py-2 text-right text-slate-900">₹{trialBalance.total_debit.toFixed(2)}</td>
-                    <td className="py-2 text-right text-slate-900">₹{trialBalance.total_credit.toFixed(2)}</td>
+                  <tr className="border-t-2 border-[#1B2D42] font-bold">
+                    <td className="py-2 text-[#E8EDF2]">Total</td>
+                    <td className="py-2 text-right text-[#E8EDF2]">₹{trialBalance.total_debit.toFixed(2)}</td>
+                    <td className="py-2 text-right text-[#E8EDF2]">₹{trialBalance.total_credit.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>

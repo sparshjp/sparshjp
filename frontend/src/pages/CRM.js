@@ -84,19 +84,19 @@ function CRM() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="crm-title">
+            <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="crm-title">
               CRM
             </h1>
-            <p className="text-slate-500 mt-2">Customer Relationship Management</p>
+            <p className="text-[#4A5B6E] mt-2">Customer Relationship Management</p>
           </div>
-          <button className="bg-[#002FA7] hover:bg-[#002480] text-white px-4 py-2 rounded-sm text-sm font-medium flex items-center space-x-2">
+          <button className="bg-[#00C9A7] hover:bg-[#002480] text-white px-4 py-2 rounded-sm text-sm font-medium flex items-center space-x-2">
             <Plus size={16} />
             <span>New Lead</span>
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 border-b border-slate-200">
+        <div className="flex space-x-1 border-b border-[#1B2D42]">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -105,43 +105,43 @@ function CRM() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-3 font-medium transition-colors flex items-center space-x-2 border-b-2 ${
                   activeTab === tab.id
-                    ? 'border-[#002FA7] text-[#002FA7]'
-                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                    ? 'border-[#002FA7] text-[#00C9A7]'
+                    : 'border-transparent text-[#4A5B6E] hover:text-[#E8EDF2]'
                 }`}
               >
                 <Icon size={16} />
                 <span>{tab.label}</span>
-                <span className="mono text-xs px-2 py-0.5 rounded bg-slate-100">{tab.count}</span>
+                <span className="mono text-xs px-2 py-0.5 rounded bg-[#1B2D42]">{tab.count}</span>
               </button>
             );
           })}
         </div>
 
         {/* Content */}
-        <div className="bg-white border border-slate-200 rounded-sm p-6">
+        <div className="bg-[#152236] border border-[#1B2D42] rounded-sm p-6">
           {loading ? (
-            <p className="text-center py-12 text-slate-500">Loading...</p>
+            <p className="text-center py-12 text-[#4A5B6E]">Loading...</p>
           ) : activeTab === 'leads' ? (
             leads.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="mx-auto mb-3 text-slate-300" size={48} />
-                <p className="text-slate-500">No leads yet</p>
-                <p className="text-sm text-slate-400 mt-1">Use AI Prompt to capture leads from conversations</p>
+                <p className="text-[#4A5B6E]">No leads yet</p>
+                <p className="text-sm text-[#4A5B6E] mt-1">Use AI Prompt to capture leads from conversations</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {leads.map((lead) => (
-                  <div key={lead.id} className="border border-slate-200 p-4 rounded-sm hover:shadow-sm transition-all">
+                  <div key={lead.id} className="border border-[#1B2D42] p-4 rounded-sm hover:shadow-sm transition-all">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-bold text-slate-900">{lead.lead_name}</h3>
-                        {lead.company_name && <p className="text-sm text-slate-600">{lead.company_name}</p>}
-                        <p className="text-sm text-slate-500 mt-2">{lead.requirement}</p>
+                        <h3 className="font-bold text-[#E8EDF2]">{lead.lead_name}</h3>
+                        {lead.company_name && <p className="text-sm text-[#4A5B6E]">{lead.company_name}</p>}
+                        <p className="text-sm text-[#4A5B6E] mt-2">{lead.requirement}</p>
                         <div className="flex items-center space-x-4 mt-3 text-xs">
-                          {lead.email && <span className="text-slate-600">{lead.email}</span>}
-                          {lead.phone && <span className="text-slate-600">{lead.phone}</span>}
+                          {lead.email && <span className="text-[#4A5B6E]">{lead.email}</span>}
+                          {lead.phone && <span className="text-[#4A5B6E]">{lead.phone}</span>}
                           {lead.ai_score && (
-                            <span className="flex items-center space-x-1 text-[#002FA7]">
+                            <span className="flex items-center space-x-1 text-[#00C9A7]">
                               <Star size={12} fill="#002FA7" />
                               <span className="mono font-bold">{lead.ai_score}/100</span>
                             </span>
@@ -159,13 +159,13 @@ function CRM() {
                           <>
                             <button
                               onClick={() => qualifyLead(lead.id)}
-                              className="text-xs px-3 py-1 bg-white border border-slate-200 hover:bg-slate-50 rounded-sm"
+                              className="text-xs px-3 py-1 bg-[#152236] border border-[#1B2D42] hover:bg-[#152236] rounded-sm"
                             >
                               AI Qualify
                             </button>
                             <button
                               onClick={() => convertLead(lead.id)}
-                              className="text-xs px-3 py-1 bg-[#002FA7] text-white hover:bg-[#002480] rounded-sm"
+                              className="text-xs px-3 py-1 bg-[#00C9A7] text-white hover:bg-[#002480] rounded-sm"
                             >
                               Convert
                             </button>
@@ -181,15 +181,15 @@ function CRM() {
             opportunities.length === 0 ? (
               <div className="text-center py-12">
                 <TrendingUp className="mx-auto mb-3 text-slate-300" size={48} />
-                <p className="text-slate-500">No opportunities</p>
+                <p className="text-[#4A5B6E]">No opportunities</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {opportunities.map((opp) => (
-                  <div key={opp.id} className="border border-slate-200 p-4 rounded-sm">
-                    <h3 className="font-bold text-slate-900">{opp.party_name}</h3>
-                    <p className="text-sm text-slate-600 mt-1">Amount: ₹{opp.opportunity_amount?.toLocaleString()}</p>
-                    <p className="text-xs text-slate-500 mt-1">Probability: {opp.probability}%</p>
+                  <div key={opp.id} className="border border-[#1B2D42] p-4 rounded-sm">
+                    <h3 className="font-bold text-[#E8EDF2]">{opp.party_name}</h3>
+                    <p className="text-sm text-[#4A5B6E] mt-1">Amount: ₹{opp.opportunity_amount?.toLocaleString()}</p>
+                    <p className="text-xs text-[#4A5B6E] mt-1">Probability: {opp.probability}%</p>
                   </div>
                 ))}
               </div>
@@ -198,15 +198,15 @@ function CRM() {
             customers.length === 0 ? (
               <div className="text-center py-12">
                 <UserCheck className="mx-auto mb-3 text-slate-300" size={48} />
-                <p className="text-slate-500">No customers</p>
+                <p className="text-[#4A5B6E]">No customers</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {customers.map((customer) => (
-                  <div key={customer.id} className="border border-slate-200 p-4 rounded-sm hover:shadow-sm transition-all">
-                    <h3 className="font-bold text-slate-900">{customer.customer_name}</h3>
-                    <p className="text-xs text-slate-500 mt-1">{customer.customer_type}</p>
-                    {customer.gstin && <p className="text-xs text-slate-600 mono mt-2">GSTIN: {customer.gstin}</p>}
+                  <div key={customer.id} className="border border-[#1B2D42] p-4 rounded-sm hover:shadow-sm transition-all">
+                    <h3 className="font-bold text-[#E8EDF2]">{customer.customer_name}</h3>
+                    <p className="text-xs text-[#4A5B6E] mt-1">{customer.customer_type}</p>
+                    {customer.gstin && <p className="text-xs text-[#4A5B6E] mono mt-2">GSTIN: {customer.gstin}</p>}
                   </div>
                 ))}
               </div>

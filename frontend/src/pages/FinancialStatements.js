@@ -18,27 +18,27 @@ function BSLineItem({ label, amount, note, indent = 0, isBold = false, isTotal =
   return (
     <>
       <tr
-        className={`border-b border-zinc-800/40 ${isTotal ? 'bg-zinc-800/30 font-semibold' : 'hover:bg-zinc-800/20'} transition-colors cursor-default`}
+        className={`border-b border-[#1B2D42]/40 ${isTotal ? 'bg-[#152236]/50 font-semibold' : 'hover:bg-[#152236]/30'} transition-colors cursor-default`}
         onClick={() => hasChildren && setExpanded(!expanded)}
         data-testid={`bs-row-${label?.replace(/[^a-zA-Z0-9]/g, '-')}`}
       >
-        <td className={`py-2.5 px-4 ${isBold ? 'font-semibold text-amber-400' : 'text-zinc-200'}`} style={{ paddingLeft: `${16 + indent * 24}px` }}>
+        <td className={`py-2.5 px-4 ${isBold ? 'font-semibold text-[#00C9A7]' : 'text-[#E8EDF2]'}`} style={{ paddingLeft: `${16 + indent * 24}px` }}>
           <div className="flex items-center gap-2">
-            {hasChildren && (expanded ? <ChevronDown className="w-3.5 h-3.5 text-zinc-500" /> : <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />)}
-            {isTotal && <div className="w-8 h-0.5 bg-amber-500/40 mr-1" />}
+            {hasChildren && (expanded ? <ChevronDown className="w-3.5 h-3.5 text-[#4A5B6E]" /> : <ChevronRight className="w-3.5 h-3.5 text-[#4A5B6E]" />)}
+            {isTotal && <div className="w-8 h-0.5 bg-[#00C9A7]/40 mr-1" />}
             {label}
           </div>
         </td>
-        <td className="py-2.5 px-2 text-center text-zinc-500 text-xs">{note || ''}</td>
-        <td className={`py-2.5 px-4 text-right font-mono ${isTotal ? 'text-amber-400 font-bold text-base' : amount < 0 ? 'text-red-400' : 'text-zinc-100'}`}>
+        <td className="py-2.5 px-2 text-center text-[#4A5B6E] text-xs">{note || ''}</td>
+        <td className={`py-2.5 px-4 text-right font-mono ${isTotal ? 'text-[#00C9A7] font-bold text-base' : amount < 0 ? 'text-[#FF4D6A]' : 'text-[#E8EDF2]'}`}>
           {amount !== undefined ? formatINR(amount) : ''}
         </td>
       </tr>
       {expanded && details && Object.entries(details).map(([key, val]) => (
-        <tr key={key} className="border-b border-zinc-800/20 bg-zinc-900/40">
-          <td className="py-1.5 px-4 text-zinc-500 text-xs italic" style={{ paddingLeft: `${40 + indent * 24}px` }}>{key.replace(/_/g, ' ')}</td>
+        <tr key={key} className="border-b border-[#1B2D42]/20 bg-[#0D1B2A]/40">
+          <td className="py-1.5 px-4 text-[#4A5B6E] text-xs italic" style={{ paddingLeft: `${40 + indent * 24}px` }}>{key.replace(/_/g, ' ')}</td>
           <td></td>
-          <td className="py-1.5 px-4 text-right font-mono text-xs text-zinc-400">{formatINR(val)}</td>
+          <td className="py-1.5 px-4 text-right font-mono text-xs text-[#7A8BA0]">{formatINR(val)}</td>
         </tr>
       ))}
     </>
@@ -52,35 +52,35 @@ function PLLineItem({ sl, particular, amount, note, isTotal, isHeader, isFinal, 
   return (
     <>
       <tr
-        className={`border-b border-zinc-800/40 transition-colors ${
-          isFinal ? 'bg-amber-500/10 border-amber-500/30' :
-          isTotal ? 'bg-zinc-800/30' :
-          isHeader ? 'bg-zinc-800/20' : 'hover:bg-zinc-800/20'
+        className={`border-b border-[#1B2D42]/40 transition-colors ${
+          isFinal ? 'bg-[#00C9A7]/10 border-[#00C9A7]/30' :
+          isTotal ? 'bg-[#1B2D42]/30' :
+          isHeader ? 'bg-[#1B2D42]/20' : 'hover:bg-[#1B2D42]/20'
         } ${hasDetails ? 'cursor-pointer' : ''}`}
         onClick={() => hasDetails && setExpanded(!expanded)}
         data-testid={`pl-row-${particular?.replace(/[^a-zA-Z0-9]/g, '-')}`}
       >
-        <td className={`py-2.5 px-4 font-mono ${sl ? 'text-amber-400 font-semibold' : 'text-zinc-500'} w-16`}>{sl}</td>
-        <td className={`py-2.5 px-4 ${isHeader || isTotal || isFinal ? 'font-semibold text-amber-400' : 'text-zinc-200'}`}>
+        <td className={`py-2.5 px-4 font-mono ${sl ? 'text-[#00C9A7] font-semibold' : 'text-[#4A5B6E]'} w-16`}>{sl}</td>
+        <td className={`py-2.5 px-4 ${isHeader || isTotal || isFinal ? 'font-semibold text-[#00C9A7]' : 'text-[#E8EDF2]'}`}>
           <div className="flex items-center gap-2">
-            {hasDetails && (expanded ? <ChevronDown className="w-3.5 h-3.5 text-zinc-500" /> : <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />)}
+            {hasDetails && (expanded ? <ChevronDown className="w-3.5 h-3.5 text-[#4A5B6E]" /> : <ChevronRight className="w-3.5 h-3.5 text-[#4A5B6E]" />)}
             {particular}
           </div>
         </td>
-        <td className="py-2.5 px-2 text-center text-zinc-500 text-xs w-12">{note || ''}</td>
+        <td className="py-2.5 px-2 text-center text-[#4A5B6E] text-xs w-12">{note || ''}</td>
         <td className={`py-2.5 px-4 text-right font-mono w-36 ${
           isFinal ? 'text-lg font-bold' :
           isTotal ? 'font-bold' : ''
-        } ${amount < 0 ? 'text-red-400' : isFinal || isTotal ? 'text-amber-400' : 'text-zinc-100'}`}>
+        } ${amount < 0 ? 'text-[#FF4D6A]' : isFinal || isTotal ? 'text-[#00C9A7]' : 'text-[#E8EDF2]'}`}>
           {amount !== undefined && !isHeader ? formatINR(amount) : ''}
         </td>
       </tr>
       {expanded && details && details.map((d, i) => (
-        <tr key={i} className="border-b border-zinc-800/20 bg-zinc-900/40">
+        <tr key={i} className="border-b border-[#1B2D42]/20 bg-[#152236]/40">
           <td></td>
-          <td className="py-1.5 px-4 text-zinc-500 text-xs italic pl-12">{d.account}</td>
+          <td className="py-1.5 px-4 text-[#4A5B6E] text-xs italic pl-12">{d.account}</td>
           <td></td>
-          <td className="py-1.5 px-4 text-right font-mono text-xs text-zinc-400">{formatINR(d.amount)}</td>
+          <td className="py-1.5 px-4 text-right font-mono text-xs text-[#7A8BA0]">{formatINR(d.amount)}</td>
         </tr>
       ))}
     </>
@@ -125,13 +125,13 @@ export default function FinancialStatements() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100">Financial Statements</h1>
-          <p className="text-zinc-500 text-sm mt-1">Schedule III - Companies Act 2013 (Division I)</p>
+          <h1 className="text-2xl font-bold text-[#E8EDF2]">Financial Statements</h1>
+          <p className="text-[#4A5B6E] text-sm mt-1">Schedule III - Companies Act 2013 (Division I)</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-zinc-900 p-1 rounded-lg w-fit" data-testid="fs-tabs">
+      <div className="flex gap-1 bg-[#152236] p-1 rounded-lg w-fit" data-testid="fs-tabs">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -139,8 +139,8 @@ export default function FinancialStatements() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === tab.id
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                ? 'bg-[#00C9A7]/20 text-[#00C9A7] border border-[#00C9A7]/30'
+                : 'text-[#7A8BA0] hover:text-[#E8EDF2] hover:bg-[#1B2D42]'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -149,18 +149,18 @@ export default function FinancialStatements() {
         ))}
       </div>
 
-      {loading && <div className="text-zinc-500 py-8 text-center">Loading...</div>}
+      {loading && <div className="text-[#4A5B6E] py-8 text-center">Loading...</div>}
 
       {/* Balance Sheet */}
       {activeTab === 'balance-sheet' && bsData && (
         <div className="space-y-6" data-testid="balance-sheet-content">
           {/* Company Header */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
-            <h2 className="text-lg font-bold text-zinc-100">{bsData.company_name}</h2>
-            <p className="text-zinc-400 text-sm">Balance Sheet as at {bsData.as_of_date}</p>
-            <p className="text-zinc-500 text-xs mt-1">{bsData.format}</p>
+          <div className="bg-[#152236] border border-[#1B2D42] rounded-lg p-6 text-center">
+            <h2 className="text-lg font-bold text-[#E8EDF2]">{bsData.company_name}</h2>
+            <p className="text-[#7A8BA0] text-sm">Balance Sheet as at {bsData.as_of_date}</p>
+            <p className="text-[#4A5B6E] text-xs mt-1">{bsData.format}</p>
             <div className={`mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium ${
-              bsData.is_balanced ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+              bsData.is_balanced ? 'bg-[#00C9A7]/20 text-[#00C9A7]' : 'bg-[#FF4D6A]/20 text-[#FF4D6A]'
             }`}>
               {bsData.is_balanced ? 'Balanced' : `Out of balance by ${formatINR(bsData.difference)}`}
             </div>
@@ -168,13 +168,13 @@ export default function FinancialStatements() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* EQUITY & LIABILITIES */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
-              <div className="bg-zinc-800/50 px-4 py-3 border-b border-zinc-700">
-                <h3 className="text-sm font-bold text-amber-400 tracking-wider">I. EQUITY AND LIABILITIES</h3>
+            <div className="bg-[#152236] border border-[#1B2D42] rounded-lg overflow-hidden">
+              <div className="bg-[#1B2D42]/50 px-4 py-3 border-b border-[#1B2D42]">
+                <h3 className="text-sm font-bold text-[#00C9A7] tracking-wider">I. EQUITY AND LIABILITIES</h3>
               </div>
               <table className="w-full text-sm" data-testid="bs-equity-liabilities-table">
                 <thead>
-                  <tr className="border-b border-zinc-700 text-zinc-500 text-xs">
+                  <tr className="border-b border-[#1B2D42] text-[#4A5B6E] text-xs">
                     <th className="py-2 px-4 text-left">Particulars</th>
                     <th className="py-2 px-2 text-center w-12">Note</th>
                     <th className="py-2 px-4 text-right w-32">Amount (INR)</th>
@@ -202,13 +202,13 @@ export default function FinancialStatements() {
             </div>
 
             {/* ASSETS */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
-              <div className="bg-zinc-800/50 px-4 py-3 border-b border-zinc-700">
-                <h3 className="text-sm font-bold text-amber-400 tracking-wider">II. ASSETS</h3>
+            <div className="bg-[#152236] border border-[#1B2D42] rounded-lg overflow-hidden">
+              <div className="bg-[#1B2D42]/50 px-4 py-3 border-b border-[#1B2D42]">
+                <h3 className="text-sm font-bold text-[#00C9A7] tracking-wider">II. ASSETS</h3>
               </div>
               <table className="w-full text-sm" data-testid="bs-assets-table">
                 <thead>
-                  <tr className="border-b border-zinc-700 text-zinc-500 text-xs">
+                  <tr className="border-b border-[#1B2D42] text-[#4A5B6E] text-xs">
                     <th className="py-2 px-4 text-left">Particulars</th>
                     <th className="py-2 px-2 text-center w-12">Note</th>
                     <th className="py-2 px-4 text-right w-32">Amount (INR)</th>
@@ -243,20 +243,20 @@ export default function FinancialStatements() {
       {/* Profit & Loss */}
       {activeTab === 'profit-loss' && plData && (
         <div className="space-y-6" data-testid="profit-loss-content">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
-            <h2 className="text-lg font-bold text-zinc-100">{plData.company_name}</h2>
-            <p className="text-zinc-400 text-sm">Statement of Profit and Loss for the period {plData.period?.from} to {plData.period?.to}</p>
-            <p className="text-zinc-500 text-xs mt-1">{plData.format}</p>
+          <div className="bg-[#152236] border border-[#1B2D42] rounded-lg p-6 text-center">
+            <h2 className="text-lg font-bold text-[#E8EDF2]">{plData.company_name}</h2>
+            <p className="text-[#7A8BA0] text-sm">Statement of Profit and Loss for the period {plData.period?.from} to {plData.period?.to}</p>
+            <p className="text-[#4A5B6E] text-xs mt-1">{plData.format}</p>
             <div className="flex justify-center gap-4 mt-3">
-              <span className="text-sm text-zinc-400">Net: <span className={plData.summary?.net_profit >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{formatINR(plData.summary?.net_profit)}</span></span>
-              <span className="text-sm text-zinc-400">Margin: <span className="text-amber-400 font-bold">{plData.summary?.gross_margin_pct}%</span></span>
+              <span className="text-sm text-[#7A8BA0]">Net: <span className={plData.summary?.net_profit >= 0 ? 'text-[#00C9A7] font-bold' : 'text-[#FF4D6A] font-bold'}>{formatINR(plData.summary?.net_profit)}</span></span>
+              <span className="text-sm text-[#7A8BA0]">Margin: <span className="text-[#00C9A7] font-bold">{plData.summary?.gross_margin_pct}%</span></span>
             </div>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+          <div className="bg-[#152236] border border-[#1B2D42] rounded-lg overflow-hidden">
             <table className="w-full text-sm" data-testid="pl-table">
               <thead>
-                <tr className="border-b border-zinc-700 text-zinc-500 text-xs bg-zinc-800/50">
+                <tr className="border-b border-[#1B2D42] text-[#4A5B6E] text-xs bg-[#1B2D42]/50">
                   <th className="py-2.5 px-4 text-left w-16">Sl.</th>
                   <th className="py-2.5 px-4 text-left">Particulars</th>
                   <th className="py-2.5 px-2 text-center w-12">Note</th>
@@ -276,20 +276,20 @@ export default function FinancialStatements() {
       {/* Trial Balance */}
       {activeTab === 'trial-balance' && tbData && (
         <div className="space-y-6" data-testid="trial-balance-content">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
-            <h2 className="text-lg font-bold text-zinc-100">{tbData.company_name}</h2>
-            <p className="text-zinc-400 text-sm">Trial Balance as at {tbData.as_of_date}</p>
+          <div className="bg-[#152236] border border-[#1B2D42] rounded-lg p-6 text-center">
+            <h2 className="text-lg font-bold text-[#E8EDF2]">{tbData.company_name}</h2>
+            <p className="text-[#7A8BA0] text-sm">Trial Balance as at {tbData.as_of_date}</p>
             <div className={`mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium ${
-              tbData.in_balance ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+              tbData.in_balance ? 'bg-[#00C9A7]/20 text-[#00C9A7]' : 'bg-[#FF4D6A]/20 text-[#FF4D6A]'
             }`}>
               {tbData.in_balance ? 'In Balance' : `Out by ${formatINR(tbData.difference)}`}
             </div>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+          <div className="bg-[#152236] border border-[#1B2D42] rounded-lg overflow-hidden">
             <table className="w-full text-sm" data-testid="tb-table">
               <thead>
-                <tr className="border-b border-zinc-700 text-zinc-500 text-xs bg-zinc-800/50">
+                <tr className="border-b border-[#1B2D42] text-[#4A5B6E] text-xs bg-[#1B2D42]/50">
                   <th className="py-2.5 px-4 text-left">Account</th>
                   <th className="py-2.5 px-4 text-left w-24">Category</th>
                   <th className="py-2.5 px-4 text-right w-32">Debit (INR)</th>
@@ -298,19 +298,19 @@ export default function FinancialStatements() {
               </thead>
               <tbody>
                 {tbData.entries?.map((entry, i) => (
-                  <tr key={i} className="border-b border-zinc-800/40 hover:bg-zinc-800/20 transition-colors">
-                    <td className="py-2 px-4 text-zinc-200">{entry.account}</td>
-                    <td className="py-2 px-4 text-zinc-500 text-xs">{entry.category}</td>
-                    <td className="py-2 px-4 text-right font-mono text-zinc-100">{entry.debit > 0 ? formatINR(entry.debit) : ''}</td>
-                    <td className="py-2 px-4 text-right font-mono text-zinc-100">{entry.credit > 0 ? formatINR(entry.credit) : ''}</td>
+                  <tr key={i} className="border-b border-[#1B2D42]/40 hover:bg-[#1B2D42]/20 transition-colors">
+                    <td className="py-2 px-4 text-[#E8EDF2]">{entry.account}</td>
+                    <td className="py-2 px-4 text-[#4A5B6E] text-xs">{entry.category}</td>
+                    <td className="py-2 px-4 text-right font-mono text-[#E8EDF2]">{entry.debit > 0 ? formatINR(entry.debit) : ''}</td>
+                    <td className="py-2 px-4 text-right font-mono text-[#E8EDF2]">{entry.credit > 0 ? formatINR(entry.credit) : ''}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-zinc-800/50 border-t-2 border-amber-500/30">
-                  <td className="py-3 px-4 font-bold text-amber-400" colSpan={2}>TOTAL</td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-amber-400">{formatINR(tbData.total_debit)}</td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-amber-400">{formatINR(tbData.total_credit)}</td>
+                <tr className="bg-[#1B2D42]/50 border-t-2 border-[#00C9A7]/30">
+                  <td className="py-3 px-4 font-bold text-[#00C9A7]" colSpan={2}>TOTAL</td>
+                  <td className="py-3 px-4 text-right font-mono font-bold text-[#00C9A7]">{formatINR(tbData.total_debit)}</td>
+                  <td className="py-3 px-4 text-right font-mono font-bold text-[#00C9A7]">{formatINR(tbData.total_credit)}</td>
                 </tr>
               </tfoot>
             </table>

@@ -53,14 +53,14 @@ function CostCenters() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="cost-centers-title">
+            <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="cost-centers-title">
               Cost Centers
             </h1>
-            <p className="text-slate-500 mt-2">Define departments, projects, and business units for expense tracking</p>
+            <p className="text-[#4A5B6E] mt-2">Define departments, projects, and business units for expense tracking</p>
           </div>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-[#002FA7] hover:bg-[#002480] text-white px-4 py-2 rounded-sm text-sm font-medium transition-colors flex items-center space-x-2"
+            className="bg-[#00C9A7] hover:bg-[#002480] text-white px-4 py-2 rounded-sm text-sm font-medium transition-colors flex items-center space-x-2"
             data-testid="add-cost-center-button"
           >
             <Plus size={16} />
@@ -69,26 +69,26 @@ function CostCenters() {
         </div>
 
         {showAddForm && (
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="add-cost-center-form">
-            <h3 className="heading-font text-lg font-bold text-slate-900 mb-4">Add New Cost Center</h3>
+          <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm" data-testid="add-cost-center-form">
+            <h3 className="heading-font text-lg font-bold text-[#E8EDF2] mb-4">Add New Cost Center</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Name</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Name</label>
                 <input
                   type="text"
                   value={newCenter.name}
                   onChange={(e) => setNewCenter({...newCenter, name: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
                   placeholder="e.g., Marketing Department"
                 />
               </div>
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Description</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Description</label>
                 <input
                   type="text"
                   value={newCenter.description}
                   onChange={(e) => setNewCenter({...newCenter, description: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
                   placeholder="Optional description"
                 />
               </div>
@@ -96,13 +96,13 @@ function CostCenters() {
             <div className="flex space-x-3 mt-4">
               <button
                 onClick={handleAddCenter}
-                className="bg-[#002FA7] hover:bg-[#002480] text-white px-6 py-2 rounded-sm text-sm font-medium transition-colors"
+                className="bg-[#00C9A7] hover:bg-[#002480] text-white px-6 py-2 rounded-sm text-sm font-medium transition-colors"
               >
                 Save Cost Center
               </button>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-900 px-6 py-2 rounded-sm text-sm font-medium transition-colors"
+                className="bg-[#152236] border border-[#1B2D42] hover:bg-[#152236] text-[#E8EDF2] px-6 py-2 rounded-sm text-sm font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -110,44 +110,44 @@ function CostCenters() {
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 p-6 rounded-sm">
-          <h2 className="heading-font text-xl font-bold text-slate-900 mb-4">Active Cost Centers</h2>
+        <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm">
+          <h2 className="heading-font text-xl font-bold text-[#E8EDF2] mb-4">Active Cost Centers</h2>
           
           {loading ? (
-            <p className="text-center py-8 text-slate-500">Loading...</p>
+            <p className="text-center py-8 text-[#4A5B6E]">Loading...</p>
           ) : costCenters.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-sm">
-              <p className="text-slate-500">No cost centers defined</p>
-              <p className="text-sm text-slate-400 mt-1">Add your first cost center to start tracking</p>
+            <div className="text-center py-12 border-2 border-dashed border-[#1B2D42] rounded-sm">
+              <p className="text-[#4A5B6E]">No cost centers defined</p>
+              <p className="text-sm text-[#4A5B6E] mt-1">Add your first cost center to start tracking</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {costCenters.map((center) => (
-                <div key={center.id} className="border border-slate-200 p-4 rounded-sm hover:shadow-sm transition-all" data-testid={`cost-center-${center.id}`}>
-                  <h3 className="heading-font text-lg font-bold text-slate-900 mb-1">{center.name}</h3>
+                <div key={center.id} className="border border-[#1B2D42] p-4 rounded-sm hover:shadow-sm transition-all" data-testid={`cost-center-${center.id}`}>
+                  <h3 className="heading-font text-lg font-bold text-[#E8EDF2] mb-1">{center.name}</h3>
                   {center.description && (
-                    <p className="text-sm text-slate-600">{center.description}</p>
+                    <p className="text-sm text-[#4A5B6E]">{center.description}</p>
                   )}
-                  <p className="text-xs text-slate-400 mt-2 mono">ID: {center.id.slice(0, 8)}</p>
+                  <p className="text-xs text-[#4A5B6E] mt-2 mono">ID: {center.id.slice(0, 8)}</p>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="bg-[#F4F4F5] border border-slate-200 p-6 rounded-sm">
-          <h3 className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-3">How Cost Centers Work</h3>
-          <ul className="space-y-2 text-sm text-slate-700">
+        <div className="bg-[#F4F4F5] border border-[#1B2D42] p-6 rounded-sm">
+          <h3 className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-3">How Cost Centers Work</h3>
+          <ul className="space-y-2 text-sm text-[#7A8BA0]">
             <li className="flex items-start space-x-2">
-              <span className="w-1.5 h-1.5 bg-[#002FA7] rounded-full mt-2"></span>
+              <span className="w-1.5 h-1.5 bg-[#00C9A7] rounded-full mt-2"></span>
               <span>Every transaction can be tagged with a Cost Center (defaults to "General")</span>
             </li>
             <li className="flex items-start space-x-2">
-              <span className="w-1.5 h-1.5 bg-[#002FA7] rounded-full mt-2"></span>
+              <span className="w-1.5 h-1.5 bg-[#00C9A7] rounded-full mt-2"></span>
               <span>Filter Balance Sheet and P&L reports by Cost Center to view departmental profitability</span>
             </li>
             <li className="flex items-start space-x-2">
-              <span className="w-1.5 h-1.5 bg-[#002FA7] rounded-full mt-2"></span>
+              <span className="w-1.5 h-1.5 bg-[#00C9A7] rounded-full mt-2"></span>
               <span>Use AI Prompt Interface to specify cost center when creating transactions</span>
             </li>
           </ul>

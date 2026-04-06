@@ -62,14 +62,14 @@ function MasterData() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="master-data-title">
+            <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="master-data-title">
               Master Data
             </h1>
-            <p className="text-slate-500 mt-2">Manage vendors, clients, and party information</p>
+            <p className="text-[#4A5B6E] mt-2">Manage vendors, clients, and party information</p>
           </div>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-[#002FA7] hover:bg-[#002480] text-white px-4 py-2 rounded-sm text-sm font-medium transition-colors flex items-center space-x-2"
+            className="bg-[#00C9A7] hover:bg-[#002480] text-white px-4 py-2 rounded-sm text-sm font-medium transition-colors flex items-center space-x-2"
             data-testid="add-entity-button"
           >
             <Plus size={16} />
@@ -77,10 +77,10 @@ function MasterData() {
           </button>
         </div>
 
-        <div className="flex space-x-4 border-b border-slate-200">
+        <div className="flex space-x-4 border-b border-[#1B2D42]">
           <button
             onClick={() => setEntityType('vendor')}
-            className={`px-4 py-2 font-medium transition-colors ${entityType === 'vendor' ? 'border-b-2 border-[#002FA7] text-[#002FA7]' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-4 py-2 font-medium transition-colors ${entityType === 'vendor' ? 'border-b-2 border-[#002FA7] text-[#00C9A7]' : 'text-[#4A5B6E] hover:text-[#E8EDF2]'}`}
             data-testid="vendors-tab"
           >
             <div className="flex items-center space-x-2">
@@ -90,7 +90,7 @@ function MasterData() {
           </button>
           <button
             onClick={() => setEntityType('client')}
-            className={`px-4 py-2 font-medium transition-colors ${entityType === 'client' ? 'border-b-2 border-[#002FA7] text-[#002FA7]' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-4 py-2 font-medium transition-colors ${entityType === 'client' ? 'border-b-2 border-[#002FA7] text-[#00C9A7]' : 'text-[#4A5B6E] hover:text-[#E8EDF2]'}`}
             data-testid="clients-tab"
           >
             <div className="flex items-center space-x-2">
@@ -101,68 +101,68 @@ function MasterData() {
         </div>
 
         {showAddForm && (
-          <div className="bg-white border border-slate-200 p-6 rounded-sm" data-testid="add-entity-form">
-            <h3 className="heading-font text-lg font-bold text-slate-900 mb-4">Add New {entityType === 'vendor' ? 'Vendor' : 'Client'}</h3>
+          <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm" data-testid="add-entity-form">
+            <h3 className="heading-font text-lg font-bold text-[#E8EDF2] mb-4">Add New {entityType === 'vendor' ? 'Vendor' : 'Client'}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Name</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Name</label>
                 <input
                   type="text"
                   value={newEntity.name}
                   onChange={(e) => setNewEntity({...newEntity, name: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
                   placeholder="Company/Person name"
                 />
               </div>
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">GSTIN (15 chars)</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">GSTIN (15 chars)</label>
                 <input
                   type="text"
                   value={newEntity.gstin}
                   onChange={(e) => setNewEntity({...newEntity, gstin: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7] mono"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7] mono"
                   placeholder="22AAAAA0000A1Z5"
                   maxLength="15"
                 />
               </div>
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">PAN</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">PAN</label>
                 <input
                   type="text"
                   value={newEntity.pan}
                   onChange={(e) => setNewEntity({...newEntity, pan: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7] mono"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7] mono"
                   placeholder="ABCDE1234F"
                   maxLength="10"
                 />
               </div>
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Contact</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Contact</label>
                 <input
                   type="text"
                   value={newEntity.contact}
                   onChange={(e) => setNewEntity({...newEntity, contact: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
                   placeholder="Phone number"
                 />
               </div>
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Email</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Email</label>
                 <input
                   type="email"
                   value={newEntity.email}
                   onChange={(e) => setNewEntity({...newEntity, email: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
                   placeholder="email@example.com"
                 />
               </div>
               <div>
-                <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Address</label>
+                <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Address</label>
                 <input
                   type="text"
                   value={newEntity.address}
                   onChange={(e) => setNewEntity({...newEntity, address: e.target.value})}
-                  className="w-full border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                  className="w-full border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
                   placeholder="Full address"
                 />
               </div>
@@ -170,62 +170,62 @@ function MasterData() {
             <div className="flex space-x-3 mt-4">
               <button
                 onClick={handleAddEntity}
-                className="bg-[#002FA7] hover:bg-[#002480] text-white px-6 py-2 rounded-sm text-sm font-medium transition-colors"
+                className="bg-[#00C9A7] hover:bg-[#002480] text-white px-6 py-2 rounded-sm text-sm font-medium transition-colors"
               >
                 Save {entityType === 'vendor' ? 'Vendor' : 'Client'}
               </button>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-900 px-6 py-2 rounded-sm text-sm font-medium transition-colors"
+                className="bg-[#152236] border border-[#1B2D42] hover:bg-[#152236] text-[#E8EDF2] px-6 py-2 rounded-sm text-sm font-medium transition-colors"
               >
                 Cancel
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-3">💡 Enter GSTIN to auto-fetch legal name, constitution, and status</p>
+            <p className="text-xs text-[#4A5B6E] mt-3">💡 Enter GSTIN to auto-fetch legal name, constitution, and status</p>
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 p-6 rounded-sm">
-          <h2 className="heading-font text-xl font-bold text-slate-900 mb-4">
+        <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm">
+          <h2 className="heading-font text-xl font-bold text-[#E8EDF2] mb-4">
             {entityType === 'vendor' ? 'Vendors' : 'Clients'} ({entities.length})
           </h2>
           
           {loading ? (
-            <p className="text-center py-8 text-slate-500">Loading...</p>
+            <p className="text-center py-8 text-[#4A5B6E]">Loading...</p>
           ) : entities.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-sm">
-              <p className="text-slate-500">No {entityType}s found</p>
-              <p className="text-sm text-slate-400 mt-1">Add your first {entityType}</p>
+            <div className="text-center py-12 border-2 border-dashed border-[#1B2D42] rounded-sm">
+              <p className="text-[#4A5B6E]">No {entityType}s found</p>
+              <p className="text-sm text-[#4A5B6E] mt-1">Add your first {entityType}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-slate-500">Name</th>
-                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-slate-500">GSTIN</th>
-                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-slate-500">Status</th>
-                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-slate-500">Contact</th>
+                  <tr className="border-b border-[#1B2D42]">
+                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-[#4A5B6E]">Name</th>
+                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-[#4A5B6E]">GSTIN</th>
+                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-[#4A5B6E]">Status</th>
+                    <th className="pb-2 text-left font-bold text-xs tracking-widest uppercase text-[#4A5B6E]">Contact</th>
                   </tr>
                 </thead>
                 <tbody>
                   {entities.map((entity) => (
-                    <tr key={entity.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr key={entity.id} className="border-b border-slate-100 hover:bg-[#152236]">
                       <td className="py-3">
                         <div>
-                          <p className="font-medium text-slate-900">{entity.name}</p>
+                          <p className="font-medium text-[#E8EDF2]">{entity.name}</p>
                           {entity.legal_name && entity.legal_name !== entity.name && (
-                            <p className="text-xs text-slate-500">{entity.legal_name}</p>
+                            <p className="text-xs text-[#4A5B6E]">{entity.legal_name}</p>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 mono text-slate-700">{entity.gstin || '-'}</td>
+                      <td className="py-3 mono text-[#7A8BA0]">{entity.gstin || '-'}</td>
                       <td className="py-3">
                         <span className={`px-2 py-1 rounded text-xs ${entity.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {entity.status}
                         </span>
                       </td>
-                      <td className="py-3 text-slate-700">{entity.contact || '-'}</td>
+                      <td className="py-3 text-[#7A8BA0]">{entity.contact || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

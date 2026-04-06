@@ -41,7 +41,7 @@ function Dashboard() {
     {
       title: 'CRM',
       icon: Users,
-      color: 'bg-blue-500',
+      color: 'bg-[#00C9A7]/100',
       link: '/crm',
       stats: [
         { label: 'Leads', value: moduleStats.crm.leads },
@@ -51,7 +51,7 @@ function Dashboard() {
     {
       title: 'Sales',
       icon: TrendingUp,
-      color: 'bg-green-500',
+      color: 'bg-[#00C9A7]/100',
       link: '/sales',
       stats: [
         { label: 'Quotations', value: moduleStats.sales.quotations },
@@ -61,7 +61,7 @@ function Dashboard() {
     {
       title: 'Stock',
       icon: Package,
-      color: 'bg-purple-500',
+      color: 'bg-[#00C9A7]/100',
       link: '/stock',
       stats: [
         { label: 'Items', value: moduleStats.stock.items },
@@ -84,10 +84,10 @@ function Dashboard() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
-          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="dashboard-title">
+          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="dashboard-title">
             Dashboard
           </h1>
-          <p className="text-slate-500 mt-2">Welcome to Kairos Accounting - AI-Powered ERP</p>
+          <p className="text-[#4A5B6E] mt-2">Welcome to Kairos Accounting - AI-Powered ERP</p>
         </div>
 
         {/* AI Assistant Banner */}
@@ -101,12 +101,12 @@ function Dashboard() {
               Simply describe what you need in natural language. AI will understand and create the right document in the right module.
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">"Customer ABC wants 100 laptops"</span>
-              <span className="px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">"Mark attendance for all"</span>
-              <span className="px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">"Create PO for Vendor X"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Customer ABC wants 100 laptops"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Mark attendance for all"</span>
+              <span className="px-3 py-1 bg-[#152236]/20 rounded-full backdrop-blur-sm">"Create PO for Vendor X"</span>
             </div>
           </div>
-          <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute right-0 top-0 w-64 h-64 bg-[#152236]/10 rounded-full blur-3xl" />
         </div>
 
         {/* Module Cards */}
@@ -117,17 +117,17 @@ function Dashboard() {
               <Link
                 key={module.title}
                 to={module.link}
-                className="bg-white border border-slate-200 p-6 rounded-sm hover:shadow-lg transition-all group"
+                className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm hover:shadow-lg transition-all group"
               >
                 <div className={`${module.color} w-12 h-12 rounded-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   <Icon size={24} className="text-white" />
                 </div>
-                <h3 className="heading-font text-xl font-bold text-slate-900 mb-3">{module.title}</h3>
+                <h3 className="heading-font text-xl font-bold text-[#E8EDF2] mb-3">{module.title}</h3>
                 <div className="space-y-2">
                   {module.stats.map((stat) => (
                     <div key={stat.label} className="flex justify-between text-sm">
-                      <span className="text-slate-600">{stat.label}</span>
-                      <span className="mono font-bold text-slate-900">{stat.value}</span>
+                      <span className="text-[#4A5B6E]">{stat.label}</span>
+                      <span className="mono font-bold text-[#E8EDF2]">{stat.value}</span>
                     </div>
                   ))}
                 </div>
@@ -137,24 +137,24 @@ function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white border border-slate-200 rounded-sm p-6">
-          <h2 className="heading-font text-xl font-bold text-slate-900 mb-4">Quick Actions</h2>
+        <div className="bg-[#152236] border border-[#1B2D42] rounded-sm p-6">
+          <h2 className="heading-font text-xl font-bold text-[#E8EDF2] mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
-              <p className="font-medium text-slate-900 text-sm">New Lead</p>
-              <p className="text-xs text-slate-500 mt-1">Capture inquiry</p>
+            <button className="border-2 border-[#1B2D42] hover:border-[#002FA7] hover:bg-[#00C9A7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-[#E8EDF2] text-sm">New Lead</p>
+              <p className="text-xs text-[#4A5B6E] mt-1">Capture inquiry</p>
             </button>
-            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
-              <p className="font-medium text-slate-900 text-sm">Create Quotation</p>
-              <p className="text-xs text-slate-500 mt-1">Sales document</p>
+            <button className="border-2 border-[#1B2D42] hover:border-[#002FA7] hover:bg-[#00C9A7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-[#E8EDF2] text-sm">Create Quotation</p>
+              <p className="text-xs text-[#4A5B6E] mt-1">Sales document</p>
             </button>
-            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
-              <p className="font-medium text-slate-900 text-sm">Add Stock</p>
-              <p className="text-xs text-slate-500 mt-1">Material receipt</p>
+            <button className="border-2 border-[#1B2D42] hover:border-[#002FA7] hover:bg-[#00C9A7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-[#E8EDF2] text-sm">Add Stock</p>
+              <p className="text-xs text-[#4A5B6E] mt-1">Material receipt</p>
             </button>
-            <button className="border-2 border-slate-200 hover:border-[#002FA7] hover:bg-[#002FA7]/5 p-4 rounded-sm text-left transition-all">
-              <p className="font-medium text-slate-900 text-sm">Mark Attendance</p>
-              <p className="text-xs text-slate-500 mt-1">HR operation</p>
+            <button className="border-2 border-[#1B2D42] hover:border-[#002FA7] hover:bg-[#00C9A7]/5 p-4 rounded-sm text-left transition-all">
+              <p className="font-medium text-[#E8EDF2] text-sm">Mark Attendance</p>
+              <p className="text-xs text-[#4A5B6E] mt-1">HR operation</p>
             </button>
           </div>
         </div>

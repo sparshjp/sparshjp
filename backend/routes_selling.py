@@ -124,6 +124,19 @@ async def create_sales_order(data: dict):
         "billing_status": "Not Billed",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    # Credit limit check
+    customer_data = await db.customers.find_one({"customer_name": data.get("customer")}, {"_id": 0})
+    if customer_data:
+        credit_limit = customer_data.get("credit_limit", 0)
+        if credit_limit > 0:
+            outstanding_ar = await db.selling_invoices.find(
+                {"customer": data.get("customer"), "status": {"$in": ["Unpaid", "Partially Paid"]}},
+                {"_id": 0}
+            ).to_list(10000)
+            total_outstanding = sum(inv.get("grand_total", 0) - inv.get("amount_paid", 0) for inv in outstanding_ar)
+            if total_outstanding + so["grand_total"] > credit_limit:
+                so["credit_warning"] = f"Credit limit: {credit_limit}, Outstanding: {total_outstanding}, This SO: {so['grand_total']}"
+
     await db.selling_sales_orders.insert_one(so)
     del so["_id"]
     return so
@@ -170,10 +183,15 @@ async def create_delivery_note(data: dict):
     await db.selling_delivery_notes.insert_one(dn)
     del dn["_id"]
 
-    # Update stock levels (reduce FG)
+    # Update stock levels (reduce FG) - with negative stock check
     for item in items:
+        item_code = item.get("item_code", item.get("item", ""))
+        item_doc = await db.items.find_one({"item_code": item_code}, {"_id": 0})
+        current_stock = item_doc.get("current_stock", 0) if item_doc else 0
+        if current_stock < item.get("qty", 0):
+            return {**dn, "warning": f"Negative stock: {item_code} has {current_stock} units, dispatching {item.get('qty', 0)}"}
         await db.items.update_one(
-            {"item_code": item.get("item_code", item.get("item", ""))},
+            {"item_code": item_code},
             {"$inc": {"current_stock": -item.get("qty", 0)}},
             upsert=False
         )

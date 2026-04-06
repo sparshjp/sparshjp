@@ -1,47 +1,61 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-@import url('https://fonts.cdnfonts.com/css/cabinet-grotesk');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --kairos-navy: #0D1B2A;
+    --kairos-teal: #00C9A7;
+    --kairos-bg: #F4F3EF;
+    --kairos-white: #FFFFFF;
+    --kairos-navy-light: #1B2D42;
+    --kairos-navy-mid: #152236;
+    --kairos-teal-dim: rgba(0, 201, 167, 0.15);
+    --kairos-teal-glow: rgba(0, 201, 167, 0.3);
+    --kairos-border: rgba(0, 201, 167, 0.12);
+    --kairos-text: #E8EDF2;
+    --kairos-text-dim: #7A8BA0;
+    --kairos-text-muted: #4A5B6E;
+    --kairos-danger: #FF4D6A;
+    --kairos-warn: #FFB547;
+}
+
 body {
     margin: 0;
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: var(--kairos-navy);
+    color: var(--kairos-text);
 }
 
 code, .mono {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 
-.heading-font {
-    font-family: 'Cabinet Grotesk', 'IBM Plex Sans', sans-serif;
-}
-
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
-        --primary: 221 100% 33%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 210 40% 96.1%;
-        --secondary-foreground: 222 47% 11%;
-        --muted: 210 40% 96.1%;
-        --muted-foreground: 215 16% 47%;
-        --accent: 210 40% 96.1%;
-        --accent-foreground: 222 47% 11%;
-        --destructive: 0 84% 60%;
+        --background: 210 33% 11%;
+        --foreground: 210 25% 92%;
+        --card: 210 33% 14%;
+        --card-foreground: 210 25% 92%;
+        --popover: 210 33% 11%;
+        --popover-foreground: 210 25% 92%;
+        --primary: 168 100% 39%;
+        --primary-foreground: 210 33% 11%;
+        --secondary: 210 25% 18%;
+        --secondary-foreground: 210 25% 92%;
+        --muted: 210 20% 20%;
+        --muted-foreground: 210 15% 55%;
+        --accent: 168 100% 39%;
+        --accent-foreground: 210 33% 11%;
+        --destructive: 348 100% 65%;
         --destructive-foreground: 0 0% 98%;
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 221 100% 33%;
-        --radius: 0.25rem;
+        --border: 168 50% 15%;
+        --input: 210 25% 18%;
+        --ring: 168 100% 39%;
+        --radius: 0.5rem;
     }
 }
 
@@ -50,7 +64,7 @@ code, .mono {
         @apply border-border;
     }
     body {
-        @apply bg-white text-slate-900;
+        @apply bg-[#0D1B2A] text-[#E8EDF2];
     }
 }
 
@@ -60,77 +74,56 @@ code, .mono {
     }
 
     [data-debug-wrapper="true"] > * {
-        margin-left: inherit;
-        margin-right: inherit;
-        margin-top: inherit;
-        margin-bottom: inherit;
-        padding-left: inherit;
-        padding-right: inherit;
-        padding-top: inherit;
-        padding-bottom: inherit;
-        column-gap: inherit;
-        row-gap: inherit;
-        gap: inherit;
-        border-left-width: inherit;
-        border-right-width: inherit;
-        border-top-width: inherit;
-        border-bottom-width: inherit;
-        border-left-style: inherit;
-        border-right-style: inherit;
-        border-top-style: inherit;
-        border-bottom-style: inherit;
-        border-left-color: inherit;
-        border-right-color: inherit;
-        border-top-color: inherit;
-        border-bottom-color: inherit;
+        margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
+        padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
+        column-gap: inherit; row-gap: inherit; gap: inherit;
+        border-left-width: inherit; border-right-width: inherit; border-top-width: inherit; border-bottom-width: inherit;
+        border-left-style: inherit; border-right-style: inherit; border-top-style: inherit; border-bottom-style: inherit;
+        border-left-color: inherit; border-right-color: inherit; border-top-color: inherit; border-bottom-color: inherit;
     }
 }
 
-/* Tracing Beam Animation */
+/* Teal glow animation */
+@keyframes teal-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 201, 167, 0); }
+    50% { box-shadow: 0 0 12px 2px rgba(0, 201, 167, 0.2); }
+}
+
+.teal-glow { animation: teal-pulse 3s ease-in-out infinite; }
+
+/* Tracing Beam - Kairos teal */
 @keyframes trace-beam {
-    0% {
-        background-position: 0% 0%;
-    }
-    100% {
-        background-position: 200% 0%;
-    }
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
 }
 
-.tracing-beam {
-    position: relative;
-    overflow: hidden;
-}
-
+.tracing-beam { position: relative; overflow: hidden; }
 .tracing-beam::before {
     content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(90deg, transparent, #002FA7, transparent);
+    position: absolute; inset: 0;
+    border-radius: inherit; padding: 1px;
+    background: linear-gradient(90deg, transparent, #00C9A7, transparent);
     background-size: 200% 100%;
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    -webkit-mask-composite: xor; mask-composite: exclude;
     animation: trace-beam 3s linear infinite;
     pointer-events: none;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* Scrollbar - Kairos theme */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0D1B2A; }
+::-webkit-scrollbar-thumb { background: #1B2D42; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #00C9A7; }
+
+/* Input focus states */
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #00C9A7 !important;
+    box-shadow: 0 0 0 2px rgba(0, 201, 167, 0.2);
 }
 
-::-webkit-scrollbar-track {
-    background: #F4F4F5;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #94A3B8;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #64748B;
-}
+/* Status badges */
+.badge-success { background: rgba(0, 201, 167, 0.15); color: #00C9A7; }
+.badge-warning { background: rgba(255, 181, 71, 0.15); color: #FFB547; }
+.badge-danger { background: rgba(255, 77, 106, 0.15); color: #FF4D6A; }

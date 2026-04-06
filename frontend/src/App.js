@@ -4,7 +4,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { 
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
-  Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database
+  Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
+  Scale, IndianRupee
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -25,6 +26,7 @@ import AdminDataTables from './pages/AdminDataTables';
 import FinancialStatements from './pages/FinancialStatements';
 import SellingModule from './pages/SellingModule';
 import BuyingModule from './pages/BuyingModule';
+import GSTModule from './pages/GSTModule';
 import UniversalAI from './components/UniversalAI';
 import { Toaster } from './components/ui/sonner';
 
@@ -90,6 +92,7 @@ function Sidebar({ isOpen, setIsOpen }) {
       items: [
         { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
+        { path: '/gst-tds', label: 'GST & TDS', icon: Scale },
       ]
     },
     {
@@ -115,18 +118,29 @@ function Sidebar({ isOpen, setIsOpen }) {
       
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-screen bg-white border-r border-slate-200 z-50 transition-transform duration-300
+        fixed top-0 left-0 h-screen bg-[#0D1B2A] border-r border-[#1B2D42] z-50 transition-transform duration-300
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 w-64
       `}>
         <div className="h-full flex flex-col">
           {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
-            <Link to="/" className="heading-font text-xl font-black tracking-tighter text-slate-900">
-              Kairos
+          <div className="h-16 flex items-center justify-between px-4 border-b border-[#1B2D42]">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-6 bg-[#0D1B2A] rounded-sm" />
+                <div className="flex flex-col gap-0.5">
+                  <div className="w-2.5 h-0.5 bg-[#00C9A7] -rotate-12" />
+                  <div className="w-2.5 h-0.5 bg-[#00C9A7] rotate-12" />
+                </div>
+                <div className="w-1.5 h-1.5 rounded-full bg-[#00C9A7]" />
+              </div>
+              <div className="border-l border-[#1B2D42] pl-3 h-8 flex flex-col justify-center">
+                <span className="text-sm font-bold tracking-[3px] text-white leading-none">KAIROS</span>
+                <span className="text-[8px] tracking-[4px] text-[#00C9A7] uppercase leading-none mt-1">Advisory</span>
+              </div>
             </Link>
             <button 
-              className="md:hidden p-2 hover:bg-slate-100 rounded-sm"
+              className="md:hidden p-2 hover:bg-[#1B2D42] rounded text-[#7A8BA0]"
               onClick={() => setIsOpen(false)}
             >
               <X size={20} />
@@ -139,7 +153,7 @@ function Sidebar({ isOpen, setIsOpen }) {
               <div key={section.id} className="mb-2">
                 <button
                   onClick={() => toggleSection(section.id)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-xs tracking-widest uppercase font-bold text-slate-500 hover:bg-slate-50 rounded-sm transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 text-[10px] tracking-[2px] uppercase font-semibold text-[#4A5B6E] hover:text-[#7A8BA0] hover:bg-[#152236] rounded transition-colors"
                 >
                   <span>{section.title}</span>
                   {expandedSections.includes(section.id) ? 
@@ -147,7 +161,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   }
                 </button>
                 {expandedSections.includes(section.id) && (
-                  <div className="mt-1 space-y-1">
+                  <div className="mt-1 space-y-0.5">
                     {section.items.map((item) => {
                       const Icon = item.icon;
                       return (
@@ -155,10 +169,10 @@ function Sidebar({ isOpen, setIsOpen }) {
                           key={item.path}
                           to={item.path}
                           onClick={() => window.innerWidth < 768 && setIsOpen(false)}
-                          className={`flex items-center space-x-3 px-3 py-2 text-sm rounded-sm transition-colors ${
+                          className={`flex items-center space-x-3 px-3 py-2 text-sm rounded transition-all ${
                             isActive(item.path)
-                              ? 'bg-[#002FA7] text-white'
-                              : 'text-slate-700 hover:bg-slate-100'
+                              ? 'bg-[#00C9A7]/15 text-[#00C9A7] border-l-2 border-[#00C9A7]'
+                              : 'text-[#7A8BA0] hover:bg-[#152236] hover:text-[#E8EDF2]'
                           }`}
                         >
                           <Icon size={16} />
@@ -173,9 +187,9 @@ function Sidebar({ isOpen, setIsOpen }) {
           </nav>
 
           {/* Footer */}
-          <div className="p-3 border-t border-slate-200 text-xs text-slate-500">
-            <p>Kairos Accounting v2.0</p>
-            <p className="text-[10px] mt-1">AI-Powered ERP</p>
+          <div className="p-3 border-t border-[#1B2D42] text-xs text-[#4A5B6E]">
+            <p className="font-semibold tracking-wider">Kairos Advisory</p>
+            <p className="text-[10px] mt-1 text-[#00C9A7]">AI-Powered ERP</p>
           </div>
         </div>
       </aside>
@@ -191,22 +205,23 @@ function App() {
       <BrowserRouter>
         <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
         
-        <div className="md:ml-64 min-h-screen bg-[#FAFAFA]">
+        <div className="md:ml-64 min-h-screen bg-[#0D1B2A]">
           {/* Top bar */}
-          <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-30">
+          <div className="h-14 bg-[#152236] border-b border-[#1B2D42] flex items-center justify-between px-4 sticky top-0 z-30">
             <button 
-              className="md:hidden p-2 hover:bg-slate-100 rounded-sm"
+              className="md:hidden p-2 hover:bg-[#1B2D42] rounded text-[#7A8BA0]"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={24} />
             </button>
             <div className="flex-1" />
-            <button className="text-sm text-slate-600 hover:text-slate-900 font-medium">
+            <button className="text-sm text-[#7A8BA0] hover:text-[#00C9A7] font-medium transition-colors">
               Admin
             </button>
           </div>
 
           {/* Main content */}
+          <div className="p-4 sm:p-6">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/crm" element={<CRM />} />
@@ -228,7 +243,9 @@ function App() {
             <Route path="/financial-statements" element={<FinancialStatements />} />
             <Route path="/selling" element={<SellingModule />} />
             <Route path="/buying" element={<BuyingModule />} />
+            <Route path="/gst-tds" element={<GSTModule />} />
           </Routes>
+          </div>
           
           <UniversalAI />
         </div>

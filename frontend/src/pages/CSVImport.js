@@ -85,22 +85,22 @@ function CSVImport() {
     <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
-          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-slate-900" data-testid="csv-import-title">
+          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="csv-import-title">
             CSV Import
           </h1>
-          <p className="text-slate-500 mt-2">Bulk import transactions from Excel/CSV files</p>
+          <p className="text-[#4A5B6E] mt-2">Bulk import transactions from Excel/CSV files</p>
         </div>
 
-        <div className="bg-white border border-slate-200 p-6 rounded-sm">
-          <h2 className="heading-font text-xl font-bold text-slate-900 mb-4">Import Configuration</h2>
+        <div className="bg-[#152236] border border-[#1B2D42] p-6 rounded-sm">
+          <h2 className="heading-font text-xl font-bold text-[#E8EDF2] mb-4">Import Configuration</h2>
           
           <div className="space-y-4">
             <div>
-              <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Module</label>
+              <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Module</label>
               <select
                 value={module}
                 onChange={(e) => setModule(e.target.value)}
-                className="w-full md:w-64 border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
+                className="w-full md:w-64 border border-[#1B2D42] rounded-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#002FA7]"
               >
                 {modules.map(m => (
                   <option key={m.value} value={m.value}>{m.label}</option>
@@ -109,8 +109,8 @@ function CSVImport() {
             </div>
 
             <div>
-              <label className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-2 block">Upload CSV File</label>
-              <label className="flex items-center justify-center border-2 border-dashed border-slate-200 rounded-sm p-8 cursor-pointer hover:border-[#002FA7] transition-colors" data-testid="csv-upload-area">
+              <label className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-2 block">Upload CSV File</label>
+              <label className="flex items-center justify-center border-2 border-dashed border-[#1B2D42] rounded-sm p-8 cursor-pointer hover:border-[#002FA7] transition-colors" data-testid="csv-upload-area">
                 <input
                   type="file"
                   onChange={handleFileSelect}
@@ -118,9 +118,9 @@ function CSVImport() {
                   accept=".csv"
                 />
                 <div className="text-center">
-                  <Upload className="mx-auto mb-2 text-slate-400" size={32} />
-                  <p className="text-sm text-slate-600">{file ? file.name : 'Click to upload CSV file'}</p>
-                  {file && <p className="text-xs text-slate-400 mt-1">{(file.size / 1024).toFixed(2)} KB</p>}
+                  <Upload className="mx-auto mb-2 text-[#4A5B6E]" size={32} />
+                  <p className="text-sm text-[#4A5B6E]">{file ? file.name : 'Click to upload CSV file'}</p>
+                  {file && <p className="text-xs text-[#4A5B6E] mt-1">{(file.size / 1024).toFixed(2)} KB</p>}
                 </div>
               </label>
             </div>
@@ -129,14 +129,14 @@ function CSVImport() {
               <button
                 onClick={handleValidate}
                 disabled={!file}
-                className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-900 px-6 py-2 rounded-sm text-sm font-medium transition-colors disabled:opacity-50"
+                className="bg-[#152236] border border-[#1B2D42] hover:bg-[#152236] text-[#E8EDF2] px-6 py-2 rounded-sm text-sm font-medium transition-colors disabled:opacity-50"
               >
                 Validate CSV
               </button>
               <button
                 onClick={handleImport}
                 disabled={!file || importing}
-                className="bg-[#002FA7] hover:bg-[#002480] text-white px-6 py-2 rounded-sm text-sm font-medium transition-colors disabled:opacity-50"
+                className="bg-[#00C9A7] hover:bg-[#002480] text-white px-6 py-2 rounded-sm text-sm font-medium transition-colors disabled:opacity-50"
                 data-testid="import-button"
               >
                 {importing ? 'Importing...' : 'Import Transactions'}
@@ -146,7 +146,7 @@ function CSVImport() {
         </div>
 
         {validation && (
-          <div className={`border p-6 rounded-sm ${validation.valid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`} data-testid="validation-result">
+          <div className={`border p-6 rounded-sm ${validation.valid ? 'bg-[#00C9A7]/10 border-green-200' : 'bg-[#FF4D6A]/10 border-red-200'}`} data-testid="validation-result">
             <div className="flex items-start space-x-3">
               {validation.valid ? (
                 <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
@@ -186,7 +186,7 @@ function CSVImport() {
         )}
 
         {importResult && (
-          <div className="bg-green-50 border border-green-200 p-6 rounded-sm" data-testid="import-result">
+          <div className="bg-[#00C9A7]/10 border border-green-200 p-6 rounded-sm" data-testid="import-result">
             <div className="flex items-start space-x-3">
               <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
               <div>
@@ -198,35 +198,35 @@ function CSVImport() {
           </div>
         )}
 
-        <div className="bg-[#F4F4F5] border border-slate-200 p-6 rounded-sm">
-          <h3 className="text-xs tracking-widest uppercase font-bold text-slate-500 mb-3">Zoho-Standard CSV Format</h3>
+        <div className="bg-[#F4F4F5] border border-[#1B2D42] p-6 rounded-sm">
+          <h3 className="text-xs tracking-widest uppercase font-bold text-[#4A5B6E] mb-3">Zoho-Standard CSV Format</h3>
           
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-bold text-slate-700 mb-2">Purchases/Sales:</p>
-              <code className="block bg-white p-3 rounded-sm text-xs mono border border-slate-200">
+              <p className="text-sm font-bold text-[#7A8BA0] mb-2">Purchases/Sales:</p>
+              <code className="block bg-[#152236] p-3 rounded-sm text-xs mono border border-[#1B2D42]">
                 Date, Entity Name, Item/Service, HSN Code, Quantity, Rate, GST Rate, Cess, Total, Cost Center
               </code>
-              <p className="text-xs text-slate-500 mt-2">Example: "2026-01-15, ABC Suppliers, Laptop, 84713020, 1, 50000, 18, 0, 59000, IT Department"</p>
+              <p className="text-xs text-[#4A5B6E] mt-2">Example: "2026-01-15, ABC Suppliers, Laptop, 84713020, 1, 50000, 18, 0, 59000, IT Department"</p>
             </div>
 
             <div>
-              <p className="text-sm font-bold text-slate-700 mb-2">Journal Entries:</p>
-              <code className="block bg-white p-3 rounded-sm text-xs mono border border-slate-200">
+              <p className="text-sm font-bold text-[#7A8BA0] mb-2">Journal Entries:</p>
+              <code className="block bg-[#152236] p-3 rounded-sm text-xs mono border border-[#1B2D42]">
                 Date, Ledger, Debit, Credit, Description, Cost Center
               </code>
-              <p className="text-xs text-slate-500 mt-2">Example: "2026-01-15, Office Rent, 25000, 0, January rent payment, Mumbai Office"</p>
+              <p className="text-xs text-[#4A5B6E] mt-2">Example: "2026-01-15, Office Rent, 25000, 0, January rent payment, Mumbai Office"</p>
             </div>
 
             <div>
-              <p className="text-sm font-bold text-slate-700 mb-2">Payments:</p>
-              <code className="block bg-white p-3 rounded-sm text-xs mono border border-slate-200">
+              <p className="text-sm font-bold text-[#7A8BA0] mb-2">Payments:</p>
+              <code className="block bg-[#152236] p-3 rounded-sm text-xs mono border border-[#1B2D42]">
                 Date, Entity Name, Amount, Payment Mode, Description
               </code>
             </div>
           </div>
 
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-sm">
+          <div className="mt-4 p-4 bg-[#00C9A7]/10 border border-blue-200 rounded-sm">
             <p className="text-sm font-bold text-blue-900 mb-1">Important Notes:</p>
             <ul className="space-y-1 text-xs text-blue-700">
               <li>• Date format must be YYYY-MM-DD</li>
