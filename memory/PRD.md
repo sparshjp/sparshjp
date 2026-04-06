@@ -1,7 +1,7 @@
 # Kairos AI ERP - Product Requirements Document
 
 ## Original Problem Statement
-Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating heavily on a "Zero-Touch" UI where data entry is performed via Natural Language Processing (NLP).
+Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating heavily on a "Zero-Touch" UI where data entry is performed via Natural Language Processing (NLP). Pivoted to IT Services context ("Nexora IT ERP") with Project Management, Timesheets, Revenue Accrual (Ind AS 115), and a Unified AI Engine.
 
 ## Current Company: Nexora Digital Solutions Pvt. Ltd.
 - **CIN:** U72200GJ2019PTC108341 | **GSTIN:** 24AABCN4567P1Z8
@@ -24,15 +24,17 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 9. **Timesheets** — 27 entries, utilization (85.3%), consolidation, approval workflow
 10. **Revenue Recognition (Ind AS 115)** — POC/T&M/Milestone/Retainer, contract assets/liabilities, RPO, Ind AS 115 disclosure
 
-### Intelligence (Completed 2026-04-06)
+### Intelligence
 11. **Transaction Explorer** — 140 transactions, 8 module filters, priority/search, copy-to-clipboard AI prompts
-12. **AI Agent Hub** — 3 independent AI agents:
-    - **Business Agent (BA):** Indian accounting expert (Ind AS, GST, TDS, Ind AS 115), translates business requirements to technical specs
-    - **Coding Agent (DEV):** ERP stack expert (FastAPI, React, MongoDB), reads/writes project files, generates production code
-    - **Testing Agent (QA):** Live MongoDB queries, validates TB balance, entity integrity, project health, revenue schedule, GST compliance. 9 predefined test types
+12. **Unified AI Engine** (Completed 2026-04-06) — Single agent combining Business Analysis, Coding, and Testing brains:
+    - **Modes:** Auto (full pipeline), Business (requirements & compliance), Coding (file ops & code gen), Testing (DB validation & API testing)
+    - **Tools:** read_file, write_file, run_query, restart_service, test_api, list_files
+    - **Workflow:** Understand → Plan → Execute → Validate → Deploy
+    - **UI:** Unified chat with mode selector, file explorer, quick test queries, inline tool result cards, files modified badges
+    - **Session management** with persistent conversation history
 
 ### Accounting & Compliance
-13. Journal Entries, Chart of Accounts (balanced TB ₹2,81,42,000)
+13. Journal Entries, Chart of Accounts (balanced TB 2,81,42,000)
 14. Financial Statements (Schedule III BS/P&L/TB with company logo)
 15. AP/AR Aging, Audit Trail (Companies Act 2013)
 16. GST (GSTR-1/3B, E-Invoicing, GST Rules Engine), TDS Returns
@@ -49,4 +51,4 @@ Build an AI-Native ERP (India Localization) called "Kairos AI ERP", operating he
 
 ## Backlog
 ### P1: Inventory Landed Cost, Fixed Asset Depreciation
-### P2: Bank Reconciliation, E-Way Bill, Mobile Responsiveness
+### P2: E-Way Bill, Bank Reconciliation, Mobile Responsiveness
