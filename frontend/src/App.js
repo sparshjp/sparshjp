@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
-  Scale, IndianRupee, Factory, Building2, Sparkles, Shield
+  Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -27,6 +27,10 @@ import FinancialStatements from './pages/FinancialStatements';
 import SellingModule from './pages/SellingModule';
 import BuyingModule from './pages/BuyingModule';
 import GSTModule from './pages/GSTModule';
+import GSTR1Page from './pages/GSTR1Page';
+import GSTR3BPage from './pages/GSTR3BPage';
+import EInvoicePage from './pages/EInvoicePage';
+import TDSPage from './pages/TDSPage';
 import ManufacturingModule from './pages/ManufacturingModule';
 import CompanySetup from './pages/CompanySetup';
 import ReportingAI from './pages/ReportingAI';
@@ -99,8 +103,24 @@ function Sidebar({ isOpen, setIsOpen }) {
       items: [
         { path: '/journal-entries', label: 'Journal Entries', icon: BookOpen },
         { path: '/financial-statements', label: 'Financial Statements', icon: FileText },
-        { path: '/gst-tds', label: 'GST & TDS', icon: Scale },
         { path: '/audit-trail', label: 'Audit Trail', icon: Shield },
+      ]
+    },
+    {
+      id: 'gst',
+      title: 'GST',
+      items: [
+        { path: '/gst-dashboard', label: 'GST Dashboard', icon: IndianRupee },
+        { path: '/gstr-1', label: 'GSTR-1 (Outward)', icon: FileText },
+        { path: '/gstr-3b', label: 'GSTR-3B (Summary)', icon: Receipt },
+        { path: '/e-invoicing', label: 'E-Invoicing', icon: QrCode },
+      ]
+    },
+    {
+      id: 'tds',
+      title: 'TDS',
+      items: [
+        { path: '/tds-returns', label: 'TDS Returns (26Q)', icon: Scale },
       ]
     },
     {
@@ -253,6 +273,11 @@ function App() {
             <Route path="/buying" element={<BuyingModule />} />
             <Route path="/manufacturing" element={<ManufacturingModule />} />
             <Route path="/gst-tds" element={<GSTModule />} />
+            <Route path="/gst-dashboard" element={<GSTModule />} />
+            <Route path="/gstr-1" element={<GSTR1Page />} />
+            <Route path="/gstr-3b" element={<GSTR3BPage />} />
+            <Route path="/e-invoicing" element={<EInvoicePage />} />
+            <Route path="/tds-returns" element={<TDSPage />} />
             <Route path="/company-setup" element={<CompanySetup />} />
             <Route path="/reporting-ai" element={<ReportingAI />} />
             <Route path="/audit-trail" element={<AuditTrail />} />

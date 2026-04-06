@@ -1106,7 +1106,7 @@ try:
     from routes_manufacturing import router as mfg_router, set_db as mfg_set_db
     from routes_company import router as company_router, set_db as company_set_db, set_key as company_set_key
     from routes_audit import router as audit_router, set_db as audit_set_db
-    from routes_gst import router as gst_router
+    from routes_gst import router as gst_router, set_key as gst_set_key
     import audit_trail
     from ai_orchestrator import AIOrchestrator
     
@@ -1130,6 +1130,7 @@ try:
     company_set_key(EMERGENT_KEY)
     audit_set_db(db)
     audit_trail.set_db(db)
+    gst_set_key(EMERGENT_KEY)
     
     # Universal AI Prompt Endpoint
     @api_router.post("/ai/universal-prompt")
