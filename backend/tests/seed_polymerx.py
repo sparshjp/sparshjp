@@ -30,10 +30,10 @@ async def seed():
         {"ledger_name": "Cash & Bank (ICICI Current)", "category": "Asset", "sub_category": "Current Asset", "current_balance": 8000000},
         {"ledger_name": "Cash & Bank (Axis Bank)", "category": "Asset", "sub_category": "Current Asset", "current_balance": 5000000},
         {"ledger_name": "Fixed Deposits", "category": "Asset", "sub_category": "Current Asset", "current_balance": 4500000},
-        {"ledger_name": "Accounts Receivable", "category": "Asset", "sub_category": "Current Asset", "current_balance": 0},
+        {"ledger_name": "Accounts Receivable", "category": "Asset", "sub_category": "Current Asset", "current_balance": 4200000},
         {"ledger_name": "Raw Material Inventory", "category": "Asset", "sub_category": "Current Asset", "current_balance": 0},
         {"ledger_name": "Work-in-Progress (WIP)", "category": "Asset", "sub_category": "Current Asset", "current_balance": 0},
-        {"ledger_name": "Finished Goods Inventory", "category": "Asset", "sub_category": "Current Asset", "current_balance": 0},
+        {"ledger_name": "Finished Goods Inventory", "category": "Asset", "sub_category": "Current Asset", "current_balance": 5000000},
         {"ledger_name": "GST Input", "category": "Asset", "sub_category": "Current Asset", "current_balance": 0},
         {"ledger_name": "Advance to Vendors", "category": "Asset", "sub_category": "Current Asset", "current_balance": 0},
         {"ledger_name": "Advance Tax", "category": "Asset", "sub_category": "Current Asset", "current_balance": 0},
@@ -65,7 +65,7 @@ async def seed():
         {"ledger_name": "Lease Liability", "category": "Liability", "sub_category": "Non-Current Liability", "current_balance": -2400000},
         # Equity
         {"ledger_name": "Share Capital", "category": "Equity", "sub_category": "Equity", "current_balance": -15000000},
-        {"ledger_name": "Retained Earnings (P&L)", "category": "Equity", "sub_category": "Equity", "current_balance": -8500000},
+        {"ledger_name": "Retained Earnings (P&L)", "category": "Equity", "sub_category": "Equity", "current_balance": -46020000},
         {"ledger_name": "Reserves & Surplus", "category": "Equity", "sub_category": "Equity", "current_balance": -3200000},
         # Revenue
         {"ledger_name": "Sales Revenue", "category": "Revenue", "sub_category": "Revenue", "current_balance": 0},
@@ -199,6 +199,8 @@ async def seed():
         it["id"] = uid()
         it["created_at"] = now_iso()
     await db.items.insert_many(items)
+    # Build valuation rate lookup for FG
+    val_rates = {it["item_code"]: it["valuation_rate"] for it in items}
     print(f"  Created {len(items)} items (RM + FG)")
 
     # ═══════════════════════════════════════════════════════════
@@ -536,6 +538,28 @@ async def seed():
         # Add FG to inventory for completed WOs
         if wo["qty_produced"] > 0:
             await db.items.update_one({"item_code": wo["item"]}, {"$inc": {"current_stock": wo["qty_produced"]}})
+            # FG valued at standard cost (valuation_rate * qty_produced)
+            fg_value = wo["qty_produced"] * val_rates.get(wo["item"], 0)
+            overhead = fg_value - total_rm
+            # Start JE: DR WIP, CR Raw Material Inventory
+            await post_je([
+                {"account": "Work-in-Progress (WIP)", "debit": total_rm, "credit": 0, "description": f"WO Start: {wo['wo_number']}"},
+                {"account": "Raw Material Inventory", "debit": 0, "credit": total_rm, "description": f"RM consumed: {wo['wo_number']}"},
+            ], f"WO Start: {wo['wo_number']} - {wo['name']}", wo["start"], "Production-U1", "Work Order", wo["wo_number"])
+            # Complete JE: DR FG at standard cost, CR WIP at RM cost, CR Mfg Overhead for difference
+            je_entries = [
+                {"account": "Finished Goods Inventory", "debit": fg_value, "credit": 0, "description": f"FG produced: {wo['wo_number']}"},
+                {"account": "Work-in-Progress (WIP)", "debit": 0, "credit": total_rm, "description": f"WO Complete: {wo['wo_number']}"},
+            ]
+            if overhead > 0:
+                je_entries.append({"account": "Manufacturing Overhead", "debit": 0, "credit": overhead, "description": f"Overhead absorbed: {wo['wo_number']}"})
+            await post_je(je_entries, f"WO Complete: {wo['wo_number']} - {wo['name']}", wo["end"], "Production-U1", "Work Order", wo["wo_number"])
+        elif wo["status"] == "In Progress":
+            # WO started but not completed - only consume RM to WIP
+            await post_je([
+                {"account": "Work-in-Progress (WIP)", "debit": total_rm, "credit": 0, "description": f"WO Start: {wo['wo_number']}"},
+                {"account": "Raw Material Inventory", "debit": 0, "credit": total_rm, "description": f"RM consumed: {wo['wo_number']}"},
+            ], f"WO Start: {wo['wo_number']} - {wo['name']}", wo["start"], "Production-U1", "Work Order", wo["wo_number"])
         tx_count += 1
 
     # --- KEY JOURNAL ENTRIES (Advances, Expenses, Accruals, Depreciation, Tax) ---
@@ -582,7 +606,8 @@ async def seed():
         {"date": "2026-03-31", "narration": "Salary disbursement NEFT", "entries": [
             {"account": "Salary Payable", "debit": 985000, "credit": 0}, {"account": "Cash & Bank (ICICI Current)", "debit": 0, "credit": 985000}]},
         {"date": "2026-03-31", "narration": "Forex MTM Revaluation", "entries": [
-            {"account": "Forex Loss", "debit": 2975, "credit": 0}, {"account": "Forex Gain", "debit": 0, "credit": 14947}]},
+            {"account": "Forex Loss", "debit": 2975, "credit": 0}, {"account": "Accounts Payable", "debit": 0, "credit": 2975},
+            {"account": "Accounts Receivable", "debit": 14947, "credit": 0}, {"account": "Forex Gain", "debit": 0, "credit": 14947}]},
         {"date": "2026-03-31", "narration": "Income Tax Provision FY 2025-26", "entries": [
             {"account": "Income Tax Expense", "debit": 1308840, "credit": 0}, {"account": "Provision for Tax", "debit": 0, "credit": 1308840}]},
         {"date": "2026-03-31", "narration": "Deferred Tax Movement", "entries": [

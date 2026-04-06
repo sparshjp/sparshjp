@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { API } from '../App';
-import { Users, TrendingUp, Package, UserSquare, Sparkles } from 'lucide-react';
+import { Users, TrendingUp, Package, UserSquare, Sparkles, ShoppingCart, Warehouse } from 'lucide-react';
 
 function Dashboard() {
   const [moduleStats, setModuleStats] = useState({
     crm: { leads: 0, customers: 0 },
-    sales: { quotations: 0, salesOrders: 0 },
+    selling: { salesOrders: 0, invoices: 0 },
+    buying: { purchaseOrders: 0, invoices: 0 },
     stock: { items: 0, lowStock: 0 },
     hr: { employees: 0, attendance: 0 }
   });
@@ -18,18 +19,22 @@ function Dashboard() {
 
   const fetchModuleStats = async () => {
     try {
-      const [leadsRes, customersRes, quotsRes, itemsRes, empsRes] = await Promise.all([
+      const [leadsRes, customersRes, sosRes, siRes, posRes, piRes, itemsRes, empsRes] = await Promise.all([
         axios.get(`${API}/crm/leads`).catch(() => ({ data: [] })),
         axios.get(`${API}/crm/customers`).catch(() => ({ data: [] })),
-        axios.get(`${API}/sales/quotations`).catch(() => ({ data: [] })),
+        axios.get(`${API}/selling/sales-orders`).catch(() => ({ data: [] })),
+        axios.get(`${API}/selling/invoices`).catch(() => ({ data: [] })),
+        axios.get(`${API}/purchase/orders`).catch(() => ({ data: [] })),
+        axios.get(`${API}/purchase/invoices`).catch(() => ({ data: [] })),
         axios.get(`${API}/stock/items`).catch(() => ({ data: [] })),
         axios.get(`${API}/hr/employees`).catch(() => ({ data: [] }))
       ]);
 
       setModuleStats({
         crm: { leads: leadsRes.data.length, customers: customersRes.data.length },
-        sales: { quotations: quotsRes.data.length, salesOrders: 0 },
-        stock: { items: itemsRes.data.length, lowStock: 0 },
+        selling: { salesOrders: sosRes.data.length, invoices: siRes.data.length },
+        buying: { purchaseOrders: posRes.data.length, invoices: piRes.data.length },
+        stock: { items: itemsRes.data.length, lowStock: itemsRes.data.filter(i => (i.current_stock || 0) <= (i.reorder_level || 0)).length },
         hr: { employees: empsRes.data.length, attendance: 0 }
       });
     } catch (error) {
@@ -49,18 +54,28 @@ function Dashboard() {
       ]
     },
     {
-      title: 'Sales',
+      title: 'Selling',
       icon: TrendingUp,
       color: 'bg-[#00C9A7]/100',
-      link: '/sales',
+      link: '/selling',
       stats: [
-        { label: 'Quotations', value: moduleStats.sales.quotations },
-        { label: 'Sales Orders', value: moduleStats.sales.salesOrders }
+        { label: 'Sales Orders', value: moduleStats.selling.salesOrders },
+        { label: 'Invoices', value: moduleStats.selling.invoices }
+      ]
+    },
+    {
+      title: 'Buying',
+      icon: ShoppingCart,
+      color: 'bg-[#00C9A7]/100',
+      link: '/buying',
+      stats: [
+        { label: 'Purchase Orders', value: moduleStats.buying.purchaseOrders },
+        { label: 'Invoices', value: moduleStats.buying.invoices }
       ]
     },
     {
       title: 'Stock',
-      icon: Package,
+      icon: Warehouse,
       color: 'bg-[#00C9A7]/100',
       link: '/stock',
       stats: [

@@ -535,7 +535,7 @@ async def upload_coa(file: UploadFile = File(...)):
 @api_router.get("/coa")
 async def get_coa():
     """Get all Chart of Accounts"""
-    coa_list = await db.chart_of_accounts.find({"is_active": True}, {"_id": 0}).to_list(1000)
+    coa_list = await db.chart_of_accounts.find({"is_active": {"$ne": False}}, {"_id": 0}).to_list(1000)
     return coa_list
 
 @api_router.post("/coa")

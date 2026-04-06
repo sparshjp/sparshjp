@@ -16,65 +16,49 @@ def set_db(database):
     db = database
 
 # ═══════════════════════════════════════════════════════
-# SCHEDULE III - CHART OF ACCOUNTS MAPPING
-# Maps each ledger to the Schedule III hierarchy
+# DYNAMIC SCHEDULE III CLASSIFICATION
+# Uses CoA category/sub_category instead of hardcoded names
 # ═══════════════════════════════════════════════════════
 
-SCHEDULE_III_BS_MAP = {
-    # EQUITY & LIABILITIES
-    "shareholders_funds": {
-        "share_capital": ["Share Capital"],
-        "reserves_and_surplus": ["Retained Earnings"],
-    },
-    "non_current_liabilities": {
-        "long_term_borrowings": ["Bank Loan (HDFC Term)"],
-        "deferred_tax_liabilities": [],
-        "other_long_term_liabilities": [],
-        "long_term_provisions": [],
-    },
-    "current_liabilities": {
-        "short_term_borrowings": [],
-        "trade_payables": ["Accounts Payable"],
-        "other_current_liabilities": ["GST Payable", "GST Output", "Salary Payable", "PF Payable", "Advance from Customer", "Accrued Expenses"],
-        "short_term_provisions": [],
-    },
-    # ASSETS
-    "non_current_assets": {
-        "property_plant_equipment": ["Plant & Equipment"],
-        "accumulated_depreciation": ["Accumulated Depreciation"],
-        "capital_wip": [],
-        "non_current_investments": [],
-        "deferred_tax_assets": [],
-        "long_term_loans_advances": [],
-        "other_non_current_assets": ["Prepaid Expenses"],
-    },
-    "current_assets": {
-        "current_investments": [],
-        "inventories": ["Raw Material Inventory", "WIP Inventory", "Finished Goods Inventory"],
-        "trade_receivables": ["Accounts Receivable"],
-        "cash_and_equivalents": ["Cash & Bank (HDFC Current)"],
-        "short_term_loans_advances": ["GST Input"],
-        "other_current_assets": [],
-    }
+COMPANY_NAME = "PolyMerx Specialty Chemicals Pvt. Ltd."
+
+# Keywords to sub-classify within categories
+BS_CLASSIFY = {
+    "share_capital": lambda n: "share capital" in n.lower(),
+    "reserves": lambda n: "retained" in n.lower() or "reserves" in n.lower() or "surplus" in n.lower(),
+    "ppe": lambda n: "plant" in n.lower() or "machinery" in n.lower() or "equipment" in n.lower(),
+    "acc_dep": lambda n: "accumulated depreciation" in n.lower(),
+    "cwip": lambda n: "capital work" in n.lower(),
+    "rou": lambda n: "right-of-use" in n.lower() or "rou" in n.lower(),
+    "dta": lambda n: "deferred tax asset" in n.lower(),
+    "dtl": lambda n: "deferred tax liab" in n.lower(),
+    "trade_payables": lambda n: "accounts payable" in n.lower() or "trade payable" in n.lower(),
+    "trade_receivables": lambda n: "accounts receivable" in n.lower() or "trade receivable" in n.lower(),
+    "cash": lambda n: "cash" in n.lower() or "bank" in n.lower() or "fixed deposit" in n.lower(),
+    "inventory": lambda n: "inventory" in n.lower() or "work-in-progress" in n.lower(),
+    "gst_input": lambda n: "gst input" in n.lower(),
+    "gst_output": lambda n: "gst output" in n.lower() or "gst (advance)" in n.lower(),
+    "salary_payable": lambda n: "salary payable" in n.lower(),
+    "provision": lambda n: "provision" in n.lower() or "warranty" in n.lower(),
+    "lease_liability": lambda n: "lease liab" in n.lower(),
+    "borrowings": lambda n: "loan" in n.lower() or "borrowing" in n.lower(),
 }
 
-SCHEDULE_III_PL_MAP = {
-    "revenue_from_operations": ["Sales Revenue"],
-    "other_income": ["Inventory Adjustment"],
-    "cost_of_materials_consumed": ["Raw Material / Consumables"],
-    "purchases_of_stock_in_trade": [],
-    "changes_in_inventories": [],
-    "employee_benefits": ["Salary Expense", "PF Employer Expense"],
-    "finance_costs": ["Interest Expense"],
-    "depreciation_amortisation": ["Depreciation Expense"],
-    "other_expenses": ["Utility Expense", "Professional Fees", "R&D Expense", "Cost of Goods Sold", "Scrap/Loss"],
+PL_CLASSIFY = {
+    "revenue_ops": lambda n, c: c == "Revenue" and ("sales revenue" in n.lower() or "export revenue" in n.lower()),
+    "other_income": lambda n, c: c == "Revenue" and not ("sales revenue" in n.lower() or "export revenue" in n.lower()),
+    "materials": lambda n, c: c == "Expense" and ("raw material" in n.lower() or "consumable" in n.lower()),
+    "cogs": lambda n, c: "cost of goods" in n.lower(),
+    "employee": lambda n, c: "employee" in (c or "").lower() or "salary" in n.lower() or "pf expense" in n.lower() or "esi expense" in n.lower() or "bonus" in n.lower() or "gratuity" in n.lower(),
+    "finance": lambda n, c: "finance" in (c or "").lower() or "interest expense" in n.lower() or "lease interest" in n.lower() or "forex" in n.lower() or "bank charge" in n.lower(),
+    "depreciation": lambda n, c: "depreciation" in n.lower() or "amortization" in n.lower() or "amortisation" in n.lower() or "rou asset" in n.lower(),
+    "tax": lambda n, c: "tax" in (c or "").lower() and "expense" in n.lower(),
 }
 
 
-async def get_account_balance(ledger_name: str) -> float:
-    """Get current balance for a ledger from CoA"""
-    acc = await db.chart_of_accounts.find_one({"ledger_name": ledger_name}, {"_id": 0})
-    return acc.get("current_balance", 0) if acc else 0
+async def get_accounts_with_categories() -> list:
+    """Get all CoA accounts with category info"""
+    return await db.chart_of_accounts.find({}, {"_id": 0}).to_list(1000)
 
 async def get_account_balances_map() -> dict:
     """Get all CoA balances as a map"""
@@ -88,73 +72,120 @@ async def get_account_balances_map() -> dict:
 @router.get("/balance-sheet")
 async def get_balance_sheet(as_of_date: Optional[str] = None):
     """Generate Balance Sheet per Schedule III Companies Act 2013"""
-    balances = await get_account_balances_map()
+    accounts = await get_accounts_with_categories()
+    balances = {a["ledger_name"]: a.get("current_balance", 0) for a in accounts}
 
-    def sum_accounts(account_list):
-        return sum(balances.get(a, 0) for a in account_list)
+    # Classify accounts dynamically
+    share_capital_items, reserves_items = [], []
+    lt_borrowings_items, lt_provisions_items, other_lt_liab_items = [], [], []
+    trade_pay_items, other_cl_items, st_provisions_items = [], [], []
+    ppe_items, acc_dep_items, cwip_items, rou_items = [], [], [], []
+    dta_items, other_nca_items = [], []
+    inventory_items, receivable_items, cash_items = [], [], []
+    gst_input_items, other_ca_items = [], []
 
-    # I. EQUITY AND LIABILITIES
-    # 1. Shareholders' Funds
-    share_capital = abs(sum_accounts(SCHEDULE_III_BS_MAP["shareholders_funds"]["share_capital"]))
-    reserves_surplus = abs(sum_accounts(SCHEDULE_III_BS_MAP["shareholders_funds"]["reserves_and_surplus"]))
+    for a in accounts:
+        name = a["ledger_name"]
+        cat = a.get("category", "")
+        sub = a.get("sub_category", "")
+        bal = a.get("current_balance", 0)
 
-    # Calculate current year P&L to add to reserves
-    revenue_accounts = SCHEDULE_III_PL_MAP["revenue_from_operations"] + SCHEDULE_III_PL_MAP["other_income"]
-    expense_accounts = (SCHEDULE_III_PL_MAP["cost_of_materials_consumed"] +
-                       SCHEDULE_III_PL_MAP["employee_benefits"] +
-                       SCHEDULE_III_PL_MAP["finance_costs"] +
-                       SCHEDULE_III_PL_MAP["depreciation_amortisation"] +
-                       SCHEDULE_III_PL_MAP["other_expenses"])
-    total_revenue = abs(sum_accounts(revenue_accounts))
-    total_expenses = sum_accounts(expense_accounts)
-    current_year_pl = total_revenue - total_expenses
-    reserves_surplus += current_year_pl
+        if cat == "Equity":
+            if BS_CLASSIFY["share_capital"](name):
+                share_capital_items.append((name, bal))
+            else:
+                reserves_items.append((name, bal))
+        elif cat == "Liability":
+            if sub == "Non-Current Liability":
+                if BS_CLASSIFY["borrowings"](name):
+                    lt_borrowings_items.append((name, bal))
+                elif BS_CLASSIFY["lease_liability"](name):
+                    other_lt_liab_items.append((name, bal))
+                elif BS_CLASSIFY["provision"](name):
+                    lt_provisions_items.append((name, bal))
+                else:
+                    other_lt_liab_items.append((name, bal))
+            else:  # Current Liability
+                if BS_CLASSIFY["trade_payables"](name):
+                    trade_pay_items.append((name, bal))
+                elif BS_CLASSIFY["provision"](name):
+                    st_provisions_items.append((name, bal))
+                else:
+                    other_cl_items.append((name, bal))
+        elif cat == "Asset":
+            if sub == "Non-Current Asset":
+                if BS_CLASSIFY["ppe"](name):
+                    ppe_items.append((name, bal))
+                elif BS_CLASSIFY["acc_dep"](name):
+                    acc_dep_items.append((name, bal))
+                elif BS_CLASSIFY["cwip"](name):
+                    cwip_items.append((name, bal))
+                elif BS_CLASSIFY["rou"](name):
+                    rou_items.append((name, bal))
+                elif BS_CLASSIFY["dta"](name):
+                    dta_items.append((name, bal))
+                else:
+                    other_nca_items.append((name, bal))
+            else:  # Current Asset
+                if BS_CLASSIFY["inventory"](name):
+                    inventory_items.append((name, bal))
+                elif BS_CLASSIFY["trade_receivables"](name):
+                    receivable_items.append((name, bal))
+                elif BS_CLASSIFY["cash"](name):
+                    cash_items.append((name, bal))
+                elif BS_CLASSIFY["gst_input"](name):
+                    gst_input_items.append((name, bal))
+                else:
+                    other_ca_items.append((name, bal))
 
+    # Calculate P&L for current period to add to reserves
+    revenue_total = sum(-a.get("current_balance", 0) for a in accounts if a.get("category") == "Revenue")
+    expense_total = sum(a.get("current_balance", 0) for a in accounts if a.get("category") == "Expense")
+    current_year_pl = revenue_total - expense_total
+
+    # Credit-normal sum: negate balance (liab/equity have negative bal = positive amount)
+    def sum_credit(items):
+        return sum(-b for _, b in items)
+
+    share_capital = sum_credit(share_capital_items)
+    reserves_surplus = sum_credit(reserves_items) + current_year_pl
     shareholders_funds = share_capital + reserves_surplus
 
-    # 3. Non-current Liabilities
-    long_term_borrowings = abs(sum_accounts(SCHEDULE_III_BS_MAP["non_current_liabilities"]["long_term_borrowings"]))
-    deferred_tax_liab = abs(sum_accounts(SCHEDULE_III_BS_MAP["non_current_liabilities"]["deferred_tax_liabilities"]))
-    other_lt_liab = abs(sum_accounts(SCHEDULE_III_BS_MAP["non_current_liabilities"]["other_long_term_liabilities"]))
-    lt_provisions = abs(sum_accounts(SCHEDULE_III_BS_MAP["non_current_liabilities"]["long_term_provisions"]))
-    non_current_liabilities = long_term_borrowings + deferred_tax_liab + other_lt_liab + lt_provisions
+    long_term_borrowings = sum_credit(lt_borrowings_items)
+    lt_provisions = sum_credit(lt_provisions_items)
+    other_lt_liab = sum_credit(other_lt_liab_items)
+    non_current_liabilities = long_term_borrowings + lt_provisions + other_lt_liab
 
-    # 4. Current Liabilities
-    st_borrowings = abs(sum_accounts(SCHEDULE_III_BS_MAP["current_liabilities"]["short_term_borrowings"]))
-    trade_payables = abs(sum_accounts(SCHEDULE_III_BS_MAP["current_liabilities"]["trade_payables"]))
-    other_cl = abs(sum_accounts(SCHEDULE_III_BS_MAP["current_liabilities"]["other_current_liabilities"]))
-    st_provisions = abs(sum_accounts(SCHEDULE_III_BS_MAP["current_liabilities"]["short_term_provisions"]))
-    current_liabilities = st_borrowings + trade_payables + other_cl + st_provisions
+    trade_payables = sum_credit(trade_pay_items)
+    other_cl = sum_credit(other_cl_items)
+    st_provisions = sum_credit(st_provisions_items)
+    current_liabilities = trade_payables + other_cl + st_provisions
 
     total_equity_liabilities = shareholders_funds + non_current_liabilities + current_liabilities
 
-    # II. ASSETS
-    # 1. Non-current Assets
-    ppe_gross = sum_accounts(SCHEDULE_III_BS_MAP["non_current_assets"]["property_plant_equipment"])
-    acc_dep = abs(sum_accounts(SCHEDULE_III_BS_MAP["non_current_assets"]["accumulated_depreciation"]))
+    # Assets
+    ppe_gross = sum(b for _, b in ppe_items)
+    acc_dep = sum(abs(b) for _, b in acc_dep_items)
     ppe_net = ppe_gross - acc_dep
-    capital_wip = sum_accounts(SCHEDULE_III_BS_MAP["non_current_assets"]["capital_wip"])
-    nc_investments = sum_accounts(SCHEDULE_III_BS_MAP["non_current_assets"]["non_current_investments"])
-    dta = sum_accounts(SCHEDULE_III_BS_MAP["non_current_assets"]["deferred_tax_assets"])
-    lt_loans = sum_accounts(SCHEDULE_III_BS_MAP["non_current_assets"]["long_term_loans_advances"])
-    other_nca = sum_accounts(SCHEDULE_III_BS_MAP["non_current_assets"]["other_non_current_assets"])
-    non_current_assets = ppe_net + capital_wip + nc_investments + dta + lt_loans + other_nca
+    capital_wip = sum(b for _, b in cwip_items)
+    rou_asset = sum(b for _, b in rou_items)
+    dta = sum(b for _, b in dta_items)
+    other_nca = sum(b for _, b in other_nca_items)
+    non_current_assets = ppe_net + capital_wip + rou_asset + dta + other_nca
 
-    # 2. Current Assets
-    curr_investments = sum_accounts(SCHEDULE_III_BS_MAP["current_assets"]["current_investments"])
-    inventories = sum_accounts(SCHEDULE_III_BS_MAP["current_assets"]["inventories"])
-    trade_receivables = sum_accounts(SCHEDULE_III_BS_MAP["current_assets"]["trade_receivables"])
-    cash_equivalents = sum_accounts(SCHEDULE_III_BS_MAP["current_assets"]["cash_and_equivalents"])
-    st_loans = sum_accounts(SCHEDULE_III_BS_MAP["current_assets"]["short_term_loans_advances"])
-    other_ca = sum_accounts(SCHEDULE_III_BS_MAP["current_assets"]["other_current_assets"])
-    current_assets = curr_investments + inventories + trade_receivables + cash_equivalents + st_loans + other_ca
+    inventories = sum(b for _, b in inventory_items)
+    trade_receivables = sum(b for _, b in receivable_items)
+    cash_equivalents = sum(b for _, b in cash_items)
+    gst_input = sum(b for _, b in gst_input_items)
+    other_ca = sum(b for _, b in other_ca_items)
+    current_assets = inventories + trade_receivables + cash_equivalents + gst_input + other_ca
 
     total_assets = non_current_assets + current_assets
 
     return {
         "report_type": "Balance Sheet",
         "format": "Schedule III - Companies Act 2013 (Division I)",
-        "company_name": "NanoChip Industries Pvt. Ltd.",
+        "company_name": COMPANY_NAME,
         "as_of_date": as_of_date or datetime.now(timezone.utc).date().isoformat(),
         "currency": "INR",
 
@@ -170,9 +201,8 @@ async def get_balance_sheet(as_of_date: Optional[str] = None):
             "non_current_liabilities": {
                 "label": "3. Non-current Liabilities",
                 "long_term_borrowings": {"label": "(a) Long-term Borrowings", "amount": round(long_term_borrowings, 2), "note": 3},
-                "deferred_tax_liabilities": {"label": "(b) Deferred Tax Liabilities (Net)", "amount": round(deferred_tax_liab, 2)},
-                "other_long_term_liabilities": {"label": "(c) Other Long-term Liabilities", "amount": round(other_lt_liab, 2)},
-                "long_term_provisions": {"label": "(d) Long-term Provisions", "amount": round(lt_provisions, 2)},
+                "other_long_term_liabilities": {"label": "(b) Other Long-term Liabilities", "amount": round(other_lt_liab, 2)},
+                "long_term_provisions": {"label": "(c) Long-term Provisions", "amount": round(lt_provisions, 2)},
                 "total": round(non_current_liabilities, 2)
             },
             "current_liabilities": {
@@ -196,24 +226,21 @@ async def get_balance_sheet(as_of_date: Optional[str] = None):
                     "note": 6
                 },
                 "capital_wip": {"label": "Capital Work-in-Progress", "amount": round(capital_wip, 2)},
-                "non_current_investments": {"label": "(b) Non-current Investments", "amount": round(nc_investments, 2)},
+                "rou_asset": {"label": "Right-of-Use Asset", "amount": round(rou_asset, 2)},
                 "deferred_tax_assets": {"label": "(c) Deferred Tax Assets (Net)", "amount": round(dta, 2)},
-                "long_term_loans_advances": {"label": "(d) Long-term Loans and Advances", "amount": round(lt_loans, 2)},
-                "other_non_current_assets": {"label": "(e) Other Non-current Assets", "amount": round(other_nca, 2), "note": 7},
+                "other_non_current_assets": {"label": "(d) Other Non-current Assets", "amount": round(other_nca, 2)},
                 "total": round(non_current_assets, 2)
             },
             "current_assets": {
                 "label": "2. Current Assets",
                 "inventories": {"label": "(b) Inventories", "amount": round(inventories, 2), "note": 8,
-                                "details": {
-                                    "raw_materials": round(balances.get("Raw Material Inventory", 0), 2),
-                                    "work_in_progress": round(balances.get("WIP Inventory", 0), 2),
-                                    "finished_goods": round(balances.get("Finished Goods Inventory", 0), 2)
-                                }},
+                                "details": {n: round(b, 2) for n, b in inventory_items}},
                 "trade_receivables": {"label": "(c) Trade Receivables", "amount": round(trade_receivables, 2), "note": 9},
-                "cash_and_equivalents": {"label": "(d) Cash and Cash Equivalents", "amount": round(cash_equivalents, 2), "note": 10},
-                "short_term_loans_advances": {"label": "(e) Short-term Loans and Advances", "amount": round(st_loans, 2)},
-                "other_current_assets": {"label": "(f) Other Current Assets", "amount": round(other_ca, 2)},
+                "cash_and_equivalents": {"label": "(d) Cash and Cash Equivalents", "amount": round(cash_equivalents, 2), "note": 10,
+                                         "details": {n: round(b, 2) for n, b in cash_items}},
+                "short_term_loans_advances": {"label": "(e) Short-term Loans and Advances", "amount": round(gst_input, 2)},
+                "other_current_assets": {"label": "(f) Other Current Assets", "amount": round(other_ca, 2),
+                                         "details": {n: round(b, 2) for n, b in other_ca_items}},
                 "total": round(current_assets, 2)
             },
             "total": round(total_assets, 2)
@@ -230,86 +257,98 @@ async def get_balance_sheet(as_of_date: Optional[str] = None):
 @router.get("/profit-and-loss")
 async def get_profit_and_loss(start_date: Optional[str] = None, end_date: Optional[str] = None):
     """Generate Statement of Profit & Loss per Schedule III Companies Act 2013"""
-    balances = await get_account_balances_map()
+    accounts = await get_accounts_with_categories()
 
-    def sum_accounts(account_list):
-        return sum(abs(balances.get(a, 0)) for a in account_list)
+    # Classify accounts dynamically
+    revenue_ops, other_income_items = [], []
+    materials_items, cogs_items, employee_items = [], [], []
+    finance_items, depreciation_items, tax_items = [], [], []
+    other_expense_items = []
 
-    # I. Revenue from Operations
-    revenue_operations = sum_accounts(SCHEDULE_III_PL_MAP["revenue_from_operations"])
+    for a in accounts:
+        name = a["ledger_name"]
+        cat = a.get("category", "")
+        sub = a.get("sub_category", "")
+        bal = a.get("current_balance", 0)
+        if bal == 0:
+            continue
 
-    # II. Other Income
-    other_income = sum_accounts(SCHEDULE_III_PL_MAP["other_income"])
+        if PL_CLASSIFY["revenue_ops"](name, cat):
+            revenue_ops.append((name, abs(bal)))
+        elif PL_CLASSIFY["other_income"](name, cat):
+            other_income_items.append((name, abs(bal)))
+        elif PL_CLASSIFY["cogs"](name, cat):
+            cogs_items.append((name, bal))
+        elif PL_CLASSIFY["materials"](name, cat):
+            materials_items.append((name, bal))
+        elif PL_CLASSIFY["employee"](name, sub):
+            employee_items.append((name, bal))
+        elif PL_CLASSIFY["tax"](name, sub):
+            tax_items.append((name, bal))
+        elif PL_CLASSIFY["depreciation"](name, cat):
+            depreciation_items.append((name, bal))
+        elif PL_CLASSIFY["finance"](name, sub):
+            finance_items.append((name, bal))
+        elif cat == "Expense":
+            other_expense_items.append((name, bal))
 
-    # III. Total Revenue
+    revenue_operations = sum(b for _, b in revenue_ops)
+    other_income = sum(b for _, b in other_income_items)
     total_revenue = revenue_operations + other_income
 
-    # IV. Expenses
-    cost_materials = sum_accounts(SCHEDULE_III_PL_MAP["cost_of_materials_consumed"])
-    purchases_stock = sum_accounts(SCHEDULE_III_PL_MAP["purchases_of_stock_in_trade"])
-    changes_inventory = sum_accounts(SCHEDULE_III_PL_MAP["changes_in_inventories"])
-    employee_benefits = sum_accounts(SCHEDULE_III_PL_MAP["employee_benefits"])
-    finance_costs = sum_accounts(SCHEDULE_III_PL_MAP["finance_costs"])
-    depreciation = sum_accounts(SCHEDULE_III_PL_MAP["depreciation_amortisation"])
-    other_expenses = sum_accounts(SCHEDULE_III_PL_MAP["other_expenses"])
+    cost_materials = sum(b for _, b in materials_items)
+    cogs = sum(b for _, b in cogs_items)
+    employee_benefits = sum(b for _, b in employee_items)
+    finance_costs = sum(b for _, b in finance_items)
+    depreciation = sum(b for _, b in depreciation_items)
+    other_expenses = sum(b for _, b in other_expense_items)
+    current_tax = sum(b for _, b in tax_items)
 
-    total_expenses = (cost_materials + purchases_stock + changes_inventory +
-                     employee_benefits + finance_costs + depreciation + other_expenses)
+    total_expenses = cost_materials + cogs + employee_benefits + finance_costs + depreciation + other_expenses
 
-    # V. Profit before exceptional items and tax
-    profit_before_exceptional = total_revenue - total_expenses
-
-    # IX. Profit before tax
-    profit_before_tax = profit_before_exceptional
-
-    # X. Tax expense (simplified - no deferred tax calc yet)
-    current_tax = 0
-    deferred_tax = 0
-    total_tax = current_tax + deferred_tax
-
-    # XI. Profit for the period
-    profit_for_period = profit_before_tax - total_tax
+    profit_before_tax = total_revenue - total_expenses
+    profit_for_period = profit_before_tax - current_tax
 
     return {
         "report_type": "Statement of Profit and Loss",
         "format": "Schedule III - Companies Act 2013 (Division I)",
-        "company_name": "NanoChip Industries Pvt. Ltd.",
+        "company_name": COMPANY_NAME,
         "period": {
-            "from": start_date or "2026-04-01",
+            "from": start_date or "2025-04-01",
             "to": end_date or datetime.now(timezone.utc).date().isoformat()
         },
         "currency": "INR",
 
         "line_items": [
             {"sl": "I", "particular": "Revenue from Operations", "amount": round(revenue_operations, 2), "note": 11,
-             "details": [{"account": a, "amount": round(abs(balances.get(a, 0)), 2)} for a in SCHEDULE_III_PL_MAP["revenue_from_operations"]]},
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in revenue_ops]},
 
             {"sl": "II", "particular": "Other Income", "amount": round(other_income, 2), "note": 12,
-             "details": [{"account": a, "amount": round(abs(balances.get(a, 0)), 2)} for a in SCHEDULE_III_PL_MAP["other_income"] if balances.get(a, 0) != 0]},
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in other_income_items]},
 
             {"sl": "III", "particular": "Total Revenue (I + II)", "amount": round(total_revenue, 2), "is_total": True},
 
             {"sl": "IV", "particular": "Expenses:", "is_header": True},
             {"sl": "", "particular": "Cost of Materials Consumed", "amount": round(cost_materials, 2), "note": 13},
-            {"sl": "", "particular": "Purchases of Stock-in-Trade", "amount": round(purchases_stock, 2)},
-            {"sl": "", "particular": "Changes in Inventories of FG, WIP and Stock-in-Trade", "amount": round(changes_inventory, 2)},
+            {"sl": "", "particular": "Cost of Goods Sold", "amount": round(cogs, 2),
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in cogs_items]},
             {"sl": "", "particular": "Employee Benefits Expense", "amount": round(employee_benefits, 2), "note": 14,
-             "details": [{"account": a, "amount": round(abs(balances.get(a, 0)), 2)} for a in SCHEDULE_III_PL_MAP["employee_benefits"] if balances.get(a, 0) != 0]},
-            {"sl": "", "particular": "Finance Costs", "amount": round(finance_costs, 2), "note": 15},
-            {"sl": "", "particular": "Depreciation and Amortisation Expense", "amount": round(depreciation, 2), "note": 6},
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in employee_items]},
+            {"sl": "", "particular": "Finance Costs", "amount": round(finance_costs, 2), "note": 15,
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in finance_items]},
+            {"sl": "", "particular": "Depreciation and Amortisation Expense", "amount": round(depreciation, 2), "note": 6,
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in depreciation_items]},
             {"sl": "", "particular": "Other Expenses", "amount": round(other_expenses, 2), "note": 16,
-             "details": [{"account": a, "amount": round(abs(balances.get(a, 0)), 2)} for a in SCHEDULE_III_PL_MAP["other_expenses"] if balances.get(a, 0) != 0]},
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in other_expense_items]},
             {"sl": "", "particular": "Total Expenses (IV)", "amount": round(total_expenses, 2), "is_total": True},
 
-            {"sl": "V", "particular": "Profit before Exceptional and Extraordinary Items and Tax (III - IV)", "amount": round(profit_before_exceptional, 2)},
+            {"sl": "V", "particular": "Profit before Exceptional and Extraordinary Items and Tax (III - IV)", "amount": round(profit_before_tax, 2)},
             {"sl": "VI", "particular": "Exceptional Items", "amount": 0},
-            {"sl": "VII", "particular": "Profit before Extraordinary Items and Tax (V - VI)", "amount": round(profit_before_exceptional, 2)},
-            {"sl": "VIII", "particular": "Extraordinary Items", "amount": 0},
-            {"sl": "IX", "particular": "Profit before Tax (VII - VIII)", "amount": round(profit_before_tax, 2), "is_total": True},
+            {"sl": "IX", "particular": "Profit before Tax", "amount": round(profit_before_tax, 2), "is_total": True},
 
             {"sl": "X", "particular": "Tax Expense:", "is_header": True},
-            {"sl": "", "particular": "(1) Current Tax", "amount": round(current_tax, 2)},
-            {"sl": "", "particular": "(2) Deferred Tax", "amount": round(deferred_tax, 2)},
+            {"sl": "", "particular": "(1) Current Tax / Income Tax", "amount": round(current_tax, 2),
+             "details": [{"account": n, "amount": round(b, 2)} for n, b in tax_items]},
 
             {"sl": "XI", "particular": "Profit (Loss) for the Period", "amount": round(profit_for_period, 2), "is_total": True, "is_final": True},
         ],
@@ -318,9 +357,9 @@ async def get_profit_and_loss(start_date: Optional[str] = None, end_date: Option
             "total_revenue": round(total_revenue, 2),
             "total_expenses": round(total_expenses, 2),
             "profit_before_tax": round(profit_before_tax, 2),
-            "tax_expense": round(total_tax, 2),
+            "tax_expense": round(current_tax, 2),
             "net_profit": round(profit_for_period, 2),
-            "gross_margin_pct": round((total_revenue - cost_materials - other_expenses) / total_revenue * 100, 2) if total_revenue > 0 else 0,
+            "gross_margin_pct": round((total_revenue - cost_materials - cogs) / total_revenue * 100, 2) if total_revenue > 0 else 0,
         }
     }
 
@@ -353,7 +392,7 @@ async def get_trial_balance(as_of_date: Optional[str] = None):
 
     return {
         "report_type": "Trial Balance",
-        "company_name": "NanoChip Industries Pvt. Ltd.",
+        "company_name": COMPANY_NAME,
         "as_of_date": as_of_date or datetime.now(timezone.utc).date().isoformat(),
         "entries": entries,
         "total_debit": round(total_debit, 2),
@@ -453,10 +492,19 @@ async def export_bs_excel():
     ws.append(["II. ASSETS"])
     ws[ws.max_row][0].font = Font(name='Arial', bold=True, size=11)
 
-    add_section("1. Non-current Assets", [
-        ("(a) Property, Plant & Equipment (Net)", a["non_current_assets"]["property_plant_equipment"]["net_block"], 6),
-        ("(e) Other Non-current Assets", a["non_current_assets"]["other_non_current_assets"]["amount"], 7),
-    ], "Total Non-current Assets", a["non_current_assets"]["total"])
+    nca = a["non_current_assets"]
+    nca_items = [
+        ("(a) Property, Plant & Equipment (Net)", nca["property_plant_equipment"]["net_block"], 6),
+    ]
+    if nca.get("capital_wip", {}).get("amount", 0) > 0:
+        nca_items.append(("Capital Work-in-Progress", nca["capital_wip"]["amount"], ""))
+    if nca.get("rou_asset", {}).get("amount", 0) > 0:
+        nca_items.append(("Right-of-Use Asset", nca["rou_asset"]["amount"], ""))
+    if nca.get("deferred_tax_assets", {}).get("amount", 0) > 0:
+        nca_items.append(("Deferred Tax Assets (Net)", nca["deferred_tax_assets"]["amount"], ""))
+    if nca.get("other_non_current_assets", {}).get("amount", 0) > 0:
+        nca_items.append(("Other Non-current Assets", nca["other_non_current_assets"]["amount"], 7))
+    add_section("1. Non-current Assets", nca_items, "Total Non-current Assets", nca["total"])
 
     add_section("2. Current Assets", [
         ("(b) Inventories", a["current_assets"]["inventories"]["amount"], 8),
