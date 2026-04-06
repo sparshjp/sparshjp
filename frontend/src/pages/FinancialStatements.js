@@ -139,12 +139,17 @@ export default function FinancialStatements() {
     <div className="space-y-6" data-testid="financial-statements-page">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#E8EDF2]">Financial Statements</h1>
-          <p className="text-[#4A5B6E] text-sm mt-1">
-            {company.legal_name || 'Company Name'} — Schedule III, Companies Act 2013
-          </p>
-          {company.gstin && <p className="text-[#4A5B6E] text-[10px] font-mono mt-0.5">GSTIN: {company.gstin} | CIN: {company.cin || '—'}</p>}
+        <div className="flex items-center gap-3">
+          {company.logo_url && (
+            <img src={`${API}${company.logo_url}`} alt="Logo" className="w-10 h-10 rounded-lg object-cover border border-[#1B2D42]" data-testid="fs-company-logo" />
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-[#E8EDF2]">Financial Statements</h1>
+            <p className="text-[#4A5B6E] text-sm mt-1">
+              {company.legal_name || 'Company Name'} — Schedule III, Companies Act 2013
+            </p>
+            {company.gstin && <p className="text-[#4A5B6E] text-[10px] font-mono mt-0.5">GSTIN: {company.gstin} | CIN: {company.cin || '—'}</p>}
+          </div>
         </div>
         <div className="flex gap-2">
           {activeTab === 'balance-sheet' && (
@@ -194,6 +199,9 @@ export default function FinancialStatements() {
         <div className="space-y-6" data-testid="balance-sheet-content">
           {/* Company Header */}
           <div className="bg-[#152236] border border-[#1B2D42] rounded-lg p-6 text-center">
+            {company.logo_url && (
+              <img src={`${API}${company.logo_url}`} alt="Logo" className="w-14 h-14 rounded-lg object-cover border border-[#1B2D42] mx-auto mb-3" data-testid="bs-company-logo" />
+            )}
             <h2 className="text-lg font-bold text-[#E8EDF2]">{bsData.company_name}</h2>
             <p className="text-[#7A8BA0] text-sm">Balance Sheet as at {bsData.as_of_date}</p>
             <p className="text-[#4A5B6E] text-xs mt-1">{bsData.format}</p>
@@ -282,6 +290,9 @@ export default function FinancialStatements() {
       {activeTab === 'profit-loss' && plData && (
         <div className="space-y-6" data-testid="profit-loss-content">
           <div className="bg-[#152236] border border-[#1B2D42] rounded-lg p-6 text-center">
+            {company.logo_url && (
+              <img src={`${API}${company.logo_url}`} alt="Logo" className="w-14 h-14 rounded-lg object-cover border border-[#1B2D42] mx-auto mb-3" />
+            )}
             <h2 className="text-lg font-bold text-[#E8EDF2]">{plData.company_name}</h2>
             <p className="text-[#7A8BA0] text-sm">Statement of Profit and Loss for the period {plData.period?.from} to {plData.period?.to}</p>
             <p className="text-[#4A5B6E] text-xs mt-1">{plData.format}</p>
@@ -315,6 +326,9 @@ export default function FinancialStatements() {
       {activeTab === 'trial-balance' && tbData && (
         <div className="space-y-6" data-testid="trial-balance-content">
           <div className="bg-[#152236] border border-[#1B2D42] rounded-lg p-6 text-center">
+            {company.logo_url && (
+              <img src={`${API}${company.logo_url}`} alt="Logo" className="w-14 h-14 rounded-lg object-cover border border-[#1B2D42] mx-auto mb-3" />
+            )}
             <h2 className="text-lg font-bold text-[#E8EDF2]">{tbData.company_name}</h2>
             <p className="text-[#7A8BA0] text-sm">Trial Balance as at {tbData.as_of_date}</p>
             <div className={`mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium ${

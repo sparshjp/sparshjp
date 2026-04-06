@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { API } from '../App';
 import { Users, TrendingUp, Package, UserSquare, Sparkles, ShoppingCart, Warehouse } from 'lucide-react';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
 function Dashboard() {
   const [moduleStats, setModuleStats] = useState({
     crm: { leads: 0, customers: 0 },
@@ -100,11 +102,16 @@ function Dashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <div>
-          <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="dashboard-title">
-            Dashboard
-          </h1>
-          <p className="text-[#4A5B6E] mt-2">Welcome to Kairos Accounting - AI-Powered ERP</p>
+        <div className="flex items-center gap-4">
+          {company.logo_url && (
+            <img src={`${BACKEND_URL}${company.logo_url}`} alt="Company Logo" className="w-12 h-12 rounded-lg object-cover border border-[#1B2D42]" data-testid="dashboard-company-logo" />
+          )}
+          <div>
+            <h1 className="heading-font text-4xl sm:text-5xl font-black tracking-tighter text-[#E8EDF2]" data-testid="dashboard-title">
+              {company.legal_name || company.short_name || 'Dashboard'}
+            </h1>
+            <p className="text-[#4A5B6E] mt-1">Welcome to Kairos AI ERP — AI-Powered Enterprise Resource Planning</p>
+          </div>
         </div>
 
         {/* AI Assistant Banner */}

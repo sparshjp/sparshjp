@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
-  Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Building
+  Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -19,7 +19,7 @@ import PurchaseToPay from './pages/PurchaseToPay';
 import Reports from './pages/Reports';
 import ChartOfAccounts from './pages/ChartOfAccounts';
 import CostCenters from './pages/CostCenters';
-import MasterData from './pages/MasterData';
+// MasterData replaced by VendorsPage, CustomersPage, ItemsPage
 import CSVImport from './pages/CSVImport';
 import JournalEntry from './pages/JournalEntry';
 import AdminDataTables from './pages/AdminDataTables';
@@ -278,7 +278,6 @@ function App() {
             <Route path="/settings" element={<SettingsRouter />} />
             <Route path="/settings/coa" element={<ChartOfAccounts />} />
             <Route path="/settings/cost-centers" element={<CostCenters />} />
-            <Route path="/settings/master-data" element={<MasterData />} />
             <Route path="/settings/import" element={<CSVImport />} />
             <Route path="/journal-entries" element={<JournalEntry />} />
             <Route path="/admin/tables" element={<AdminDataTables />} />
@@ -323,10 +322,6 @@ function SettingsRouter() {
         <Link to="/settings/cost-centers" className="bg-[#152236] border border-[#1B2D42] p-6 rounded-lg hover:border-[#00C9A7]/30 transition-all">
           <h3 className="text-lg font-bold text-[#E8EDF2] mb-2">Cost Centers</h3>
           <p className="text-sm text-[#4A5B6E]">Define departments</p>
-        </Link>
-        <Link to="/settings/master-data" className="bg-[#152236] border border-[#1B2D42] p-6 rounded-lg hover:border-[#00C9A7]/30 transition-all">
-          <h3 className="text-lg font-bold text-[#E8EDF2] mb-2">Master Data</h3>
-          <p className="text-sm text-[#4A5B6E]">Vendors & Clients</p>
         </Link>
         <Link to="/settings/import" className="bg-[#152236] border border-[#1B2D42] p-6 rounded-lg hover:border-[#00C9A7]/30 transition-all">
           <h3 className="text-lg font-bold text-[#E8EDF2] mb-2">CSV Import</h3>
