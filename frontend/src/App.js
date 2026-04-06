@@ -118,9 +118,9 @@ function Sidebar({ isOpen, setIsOpen }) {
     },
     {
       id: 'ai',
-      title: 'AI Agents',
+      title: 'AI Engine',
       items: [
-        { path: '/ai-agents', label: 'AI Agent Hub', icon: Sparkles },
+        { path: '/ai-agents', label: 'AI Engine', icon: Sparkles },
       ]
     },
     {
