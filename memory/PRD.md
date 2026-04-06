@@ -19,41 +19,40 @@ Modular monolith with strict Linked Document Flow:
 - Selling: SO → Delivery Note → Sales Invoice → Customer Receipt
 - Manufacturing: Work Order (consume RM → WIP → FG) with auto-JEs
 
-### Core Differentiator: AI-First Entry
-The primary data entry mechanism is natural language. User types a prompt → AI parses intent + extracts structured data → Smart popup shows pre-filled form → User confirms → Entry created.
-
-**Backend**: `/api/ai/parse-prompt` endpoint sends prompt to Claude with full master data context (vendors, customers, items, ledgers, pending POs/SOs) for accurate entity matching.
+### Core Differentiator: AI-First Entry (Zero-Touch UI)
+ALL data entry across the entire ERP is AI-first. No dropdown forms anywhere.
+- **Global prompt bar** (bottom center, all pages) — for any entry type
+- **Module-level prompt bars** (inline in Buying, Selling, Manufacturing, JournalEntry)
+- **Smart popup** with pre-filled fields from AI parsing + strict master data dropdowns
+- **Backend enforces** master data validation (vendor/customer/item must exist in master)
+- **Shared component**: `AISmartEntry.js` (SmartFormPopup, ModuleAIPrompt, StrictDropdown)
 
 **Supported intents**: purchase_order, sales_order, work_order, journal_entry, goods_receipt, delivery_note, crm_lead
 
-### Modules Implemented
-1. **Dashboard** - Module stats overview (CRM, Selling, Buying, Stock, HR)
-2. **Chart of Accounts** - 77 ledgers, category-based classification
-3. **Buying (Purchase-to-Pay)** - PO→GRN→Invoice→Payment linked flow
-4. **Selling (Order-to-Cash)** - SO→DN→Invoice→Receipt linked flow
-5. **Financial Statements** - Schedule III BS, P&L, TB with dynamic classification
-6. **Manufacturing** - Work Orders with BOM, auto-accounting (RM→WIP→FG)
-7. **CRM** - Leads, Customers, Lead qualification & conversion
-8. **HR & Payroll** - Employees, attendance, leave, salary processing
-9. **GST & TDS** - Statutory compliance modules
-10. **Journal Entries** - Manual and auto-generated
-11. **AI Entry Module** - NLP prompt → smart popup → create entry
-12. **Master Data** - Entities, items, cost centers
-13. **Reports** - Trial Balance, Balance Sheet, P&L exports (PDF/Excel)
-14. **CSV Import** - Smart validation with CoA cross-checking
-15. **GSTIN/PAN Validation** - Format checking, state code mapping
+### Master Data Enforcement
+- PO/SO can ONLY use vendors/customers/items from master data
+- StrictDropdown component prevents free-text entry
+- Backend validates existence before creation (returns 400 if not in master)
+- CRM leads are exempt (not converted yet, no statutory info needed)
 
-### Data Seeded (PolyMerx 200 Transactions)
-- 77 CoA accounts, 7 cost centers, 12 vendors, 10 customers, 18 items
-- 9 employees, 7 CRM leads
-- 12 POs (10 seeded + 2 AI-created), 10 GRNs, 6 purchase invoices
-- 8 SOs, 8 delivery notes, 8 sales invoices, 8 customer receipts
-- 8 work orders (7 completed + 1 in-progress)
-- 49+ journal entries (auto-generated)
-- TB Balanced
+### Modules Implemented
+1. **Dashboard** - Module stats (CRM, Selling, Buying, Stock, HR)
+2. **Chart of Accounts** - 77 ledgers, category-based classification
+3. **Buying (Purchase-to-Pay)** - AI-first PO creation + linked flow
+4. **Selling (Order-to-Cash)** - AI-first SO creation + linked flow
+5. **Financial Statements** - Schedule III BS, P&L, TB (dynamic classification)
+6. **Manufacturing** - AI-first WO creation + BOM + auto-accounting
+7. **Journal Entries** - AI-first JE creation
+8. **CRM** - Leads, Customers
+9. **HR & Payroll** - Employees, attendance, leave, salary processing
+10. **GST & TDS** - Statutory compliance modules
+11. **Master Data** - Entities, items, cost centers
+12. **Reports** - TB, BS, P&L exports (PDF/Excel)
+13. **CSV Import** - Smart validation with CoA cross-checking
+14. **GSTIN/PAN Validation** - Format checking, state code mapping
 
 ### Upcoming Tasks (P1)
-- Conversational Reporting ("Show me top 5 vendors by purchase value")
+- Conversational Reporting (P0 priority: "Show me top 5 vendors by purchase value")
 - AP/AR Aging Report (0-30, 30-60, 60-90, 90+ days)
 - Inventory landed cost calculation
 - Fixed asset auto-depreciation
@@ -68,10 +67,13 @@ The primary data entry mechanism is natural language. User types a prompt → AI
 ### Key API Endpoints
 - `/api/ai/parse-prompt` - AI prompt parsing (POST)
 - `/api/coa` - Chart of Accounts
-- `/api/purchase/*` - Purchase module
-- `/api/selling/*` - Selling module
+- `/api/purchase/*` - Purchase module (with master data validation)
+- `/api/selling/*` - Selling module (with master data validation)
 - `/api/financial-statements/*` - BS, P&L, TB
 - `/api/manufacturing/*` - Work Orders
 - `/api/crm/*` - Leads, Customers
 - `/api/hr/*` - Employees, Payroll
-- `/api/reports/*` - Various reports
+
+### Key Frontend Components
+- `AISmartEntry.js` - SmartFormPopup, ModuleAIPrompt, StrictDropdown (shared)
+- `UniversalAI.js` - Global prompt bar (imports SmartFormPopup from AISmartEntry)
