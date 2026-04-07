@@ -136,7 +136,20 @@ export default function AiEntryModal({ module, title, placeholder, onSubmit, onC
               <div className="flex items-center justify-between mt-3">
                 <p className="text-[10px] text-[#4A5B6E]">Press Enter to parse, Shift+Enter for new line</p>
                 <div className="flex gap-2">
-                  <button onClick={() => { setParsed({}); setSchema({}); setStep('confirm'); }} className="px-3 py-1.5 text-xs text-[#4A5B6E] hover:text-[#7A8BA0] border border-[#1B2D42] rounded-lg" data-testid="manual-entry-btn">Manual Entry</button>
+                  <button onClick={async () => {
+                    try {
+                      const res = await fetch(`${API}/ai/parse-entry`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module, prompt: '__manual__' }) });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setSchema(data.schema || {});
+                        const defaults = {};
+                        Object.entries(data.schema || {}).forEach(([k, v]) => { defaults[k] = v.default ?? (v.type === 'number' ? 0 : v.type === 'boolean' ? false : v.type === 'array' || v.type === 'array_of_objects' ? [] : ''); });
+                        setParsed(defaults);
+                        setMissing(Object.entries(data.schema || {}).filter(([, v]) => v.required).map(([k, v]) => ({ field: k, label: v.label || k, type: v.type, options: v.options })));
+                      }
+                    } catch {}
+                    setStep('confirm');
+                  }} className="px-3 py-1.5 text-xs text-[#4A5B6E] hover:text-[#7A8BA0] border border-[#1B2D42] rounded-lg" data-testid="manual-entry-btn">Manual Entry</button>
                   <button onClick={parseWithAi} disabled={parsing || !prompt.trim()} className="px-4 py-1.5 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1.5 transition-all" data-testid="ai-parse-btn">
                     {parsing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                     {parsing ? 'Parsing...' : 'Parse with AI'}

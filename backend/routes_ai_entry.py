@@ -217,6 +217,29 @@ async def parse_entry(body: dict):
         raise HTTPException(status_code=400, detail=f"Unknown module: {module}. Available: {list(MODULE_SCHEMAS.keys())}")
 
     schema = MODULE_SCHEMAS[module]
+
+    # Fast path for manual entry — just return schema + defaults, no LLM call
+    if prompt == "__manual__":
+        defaults = {}
+        for fname, fdef in schema["fields"].items():
+            if "default" in fdef:
+                defaults[fname] = fdef["default"]
+            elif fdef.get("type") == "number":
+                defaults[fname] = 0
+            elif fdef.get("type") == "boolean":
+                defaults[fname] = False
+            elif fdef.get("type") in ("array", "array_of_objects"):
+                defaults[fname] = []
+            else:
+                defaults[fname] = ""
+        missing = [{"field": k, "label": v.get("label", k), "type": v.get("type"), "options": v.get("options")} for k, v in schema["fields"].items() if v.get("required")]
+        return {
+            "parsed": defaults,
+            "missing_fields": missing,
+            "schema": {k: {"label": v.get("label", k), "type": v.get("type"), "options": v.get("options"), "required": v.get("required", False), "default": v.get("default")} for k, v in schema["fields"].items()},
+            "module": module,
+        }
+
     field_desc = []
     for fname, fdef in schema["fields"].items():
         req = "REQUIRED" if fdef.get("required") else "optional"
