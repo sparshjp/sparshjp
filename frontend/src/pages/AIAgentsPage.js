@@ -5,7 +5,8 @@ import {
   Code, Loader2, FolderOpen, X, Cpu, Wrench, Terminal, Database,
   AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play,
   Paperclip, Globe, Image, Link2, Search, Activity, GitBranch, Package,
-  Brain, Camera, Eye, Trash, ArrowRightLeft, Settings, FileCode, GitCommit
+  Brain, Camera, Eye, Trash, ArrowRightLeft, Settings, FileCode, GitCommit,
+  Bot, Layers, ImagePlus
 } from 'lucide-react';
 
 const MODES = [
@@ -33,6 +34,7 @@ const TOOL_ICONS = {
   web_search: Globe, take_screenshot: Camera,
   delete_file: Trash, move_file: ArrowRightLeft, manage_env: Settings,
   lint_code: FileCode, crawl_url: Globe, git_info: GitCommit,
+  call_subagent: Bot, batch_operations: Layers, generate_image: ImagePlus,
 };
 
 const TOOL_COLORS = {
@@ -45,6 +47,7 @@ const TOOL_COLORS = {
   web_search: '#f97316', take_screenshot: '#e879f9',
   delete_file: '#ef4444', move_file: '#f59e0b', manage_env: '#06b6d4',
   lint_code: '#a78bfa', crawl_url: '#f97316', git_info: '#60a5fa',
+  call_subagent: '#00d4aa', batch_operations: '#22c55e', generate_image: '#e879f9',
 };
 
 function ToolResultCard({ result, index }) {
@@ -78,6 +81,9 @@ function ToolResultCard({ result, index }) {
   else if (result.tool === 'crawl_url') summary = result.args?.url?.slice(0, 50) || '';
   else if (result.tool === 'git_info') summary = result.args?.action || 'log';
   else if (result.tool === 'run_query') summary = `${result.args?.operation || result.args?.query_type || 'query'} on ${result.args?.collection || '?'}`;
+  else if (result.tool === 'call_subagent') summary = `${result.args?.agent_type || '?'}: ${result.args?.task?.slice(0, 50) || ''}`;
+  else if (result.tool === 'batch_operations') summary = `${result.result?.succeeded || 0}/${result.result?.total || 0} ops succeeded`;
+  else if (result.tool === 'generate_image') summary = result.args?.prompt?.slice(0, 50) || 'image';
 
   return (
     <div className="border border-[#1B2D42] rounded-lg overflow-hidden bg-[#0D1B2A]" data-testid={`tool-result-${index}`}>
@@ -95,6 +101,24 @@ function ToolResultCard({ result, index }) {
               <img src={`${window.location.origin}/api/agents/screenshots/${result.result.path.split('/').pop()}`}
                 alt="Screenshot" className="rounded border border-[#1B2D42] max-h-64 w-auto" loading="lazy"
                 onError={(e) => { e.target.style.display = 'none'; }} />
+            </div>
+          )}
+          {result.tool === 'generate_image' && result.result?.serve_url && (
+            <div className="mt-2 mb-2">
+              <img src={`${window.location.origin}${result.result.serve_url}`}
+                alt={result.args?.prompt || 'Generated image'} className="rounded border border-[#1B2D42] max-h-64 w-auto" loading="lazy" />
+              <p className="text-[9px] text-[#4A5B6E] mt-1">{result.result?.file_size_kb}KB · {result.args?.prompt?.slice(0, 60)}</p>
+            </div>
+          )}
+          {result.tool === 'call_subagent' && result.result?.response && (
+            <div className="mt-2 bg-[#0D1B2A] rounded p-2.5 border border-[#00d4aa]/20">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Bot size={11} className="text-[#00d4aa]" />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[#00d4aa]">{result.args?.agent_type} subagent</span>
+              </div>
+              <p className="text-[10px] text-[#c8d4e0] whitespace-pre-wrap" style={{ maxHeight: '300px', overflow: 'auto' }}>
+                {result.result.response}
+              </p>
             </div>
           )}
           {result.tool === 'web_search' && result.result?.results?.length > 0 && (
@@ -551,7 +575,7 @@ export default function AIAgentsPage() {
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v4</span>
               </div>
               <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5 flex items-center gap-1">
-                <GitBranch size={8} /> 27 Tools &middot; Full Bash Access &middot; 5 LLM Providers
+                <GitBranch size={8} /> 30 Tools &middot; 4 Subagents &middot; Image Gen &middot; 5 Providers
               </p>
             </div>
           </div>
@@ -692,9 +716,9 @@ export default function AIAgentsPage() {
                 Agentic AI developer with multi-step autonomous execution.
               </p>
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Parallel Execution</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Subagents</span>
                 <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">Live Thought Process</span>
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">27 Tools + Full Access</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">30 Tools + Image Gen</span>
               </div>
               <div className="flex flex-wrap gap-2 justify-center max-w-xl">
                 {starters.map((s, i) => (
@@ -924,7 +948,7 @@ export default function AIAgentsPage() {
               </div>
             </div>
             <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
-              27 tools &middot; 5 LLM providers &middot; Full bash &middot; .env management &middot; Linting &middot; Git &middot; Auto-verify
+              30 tools &middot; 4 subagents &middot; 5 LLM providers &middot; Batch ops &middot; Image gen &middot; Expanded context
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
-"""Kairos AI Engine v3.1 — Speed, Code Generation & Research Upgrade.
+"""Kairos AI Engine v4 — Full Access, Subagents, Expanded Context.
 Parallel tool execution, compound tools (scaffold_module, create_page),
-auto-restart, compressed results, web search, screenshot, fast-path for simple questions."""
+auto-restart, compressed results, web search, screenshot, subagents, image gen."""
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from datetime import datetime, timezone
 import uuid
@@ -13,6 +13,7 @@ import httpx
 import re
 import logging
 import base64
+from kairos_subagents import call_subagent, generate_image as gen_image
 
 router = APIRouter(prefix="/agents", tags=["AI Engine"])
 
@@ -38,7 +39,7 @@ def _call_groq_sync(system: str, messages: list) -> str:
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile", messages=msgs, max_tokens=8000, temperature=0.3,
+        model="llama-3.3-70b-versatile", messages=msgs, max_tokens=16000, temperature=0.3,
     )
     return response.choices[0].message.content
 
@@ -51,7 +52,7 @@ def _call_openrouter_sync(system: str, messages: list) -> str:
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
     response = client.chat.completions.create(
-        model="openrouter/auto", messages=msgs, max_tokens=8000, temperature=0.3,
+        model="openrouter/auto", messages=msgs, max_tokens=16000, temperature=0.3,
     )
     return response.choices[0].message.content
 
@@ -251,6 +252,30 @@ Design: Dark theme #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00
 ### Version Control
 27. **git_info(action, file?)** — Git info. action: log|status|diff.
 
+### Subagents
+28. **call_subagent(agent_type, task, context?)** — Call a specialized AI expert for help. agent_type: "tester" (generates test plans & curl commands), "designer" (UI/UX specs & JSX skeletons), "integrator" (3rd party API playbooks), "troubleshooter" (root cause analysis & fix steps). context is optional extra info.
+   Example:
+   ```TOOL_CALL
+   {"tool": "call_subagent", "args": {"agent_type": "tester", "task": "Generate test plan for the expenses API endpoints", "context": "Endpoints: GET /api/expenses, POST /api/expenses, PUT /api/expenses/:id"}}
+   ```
+   ```TOOL_CALL
+   {"tool": "call_subagent", "args": {"agent_type": "designer", "task": "Design a Client Portal dashboard page with project status cards and invoice summary"}}
+   ```
+
+### Parallel File Operations
+29. **batch_operations(operations)** — Execute multiple file operations in parallel. Each op: {action: create|write|delete|move|patch|read, path, content?, destination?, search?, replace?}. Up to 20 ops per call.
+   Example:
+   ```TOOL_CALL
+   {"tool": "batch_operations", "args": {"operations": [{"action": "create", "path": "/app/backend/routes_new.py", "content": "..."}, {"action": "create", "path": "/app/frontend/src/pages/NewPage.js", "content": "..."}, {"action": "patch", "path": "/app/backend/server.py", "search": "old", "replace": "new"}]}}
+   ```
+
+### Image Generation
+30. **generate_image(prompt, size?)** — Generate an image using AI (GPT Image 1). size: "1024x1024", "1024x1536", "1536x1024". Returns image URL.
+   Example:
+   ```TOOL_CALL
+   {"tool": "generate_image", "args": {"prompt": "Modern dark-themed dashboard mockup for IT services ERP", "size": "1536x1024"}}
+   ```
+
 ### NOTES on tools
 - **run_command** has full bash access (timeout up to 120s). Use for: `rm`, `mv`, `cp`, `sudo`, `apt install`, `yarn add`, file redirects, piped commands, etc.
 - **install_package(package, manager?)** — manager can be "pip" or "yarn". Use `yarn` for frontend packages.
@@ -323,8 +348,8 @@ QA_ONLY_SUFFIX = "\n\nMODE: Testing/Validation Only. Run queries, test APIs, che
 # TOOL EXECUTION ENGINE
 # ══════════════════════════════════════════════════════════
 
-WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page", "delete_file", "move_file", "manage_env"}
-READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot", "lint_code", "crawl_url", "git_info"}
+WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page", "delete_file", "move_file", "manage_env", "batch_operations"}
+READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot", "lint_code", "crawl_url", "git_info", "call_subagent", "generate_image"}
 
 async def execute_tool(tool_name, args):
     try:
@@ -991,6 +1016,60 @@ asyncio.run(shot())
             except Exception as e:
                 return {"status": "error", "error": str(e)}
 
+        elif tool_name == "call_subagent":
+            """Call a specialized AI subagent for testing, design, integration, or troubleshooting."""
+            agent_type = args.get("agent_type", "")
+            task = args.get("task", "")
+            context = args.get("context", "")
+            if not agent_type or not task:
+                return {"status": "error", "error": "agent_type and task are required"}
+            return await call_subagent(agent_type, task, context)
+
+        elif tool_name == "batch_operations":
+            """Execute multiple file operations in parallel. Each op: {action, path, content?, destination?}."""
+            operations = args.get("operations", [])
+            if not operations:
+                return {"status": "error", "error": "operations array required"}
+
+            async def _do_op(op):
+                action = op.get("action", "")
+                path = op.get("path", "")
+                try:
+                    if action == "create":
+                        return await execute_tool("create_file", {"path": path, "content": op.get("content", "")})
+                    elif action == "write":
+                        return await execute_tool("write_file", {"path": path, "content": op.get("content", "")})
+                    elif action == "delete":
+                        return await execute_tool("delete_file", {"path": path})
+                    elif action == "move":
+                        return await execute_tool("move_file", {"path": path, "source": path, "destination": op.get("destination", "")})
+                    elif action == "patch":
+                        return await execute_tool("patch_file", {"path": path, "search": op.get("search", ""), "replace": op.get("replace", "")})
+                    elif action == "read":
+                        return await execute_tool("read_file", {"path": path})
+                    else:
+                        return {"status": "error", "error": f"Unknown action: {action}"}
+                except Exception as e:
+                    return {"status": "error", "path": path, "error": str(e)}
+
+            results = await asyncio.gather(*[_do_op(op) for op in operations[:20]])
+            succeeded = sum(1 for r in results if r.get("status") == "ok")
+            return {
+                "status": "ok",
+                "total": len(operations),
+                "succeeded": succeeded,
+                "failed": len(operations) - succeeded,
+                "results": [{"action": op.get("action"), "path": op.get("path"), "status": r.get("status"), "error": r.get("error")} for op, r in zip(operations, results)],
+            }
+
+        elif tool_name == "generate_image":
+            """Generate an image from a text prompt using AI (GPT Image 1)."""
+            prompt = args.get("prompt", "")
+            size = args.get("size", "1024x1024")
+            if not prompt:
+                return {"status": "error", "error": "prompt is required"}
+            return await gen_image(prompt, size)
+
         else:
             return {"status": "error", "error": f"Unknown tool: {tool_name}"}
     except Exception as e:
@@ -1546,6 +1625,16 @@ def _compress_tool_result(tool_name, result):
         if len(output) > 3000:
             return {**result, "output": output[:3000] + "\n... [TRUNCATED]"}
 
+    if tool_name == "call_subagent":
+        response = result.get("response", "")
+        if len(response) > 6000:
+            return {**result, "response": response[:6000] + "\n... [TRUNCATED]", "full_length": result.get("full_length")}
+
+    if tool_name == "batch_operations":
+        results_list = result.get("results", [])
+        if len(results_list) > 10:
+            return {**result, "results": results_list[:10], "note": f"Showing 10/{len(results_list)} results"}
+
     return result
 
 
@@ -1682,13 +1771,13 @@ async def crawl_url(body: dict):
 
 @router.get("/screenshots/{filename}")
 async def serve_screenshot(filename: str):
-    """Serve screenshot images from the uploads directory."""
+    """Serve screenshot and generated images from the uploads directory."""
     from fastapi.responses import FileResponse
-    if not re.match(r'^screenshot_[a-f0-9]+\.png$', filename):
+    if not re.match(r'^(screenshot|generated)_[a-f0-9]+\.png$', filename):
         raise HTTPException(status_code=400, detail="Invalid filename")
     file_path = os.path.join(UPLOAD_DIR, filename)
     if not os.path.isfile(file_path):
-        raise HTTPException(status_code=404, detail="Screenshot not found")
+        raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(file_path, media_type="image/png")
 
 # ══════════════════════════════════════════════════════════
@@ -1826,9 +1915,31 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
 
         history_context = ""
         if history:
-            recent = history[-12:]
-            hlines = [f"[{'User' if h['role']=='user' else 'AI'}]: {h['content'][:800]}" for h in recent]
-            history_context = "[HISTORY]\n" + "\n".join(hlines) + "\n\n"
+            # Smart context: summarize older messages, keep recent ones in full
+            recent_full = history[-6:]  # Last 6 messages in full
+            older = history[:-6] if len(history) > 6 else []
+
+            hlines = []
+            if older:
+                # Compress older messages to key points
+                for h in older[-20:]:  # Up to 20 older messages
+                    role = 'User' if h['role'] == 'user' else 'AI'
+                    content = h['content'][:200]
+                    tools = h.get('tool_calls_executed', 0)
+                    files = h.get('files_modified', [])
+                    summary_parts = [f"[{role}]: {content}"]
+                    if tools:
+                        summary_parts.append(f"(used {tools} tools)")
+                    if files:
+                        summary_parts.append(f"(modified: {', '.join(f[:30] for f in files[:5])})")
+                    hlines.append(" ".join(summary_parts))
+
+            # Recent messages in full (up to 2000 chars each)
+            for h in recent_full:
+                role = 'User' if h['role'] == 'user' else 'AI'
+                hlines.append(f"[{role}]: {h['content'][:2000]}")
+
+            history_context = "[CONVERSATION HISTORY]\n" + "\n".join(hlines) + "\n\n"
 
         all_tool_results = []
         all_files_modified = []
@@ -1907,9 +2018,9 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                     _tasks[task_id]["progress"] = f"Step {step_num}: Plan received, auto-executing..."
                     _tasks[task_id]["thinking_text"] = "Plan received — now executing..."
 
-                    # Trim messages if too long
-                    if len(loop_messages) > 8:
-                        loop_messages = [loop_messages[0]] + loop_messages[-6:]
+                    # Smart context management — keep more messages
+                    if len(loop_messages) > 14:
+                        loop_messages = [loop_messages[0]] + loop_messages[-12:]
                     continue
                 else:
                     break
@@ -1989,8 +2100,9 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
 
             _tasks[task_id]["progress"] = f"Step {step_num} complete. Analyzing results..."
 
-            if len(loop_messages) > 8:
-                loop_messages = [loop_messages[0]] + loop_messages[-6:]
+            # Smart context management — keep more conversation history
+            if len(loop_messages) > 14:
+                loop_messages = [loop_messages[0]] + loop_messages[-12:]
 
         # ── SAVE RESULTS ──
         final_response = "\n\n".join(all_response_parts)
