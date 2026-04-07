@@ -153,8 +153,8 @@ async def call_llm(system: str, messages: list, preferred: str = "auto") -> tupl
 # ══════════════════════════════════════════════════════════
 # PATH SAFETY
 # ══════════════════════════════════════════════════════════
-ALLOWED_DIRS = ["/app/backend", "/app/frontend/src"]
-BLOCKED_PATTERNS = [".env", "node_modules", "__pycache__", ".git", ".emergent"]
+ALLOWED_DIRS = ["/app/backend", "/app/frontend/src", "/app/frontend/public"]
+BLOCKED_PATTERNS = ["node_modules", "__pycache__", ".git", ".emergent"]
 
 def is_safe_path(path):
     for blocked in BLOCKED_PATTERNS:
@@ -234,16 +234,27 @@ Design: Dark theme #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00
    ```
 
 ### Research & Visual
-20. **web_search(query, max_results?)** — Search the web using DuckDuckGo. Returns titles, URLs, and snippets. Use for finding documentation, code examples, API references, latest library versions. max_results defaults to 5 (max 10).
-   Example:
-   ```TOOL_CALL
-   {"tool": "web_search", "args": {"query": "FastAPI motor MongoDB async best practices", "max_results": 5}}
-   ```
-21. **take_screenshot(url, full_page?, wait_ms?)** — Capture a screenshot of any URL using headless Chromium. Use to visually verify UI changes after creating/modifying frontend pages. Pass a path like "/expense-management" to screenshot the local frontend. wait_ms defaults to 2000.
-   Example:
-   ```TOOL_CALL
-   {"tool": "take_screenshot", "args": {"url": "/expense-management", "wait_ms": 3000}}
-   ```
+20. **web_search(query, max_results?)** — Search the web via DuckDuckGo. max_results defaults to 5.
+21. **take_screenshot(url, full_page?, wait_ms?)** — Screenshot any URL with headless Chromium. Path-only = local frontend.
+22. **crawl_url(url)** — Fetch and extract text content from any URL for research.
+
+### File Operations
+23. **delete_file(path)** — Delete a file in allowed directories.
+24. **move_file(source, destination)** — Move or rename a file. Creates dest dir if needed.
+
+### Environment & Config
+25. **manage_env(action, file?, key?, value?)** — Read/write .env files safely. action: read|set|delete. file: backend|frontend. Protected: MONGO_URL, DB_NAME, REACT_APP_BACKEND_URL.
+
+### Code Quality
+26. **lint_code(path, fix?)** — Run ruff (Python) or eslint (JS/JSX/TS/TSX). fix=true auto-fixes safe issues.
+
+### Version Control
+27. **git_info(action, file?)** — Git info. action: log|status|diff.
+
+### NOTES on tools
+- **run_command** has full bash access (timeout up to 120s). Use for: `rm`, `mv`, `cp`, `sudo`, `apt install`, `yarn add`, file redirects, piped commands, etc.
+- **install_package(package, manager?)** — manager can be "pip" or "yarn". Use `yarn` for frontend packages.
+- **restart_service(service)** — service can be "backend" OR "frontend". Use after changing .env or installing packages.
 
 ## CODE PATTERNS
 - Route file: `router = APIRouter(prefix="/x")` + `set_db(database)` — NEVER create own motor client
@@ -312,8 +323,8 @@ QA_ONLY_SUFFIX = "\n\nMODE: Testing/Validation Only. Run queries, test APIs, che
 # TOOL EXECUTION ENGINE
 # ══════════════════════════════════════════════════════════
 
-WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page"}
-READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot"}
+WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page", "delete_file", "move_file", "manage_env"}
+READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot", "lint_code", "crawl_url", "git_info"}
 
 async def execute_tool(tool_name, args):
     try:
@@ -434,9 +445,93 @@ async def execute_tool(tool_name, args):
         # ── DATABASE ──
 
         elif tool_name == "run_query":
-            query_type = args.get("query_type", "full_health_check")
-            result = await _run_test_query(query_type)
-            return {"status": "ok", "query_type": query_type, "results": result}
+            """Execute MongoDB queries directly. Supports find, count, insert, update, delete, aggregate, and full health check."""
+            query_type = args.get("query_type", args.get("operation", "full_health_check"))
+            collection_name = args.get("collection", "")
+
+            if query_type == "full_health_check":
+                result = await _run_test_query("full_health_check")
+                return {"status": "ok", "query_type": "full_health_check", "results": result}
+
+            if not collection_name:
+                return {"status": "error", "error": "collection name required"}
+
+            coll = db[collection_name]
+            query = args.get("query", {})
+            try:
+                if query_type in ["find", "read"]:
+                    projection = args.get("projection", {"_id": 0})
+                    if "_id" not in projection:
+                        projection["_id"] = 0
+                    limit = min(args.get("limit", 20), 100)
+                    docs = await coll.find(query, projection).limit(limit).to_list(limit)
+                    return {"status": "ok", "collection": collection_name, "count": len(docs), "documents": docs}
+
+                elif query_type == "count":
+                    count = await coll.count_documents(query)
+                    return {"status": "ok", "collection": collection_name, "count": count}
+
+                elif query_type in ["insert", "insert_one"]:
+                    doc = args.get("document", args.get("doc", {}))
+                    if not doc:
+                        return {"status": "error", "error": "document required for insert"}
+                    await coll.insert_one(doc)
+                    doc.pop("_id", None)
+                    return {"status": "ok", "collection": collection_name, "inserted": doc}
+
+                elif query_type in ["insert_many"]:
+                    docs = args.get("documents", [])
+                    if not docs:
+                        return {"status": "error", "error": "documents array required"}
+                    await coll.insert_many(docs)
+                    for d in docs:
+                        d.pop("_id", None)
+                    return {"status": "ok", "collection": collection_name, "inserted_count": len(docs)}
+
+                elif query_type in ["update", "update_many"]:
+                    update = args.get("update", {})
+                    if not update:
+                        return {"status": "error", "error": "update object required"}
+                    result = await coll.update_many(query, update)
+                    return {"status": "ok", "collection": collection_name, "matched": result.matched_count, "modified": result.modified_count}
+
+                elif query_type in ["update_one"]:
+                    update = args.get("update", {})
+                    result = await coll.update_one(query, update)
+                    return {"status": "ok", "collection": collection_name, "matched": result.matched_count, "modified": result.modified_count}
+
+                elif query_type in ["delete", "delete_many"]:
+                    result = await coll.delete_many(query)
+                    return {"status": "ok", "collection": collection_name, "deleted": result.deleted_count}
+
+                elif query_type in ["delete_one"]:
+                    result = await coll.delete_one(query)
+                    return {"status": "ok", "collection": collection_name, "deleted": result.deleted_count}
+
+                elif query_type == "aggregate":
+                    pipeline = args.get("pipeline", [])
+                    if not pipeline:
+                        return {"status": "error", "error": "pipeline array required"}
+                    docs = await coll.aggregate(pipeline).to_list(100)
+                    for d in docs:
+                        d.pop("_id", None)
+                    return {"status": "ok", "collection": collection_name, "results": docs, "count": len(docs)}
+
+                elif query_type == "distinct":
+                    field = args.get("field", "")
+                    if not field:
+                        return {"status": "error", "error": "field required for distinct"}
+                    values = await coll.distinct(field, query)
+                    return {"status": "ok", "collection": collection_name, "field": field, "values": values, "count": len(values)}
+
+                elif query_type == "drop":
+                    await coll.drop()
+                    return {"status": "ok", "collection": collection_name, "dropped": True}
+
+                else:
+                    return {"status": "error", "error": f"Unknown query_type: {query_type}. Use: find, count, insert, insert_many, update, update_one, update_many, delete, delete_one, delete_many, aggregate, distinct, drop"}
+            except Exception as e:
+                return {"status": "error", "error": str(e)}
 
         elif tool_name == "get_schema":
             collection = args.get("collection", "")
@@ -459,7 +554,8 @@ async def execute_tool(tool_name, args):
             if service not in ["backend", "frontend"]:
                 return {"status": "error", "error": "Can only restart 'backend' or 'frontend'"}
             proc = subprocess.run(["sudo", "supervisorctl", "restart", service], capture_output=True, text=True, timeout=15)
-            await asyncio.sleep(3)
+            wait_time = 4 if service == "backend" else 8  # Frontend rebuild takes longer
+            await asyncio.sleep(wait_time)
             return {"status": "ok", "service": service, "output": proc.stdout.strip()}
 
         elif tool_name == "test_api":
@@ -580,18 +676,20 @@ async def execute_tool(tool_name, args):
 
         elif tool_name == "run_command":
             cmd = args.get("command", "")
-            BLOCKED_CMDS = ["rm ", "mv ", "cp ", "chmod", "chown", "kill", "sudo", "apt", "> ", ">>"]
-            for bc in BLOCKED_CMDS:
+            timeout_secs = min(args.get("timeout", 60), 120)
+            # Only block truly dangerous operations
+            HARD_BLOCKED = ["rm -rf /", "mkfs", ":(){", "dd if="]
+            for bc in HARD_BLOCKED:
                 if bc in cmd:
-                    return {"status": "error", "error": f"Command blocked: contains '{bc.strip()}'"}
+                    return {"status": "error", "error": f"Command blocked for safety: contains '{bc}'"}
             try:
-                proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
-                output = proc.stdout[:5000]
+                proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout_secs, cwd="/app")
+                output = proc.stdout[:8000]
                 if proc.stderr:
-                    output += f"\n[STDERR]: {proc.stderr[:1000]}"
+                    output += f"\n[STDERR]: {proc.stderr[:2000]}"
                 return {"status": "ok", "command": cmd, "output": output, "exit_code": proc.returncode}
             except subprocess.TimeoutExpired:
-                return {"status": "error", "error": "Command timed out"}
+                return {"status": "error", "error": f"Command timed out ({timeout_secs}s)"}
 
         elif tool_name == "verify_deployment":
             """Comprehensive deployment verification — checks backend health, specific API endpoints, and frontend routes."""
@@ -728,6 +826,166 @@ asyncio.run(shot())
                 return {"status": "error", "error": "Screenshot timed out (30s limit)"}
             except Exception as e:
                 return {"status": "error", "error": f"Screenshot error: {str(e)}"}
+
+        elif tool_name == "delete_file":
+            """Delete a file from the project."""
+            path = args.get("path", "")
+            if not is_safe_path(path):
+                return {"status": "error", "error": "Access denied — blocked path"}
+            if not os.path.isfile(path):
+                return {"status": "error", "error": f"File not found: {path}"}
+            try:
+                size = os.path.getsize(path)
+                os.remove(path)
+                await _audit_file_write(path, f"DELETED ({size} bytes)", "DELETE_FILE")
+                return {"status": "ok", "path": path, "deleted": True, "size_was": size}
+            except Exception as e:
+                return {"status": "error", "error": str(e)}
+
+        elif tool_name == "move_file":
+            """Move or rename a file."""
+            source = args.get("source", "")
+            destination = args.get("destination", "")
+            if not is_safe_path(source) or not is_safe_path(destination):
+                return {"status": "error", "error": "Access denied — blocked path"}
+            if not os.path.isfile(source):
+                return {"status": "error", "error": f"Source not found: {source}"}
+            try:
+                import shutil
+                os.makedirs(os.path.dirname(destination), exist_ok=True)
+                shutil.move(source, destination)
+                await _audit_file_write(destination, f"MOVED from {source}", "MOVE_FILE")
+                return {"status": "ok", "source": source, "destination": destination}
+            except Exception as e:
+                return {"status": "error", "error": str(e)}
+
+        elif tool_name == "manage_env":
+            """Read or write .env file variables safely."""
+            action = args.get("action", "read")  # read, set, delete
+            env_file = args.get("file", "backend")  # backend or frontend
+            env_path = "/app/backend/.env" if env_file == "backend" else "/app/frontend/.env"
+
+            if action == "read":
+                if not os.path.isfile(env_path):
+                    return {"status": "error", "error": f".env not found: {env_path}"}
+                with open(env_path, "r") as f:
+                    lines = f.readlines()
+                # Mask sensitive values
+                vars_list = []
+                for line in lines:
+                    line = line.strip()
+                    if "=" in line and not line.startswith("#"):
+                        key = line.split("=", 1)[0]
+                        val = line.split("=", 1)[1]
+                        masked = val[:4] + "..." + val[-4:] if len(val) > 12 else val
+                        vars_list.append({"key": key, "value_preview": masked, "length": len(val)})
+                return {"status": "ok", "file": env_path, "variables": vars_list}
+
+            elif action == "set":
+                key = args.get("key", "")
+                value = args.get("value", "")
+                if not key or not re.match(r'^[A-Z_][A-Z0-9_]*$', key):
+                    return {"status": "error", "error": "Invalid env key. Must be UPPER_SNAKE_CASE."}
+                # Protected keys that cannot be overwritten
+                PROTECTED = {"MONGO_URL", "DB_NAME", "REACT_APP_BACKEND_URL"}
+                if key in PROTECTED:
+                    return {"status": "error", "error": f"Cannot modify protected key: {key}"}
+                # Read existing
+                lines = []
+                if os.path.isfile(env_path):
+                    with open(env_path, "r") as f:
+                        lines = f.readlines()
+                # Update or append
+                found = False
+                for i, line in enumerate(lines):
+                    if line.strip().startswith(f"{key}="):
+                        lines[i] = f"{key}={value}\n"
+                        found = True
+                        break
+                if not found:
+                    lines.append(f"{key}={value}\n")
+                with open(env_path, "w") as f:
+                    f.writelines(lines)
+                return {"status": "ok", "file": env_path, "key": key, "action": "updated" if found else "added"}
+
+            elif action == "delete":
+                key = args.get("key", "")
+                PROTECTED = {"MONGO_URL", "DB_NAME", "REACT_APP_BACKEND_URL", "EMERGENT_LLM_KEY"}
+                if key in PROTECTED:
+                    return {"status": "error", "error": f"Cannot delete protected key: {key}"}
+                if os.path.isfile(env_path):
+                    with open(env_path, "r") as f:
+                        lines = f.readlines()
+                    new_lines = [line for line in lines if not line.strip().startswith(f"{key}=")]
+                    with open(env_path, "w") as f:
+                        f.writelines(new_lines)
+                return {"status": "ok", "file": env_path, "key": key, "action": "deleted"}
+            else:
+                return {"status": "error", "error": f"Unknown action: {action}. Use read, set, or delete."}
+
+        elif tool_name == "lint_code":
+            """Run linters on code files. Uses ruff for Python, eslint for JS/JSX/TS/TSX."""
+            path = args.get("path", "")
+            fix = args.get("fix", False)
+            if not path:
+                return {"status": "error", "error": "path is required"}
+            ext = os.path.splitext(path)[1].lower()
+            try:
+                if ext == ".py" or (os.path.isdir(path) and not path.endswith("src")):
+                    fix_flag = "--fix" if fix else ""
+                    proc = subprocess.run(
+                        f"cd /app && ruff check {path} {fix_flag} 2>&1 | head -50",
+                        shell=True, capture_output=True, text=True, timeout=30)
+                    issues = proc.stdout.strip() if proc.stdout.strip() else "No issues found"
+                    return {"status": "ok", "linter": "ruff", "path": path, "output": issues, "exit_code": proc.returncode}
+                elif ext in [".js", ".jsx", ".ts", ".tsx"] or path.endswith("src"):
+                    fix_flag = "--fix" if fix else ""
+                    proc = subprocess.run(
+                        f"cd /app/frontend && npx eslint {path} {fix_flag} 2>&1 | head -50",
+                        shell=True, capture_output=True, text=True, timeout=30)
+                    issues = proc.stdout.strip() if proc.stdout.strip() else "No issues found"
+                    return {"status": "ok", "linter": "eslint", "path": path, "output": issues, "exit_code": proc.returncode}
+                else:
+                    return {"status": "error", "error": f"No linter for extension: {ext}"}
+            except subprocess.TimeoutExpired:
+                return {"status": "error", "error": "Linting timed out"}
+
+        elif tool_name == "crawl_url":
+            """Fetch and extract text content from a URL for research."""
+            url = args.get("url", "")
+            if not url or not url.startswith("http"):
+                return {"status": "error", "error": "Valid HTTP URL required"}
+            try:
+                async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+                    resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 Kairos Engine"})
+                text = resp.text
+                # Strip HTML tags for cleaner text
+                import re as re_mod
+                clean = re_mod.sub(r'<script[^>]*>.*?</script>', '', text, flags=re_mod.DOTALL)
+                clean = re_mod.sub(r'<style[^>]*>.*?</style>', '', clean, flags=re_mod.DOTALL)
+                clean = re_mod.sub(r'<[^>]+>', ' ', clean)
+                clean = re_mod.sub(r'\s+', ' ', clean).strip()
+                return {"status": "ok", "url": url, "http_status": resp.status_code, "content": clean[:8000], "full_length": len(clean)}
+            except Exception as e:
+                return {"status": "error", "error": f"Crawl failed: {str(e)}"}
+
+        elif tool_name == "git_info":
+            """Get git status, recent commits, or diff information."""
+            action = args.get("action", "log")  # log, status, diff
+            try:
+                if action == "log":
+                    proc = subprocess.run("git log --oneline -20", shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                elif action == "status":
+                    proc = subprocess.run("git status --short", shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                elif action == "diff":
+                    file_path = args.get("file", "")
+                    cmd = f"git diff HEAD -- {file_path}" if file_path else "git diff --stat HEAD"
+                    proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                else:
+                    return {"status": "error", "error": f"Unknown git action: {action}"}
+                return {"status": "ok", "action": action, "output": proc.stdout[:5000]}
+            except Exception as e:
+                return {"status": "error", "error": str(e)}
 
         else:
             return {"status": "error", "error": f"Unknown tool: {tool_name}"}
@@ -1121,12 +1379,17 @@ def _auto_fix_startup_error(file_path: str, log_output: str) -> bool:
 # ══════════════════════════════════════════════════════════
 
 async def _audit_file_write(path, detail, action_type):
-    await db.audit_trail.insert_one({
-        "id": str(uuid.uuid4()), "action": f"FILE_{action_type}", "module": "AI_ENGINE",
-        "record_id": path, "record_name": os.path.basename(path),
-        "changes": [{"field": "content", "new_value": str(detail)[:500]}],
-        "timestamp": datetime.now(timezone.utc).isoformat(), "user": "kairos-engine",
-    })
+    if db is None:
+        return
+    try:
+        await db.audit_trail.insert_one({
+            "id": str(uuid.uuid4()), "action": f"FILE_{action_type}", "module": "AI_ENGINE",
+            "record_id": path, "record_name": os.path.basename(path),
+            "changes": [{"field": "content", "new_value": str(detail)[:500]}],
+            "timestamp": datetime.now(timezone.utc).isoformat(), "user": "kairos-engine",
+        })
+    except Exception:
+        pass
 
 async def _run_test_query(query_type):
     if query_type == "tb_balance":
@@ -1262,6 +1525,22 @@ def _compress_tool_result(tool_name, result):
         # Remove base64 data from compressed results — keep metadata only
         return {"status": result.get("status"), "path": result.get("path"), "url_captured": result.get("url_captured"),
                 "file_size_kb": result.get("file_size_kb"), "note": result.get("note", "Screenshot captured")}
+
+    if tool_name == "crawl_url":
+        content = result.get("content", "")
+        if len(content) > 4000:
+            return {"status": "ok", "url": result.get("url"), "http_status": result.get("http_status"),
+                    "content": content[:4000] + "\n... [TRUNCATED]", "full_length": result.get("full_length")}
+
+    if tool_name == "run_query":
+        docs = result.get("documents", result.get("results", []))
+        if isinstance(docs, list) and len(docs) > 10:
+            return {**result, "documents": docs[:10], "note": f"Showing 10/{len(docs)} results"}
+
+    if tool_name == "lint_code":
+        output = result.get("output", "")
+        if len(output) > 3000:
+            return {**result, "output": output[:3000] + "\n... [TRUNCATED]"}
 
     return result
 

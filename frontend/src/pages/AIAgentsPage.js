@@ -5,7 +5,7 @@ import {
   Code, Loader2, FolderOpen, X, Cpu, Wrench, Terminal, Database,
   AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play,
   Paperclip, Globe, Image, Link2, Search, Activity, GitBranch, Package,
-  Brain, Camera, Eye
+  Brain, Camera, Eye, Trash, ArrowRightLeft, Settings, FileCode, GitCommit
 } from 'lucide-react';
 
 const MODES = [
@@ -31,6 +31,8 @@ const TOOL_ICONS = {
   grep_search: Search, check_logs: Activity, install_package: Package,
   run_tests: Play, verify_deployment: CheckCircle2,
   web_search: Globe, take_screenshot: Camera,
+  delete_file: Trash, move_file: ArrowRightLeft, manage_env: Settings,
+  lint_code: FileCode, crawl_url: Globe, git_info: GitCommit,
 };
 
 const TOOL_COLORS = {
@@ -41,6 +43,8 @@ const TOOL_COLORS = {
   grep_search: '#f59e0b', check_logs: '#a78bfa', install_package: '#06b6d4',
   run_tests: '#22c55e', verify_deployment: '#00d4aa',
   web_search: '#f97316', take_screenshot: '#e879f9',
+  delete_file: '#ef4444', move_file: '#f59e0b', manage_env: '#06b6d4',
+  lint_code: '#a78bfa', crawl_url: '#f97316', git_info: '#60a5fa',
 };
 
 function ToolResultCard({ result, index }) {
@@ -67,6 +71,13 @@ function ToolResultCard({ result, index }) {
   else if (result.tool === 'verify_deployment') summary = result.result?.summary || `${result.result?.checks?.length || 0} checks`;
   else if (result.tool === 'web_search') summary = `"${result.args?.query?.slice(0, 40) || ''}" (${result.result?.count || 0} results)`;
   else if (result.tool === 'take_screenshot') summary = result.args?.url || 'screenshot';
+  else if (result.tool === 'delete_file') summary = result.args?.path?.split('/').pop() || '';
+  else if (result.tool === 'move_file') summary = `${result.args?.source?.split('/').pop() || ''} → ${result.args?.destination?.split('/').pop() || ''}`;
+  else if (result.tool === 'manage_env') summary = `${result.args?.action || ''} ${result.args?.key || result.args?.file || ''}`;
+  else if (result.tool === 'lint_code') summary = result.args?.path?.split('/').pop() || '';
+  else if (result.tool === 'crawl_url') summary = result.args?.url?.slice(0, 50) || '';
+  else if (result.tool === 'git_info') summary = result.args?.action || 'log';
+  else if (result.tool === 'run_query') summary = `${result.args?.operation || result.args?.query_type || 'query'} on ${result.args?.collection || '?'}`;
 
   return (
     <div className="border border-[#1B2D42] rounded-lg overflow-hidden bg-[#0D1B2A]" data-testid={`tool-result-${index}`}>
@@ -540,7 +551,7 @@ export default function AIAgentsPage() {
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v3</span>
               </div>
               <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5 flex items-center gap-1">
-                <GitBranch size={8} /> 21 Tools &middot; Web Search &middot; Screenshots &middot; Auto-Verify
+                <GitBranch size={8} /> 27 Tools &middot; Full Bash Access &middot; 5 LLM Providers
               </p>
             </div>
           </div>
@@ -683,7 +694,7 @@ export default function AIAgentsPage() {
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-[9px] px-2 py-1 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">Parallel Execution</span>
                 <span className="text-[9px] px-2 py-1 rounded-full bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20">Live Thought Process</span>
-                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">21 Tools + Web Search</span>
+                <span className="text-[9px] px-2 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20">27 Tools + Full Access</span>
               </div>
               <div className="flex flex-wrap gap-2 justify-center max-w-xl">
                 {starters.map((s, i) => (
@@ -913,7 +924,7 @@ export default function AIAgentsPage() {
               </div>
             </div>
             <p className="text-[9px] text-[#4A5B6E] mt-1.5 text-center">
-              Parallel execution &middot; 21 tools &middot; 5 LLM providers &middot; Web search &middot; Screenshots &middot; Auto-verify
+              27 tools &middot; 5 LLM providers &middot; Full bash &middot; .env management &middot; Linting &middot; Git &middot; Auto-verify
             </p>
           </div>
         </div>

@@ -1,0 +1,205 @@
+{
+  "summary": "Iteration 29 testing complete. All 58 backend tests passed (100%). Verified 8 new tools (delete_file, move_file, manage_env, lint_code, crawl_url, git_info) plus upgraded run_command (full bash, 120s timeout) and run_query (full MongoDB CRUD). Frontend shows '27 Tools + Full Access' badge and all 5 LLM providers in dropdown.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration29_new_tools.py",
+    "/app/test_reports/pytest/pytest_iteration29.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration29_new_tools.py"
+  ],
+  "success_rate": {
+    "backend": "100% (58/58 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": "No authentication required - all endpoints are public",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 29 verified 8 new tools and upgrades. Key findings: (1) delete_file tool at line ~830 deletes files in allowed directories. (2) move_file tool at line ~845 moves/renames files. (3) manage_env tool at line ~862 reads/sets .env vars with PROTECTED keys (MONGO_URL, DB_NAME, REACT_APP_BACKEND_URL). (4) lint_code tool at line ~926 uses ruff for Python, eslint for JS. (5) crawl_url tool at line ~953 fetches URLs and strips HTML. (6) git_info tool at line ~972 supports log/status/diff actions. (7) run_command now allows rm, mv, cp, sudo (only blocks rm -rf /, mkfs, etc). (8) run_query supports insert_one, insert_many, count, find, update_many, delete_many, aggregate, distinct, drop. (9) install_package supports manager=yarn for frontend. (10) restart_service supports both backend and frontend. (11) Frontend shows '27 Tools + Full Access' badge and footer shows '27 tools · 5 LLM providers · Full bash · .env management · Linting · Git · Auto-verify'.",
+  "verified_features": {
+    "GET /api/agents/providers returns 5 providers": {
+      "status": "PASS",
+      "details": "Returns claude, gemini, gpt5, groq, openrouter with correct fallback order"
+    },
+    "run_command allows rm, mv, cp, sudo": {
+      "status": "PASS",
+      "details": "HARD_BLOCKED only contains rm -rf /, mkfs, :(){, dd if="
+    },
+    "run_command has 120s timeout": {
+      "status": "PASS",
+      "details": "timeout_secs = min(args.get('timeout', 60), 120)"
+    },
+    "delete_file tool exists": {
+      "status": "PASS",
+      "details": "Tool defined at line ~830, in WRITE_TOOLS set"
+    },
+    "move_file tool exists": {
+      "status": "PASS",
+      "details": "Tool defined at line ~845, in WRITE_TOOLS set"
+    },
+    "manage_env read action": {
+      "status": "PASS",
+      "details": "Returns .env variables with masked values (first 4 + last 4 chars)"
+    },
+    "manage_env blocks protected keys": {
+      "status": "PASS",
+      "details": "PROTECTED = {MONGO_URL, DB_NAME, REACT_APP_BACKEND_URL}"
+    },
+    "lint_code uses ruff for Python": {
+      "status": "PASS",
+      "details": "ruff check command for .py files"
+    },
+    "lint_code uses eslint for JS": {
+      "status": "PASS",
+      "details": "npx eslint command for .js/.jsx/.ts/.tsx files"
+    },
+    "crawl_url fetches and extracts text": {
+      "status": "PASS",
+      "details": "Strips HTML tags, returns clean text up to 8000 chars"
+    },
+    "git_info supports log/status/diff": {
+      "status": "PASS",
+      "details": "git log --oneline -20, git status --short, git diff"
+    },
+    "run_query supports insert_one": {
+      "status": "PASS",
+      "details": "query_type in ['insert', 'insert_one']"
+    },
+    "run_query supports insert_many": {
+      "status": "PASS",
+      "details": "query_type in ['insert_many']"
+    },
+    "run_query supports update_many": {
+      "status": "PASS",
+      "details": "query_type in ['update', 'update_many']"
+    },
+    "run_query supports delete_many": {
+      "status": "PASS",
+      "details": "query_type in ['delete', 'delete_many']"
+    },
+    "run_query supports aggregate": {
+      "status": "PASS",
+      "details": "query_type == 'aggregate' with pipeline"
+    },
+    "run_query supports distinct": {
+      "status": "PASS",
+      "details": "query_type == 'distinct' with field"
+    },
+    "run_query supports drop": {
+      "status": "PASS",
+      "details": "query_type == 'drop' drops collection"
+    },
+    "install_package supports yarn": {
+      "status": "PASS",
+      "details": "manager == 'yarn' runs yarn add in /app/frontend"
+    },
+    "restart_service supports frontend": {
+      "status": "PASS",
+      "details": "service can be 'backend' or 'frontend'"
+    },
+    "Frontend shows '27 Tools + Full Access' badge": {
+      "status": "PASS",
+      "details": "Badge visible in header area"
+    },
+    "Frontend footer shows correct text": {
+      "status": "PASS",
+      "details": "27 tools · 5 LLM providers · Full bash · .env management · Linting · Git · Auto-verify"
+    },
+    "Provider selector shows all 5 providers": {
+      "status": "PASS",
+      "details": "Auto, Claude Sonnet 4.5, Gemini 3 Flash, GPT-5, Groq/Llama 3.3, OpenRouter"
+    },
+    "New tool icons in frontend": {
+      "status": "PASS",
+      "details": "delete_file=Trash, move_file=ArrowRightLeft, manage_env=Settings, lint_code=FileCode, git_info=GitCommit"
+    }
+  },
+  "backend_tests_summary": [
+    "TestProvidersEndpoint::test_providers_returns_5_providers - PASS",
+    "TestRunCommandUpgrade::test_run_command_allows_rm - PASS",
+    "TestRunCommandUpgrade::test_run_command_allows_mv - PASS",
+    "TestRunCommandUpgrade::test_run_command_allows_cp - PASS",
+    "TestRunCommandUpgrade::test_run_command_blocks_rm_rf_root - PASS",
+    "TestDeleteFileTool::test_delete_file_tool_exists_in_code - PASS",
+    "TestDeleteFileTool::test_delete_file_in_write_tools - PASS",
+    "TestMoveFileTool::test_move_file_tool_exists_in_code - PASS",
+    "TestMoveFileTool::test_move_file_in_write_tools - PASS",
+    "TestManageEnvTool::test_manage_env_tool_exists_in_code - PASS",
+    "TestManageEnvTool::test_manage_env_read_action - PASS",
+    "TestManageEnvTool::test_manage_env_blocks_protected_keys - PASS",
+    "TestManageEnvTool::test_manage_env_in_write_tools - PASS",
+    "TestLintCodeTool::test_lint_code_tool_exists_in_code - PASS",
+    "TestLintCodeTool::test_lint_code_uses_ruff_for_python - PASS",
+    "TestLintCodeTool::test_lint_code_uses_eslint_for_js - PASS",
+    "TestLintCodeTool::test_lint_code_in_read_tools - PASS",
+    "TestCrawlUrlTool::test_crawl_url_tool_exists_in_code - PASS",
+    "TestCrawlUrlTool::test_crawl_url_strips_html - PASS",
+    "TestCrawlUrlTool::test_crawl_url_in_read_tools - PASS",
+    "TestGitInfoTool::test_git_info_tool_exists_in_code - PASS",
+    "TestGitInfoTool::test_git_info_supports_log_action - PASS",
+    "TestGitInfoTool::test_git_info_supports_status_action - PASS",
+    "TestGitInfoTool::test_git_info_supports_diff_action - PASS",
+    "TestGitInfoTool::test_git_info_in_read_tools - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_insert_one - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_insert_many - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_count - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_find - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_update_many - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_delete_many - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_aggregate - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_distinct - PASS",
+    "TestRunQueryUpgrade::test_run_query_supports_drop - PASS",
+    "TestInstallPackageYarn::test_install_package_supports_yarn - PASS",
+    "TestRestartServiceFrontend::test_restart_service_supports_frontend - PASS",
+    "TestFrontendToolIcons::test_frontend_has_trash_icon_for_delete_file - PASS",
+    "TestFrontendToolIcons::test_frontend_has_arrow_icon_for_move_file - PASS",
+    "TestFrontendToolIcons::test_frontend_has_settings_icon_for_manage_env - PASS",
+    "TestFrontendToolIcons::test_frontend_has_filecode_icon_for_lint_code - PASS",
+    "TestFrontendToolIcons::test_frontend_has_gitcommit_icon_for_git_info - PASS",
+    "TestFrontendToolIcons::test_frontend_shows_27_tools_badge - PASS",
+    "TestFrontendToolIcons::test_frontend_footer_shows_correct_text - PASS",
+    "TestToolResultCardSummaries::test_delete_file_summary - PASS",
+    "TestToolResultCardSummaries::test_move_file_summary - PASS",
+    "TestToolResultCardSummaries::test_manage_env_summary - PASS",
+    "TestToolResultCardSummaries::test_lint_code_summary - PASS",
+    "TestToolResultCardSummaries::test_crawl_url_summary - PASS",
+    "TestToolResultCardSummaries::test_git_info_summary - PASS",
+    "TestToolSets::test_write_tools_contains_delete_file - PASS",
+    "TestToolSets::test_write_tools_contains_move_file - PASS",
+    "TestToolSets::test_write_tools_contains_manage_env - PASS",
+    "TestToolSets::test_read_tools_contains_lint_code - PASS",
+    "TestToolSets::test_read_tools_contains_crawl_url - PASS",
+    "TestToolSets::test_read_tools_contains_git_info - PASS",
+    "TestRunCommandTimeout::test_run_command_timeout_120s - PASS",
+    "TestChatIntegration::test_chat_endpoint_works - PASS",
+    "TestChatIntegration::test_task_status_endpoint - PASS"
+  ],
+  "frontend_tests_summary": [
+    "AI Engine page loads at /ai-agents - PASS",
+    "Kairos AI Engine v3 header visible - PASS",
+    "Header shows '27 Tools + Full Access' badge - PASS",
+    "Footer shows '27 tools · 5 LLM providers · Full bash · .env management · Linting · Git · Auto-verify' - PASS",
+    "Provider selector exists with data-testid='provider-selector' - PASS",
+    "Provider dropdown shows all 6 options (Auto, Claude, Gemini, GPT-5, Groq, OpenRouter) - PASS",
+    "Mode selector exists - PASS",
+    "Engine input field exists - PASS",
+    "Send button exists - PASS",
+    "New session button exists - PASS",
+    "Attach file button exists - PASS",
+    "Attach URL button exists - PASS",
+    "Browse backend button exists - PASS",
+    "Browse frontend button exists - PASS",
+    "Quick tests button exists - PASS"
+  ]
+}

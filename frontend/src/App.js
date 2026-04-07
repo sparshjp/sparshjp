@@ -56,6 +56,7 @@ import ProformaARLink from './pages/ProformaARLink';
 import ItemSampleTracking from './pages/ItemSampleTracking';
 import LeadProbabilityScore from './pages/LeadProbabilityScore';
 import AnnouncementsPage from './pages/AnnouncementsPage';
+import LoginPage from './pages/LoginPage';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -334,6 +335,7 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
                             <Route path="/items/sample-tracking" element={<ItemSampleTracking />} />
                             <Route path="/leads/probability" element={<LeadProbabilityScore />} />
                             <Route path="/announcements" element={<AnnouncementsPage />} />
+                            <Route path="/login" element={<LoginPage />} />
               </Routes>
         </div>
         {!isAIEngine && <UniversalAI />}
