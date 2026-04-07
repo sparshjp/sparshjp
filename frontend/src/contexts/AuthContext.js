@@ -78,6 +78,16 @@ export function AuthProvider({ children }) {
       reports: ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager', 'viewer'],
       settings: ['creator', 'admin'],
       'user-management': ['creator', 'admin'],
+      approvals: ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager'],
+      budgets: ['creator', 'admin', 'finance_manager'],
+      contracts: ['creator', 'admin', 'finance_manager', 'project_manager'],
+      resources: ['creator', 'admin', 'project_manager', 'hr_manager'],
+      forex: ['creator', 'admin', 'finance_manager'],
+      billing: ['creator', 'admin', 'finance_manager', 'project_manager'],
+      'doc-mgmt': ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager', 'ap_clerk', 'ar_clerk'],
+      notifications: ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager', 'ap_clerk', 'ar_clerk', 'tax_compliance', 'viewer'],
+      compliance: ['creator', 'admin'],
+      portal: ['creator', 'admin', 'project_manager'],
     };
     const allowed = SECTION_ACCESS[section] || [];
     return allowed.includes(user.role);

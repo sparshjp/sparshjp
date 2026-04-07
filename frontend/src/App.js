@@ -7,7 +7,8 @@ import {
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
   Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock,
-  FolderKanban, ArrowLeftRight, CreditCard, LogOut, User
+  FolderKanban, ArrowLeftRight, CreditCard, LogOut, User,
+  CheckSquare, Wallet, ScrollText, UserCog, DollarSign, Bell, FolderOpen, Globe
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -59,6 +60,16 @@ import LeadProbabilityScore from './pages/LeadProbabilityScore';
 import AnnouncementsPage from './pages/AnnouncementsPage';
 import LoginPage from './pages/LoginPage';
 import UserManagement from './pages/UserManagement';
+import ApprovalsPage from './pages/ApprovalsPage';
+import BudgetsPage from './pages/BudgetsPage';
+import ContractsPage from './pages/ContractsPage';
+import ResourcesPage from './pages/ResourcesPage';
+import ForexPage from './pages/ForexPage';
+import BillingPage from './pages/BillingPage';
+import DocumentsPage from './pages/DocumentsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import CompliancePage from './pages/CompliancePage';
+import PortalPage from './pages/PortalPage';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -154,6 +165,76 @@ function Sidebar({ isOpen, setIsOpen }) {
         { path: '/bank-reconciliation', label: 'Bank Reconciliation', icon: ArrowLeftRight },
         { path: '/expense-management', label: 'Expense Management', icon: CreditCard },
         { path: '/audit-trail', label: 'Audit Trail', icon: Shield },
+      ]
+    },
+    {
+      id: 'approvals',
+      title: 'Approvals',
+      items: [
+        { path: '/approvals', label: 'Approval Workflows', icon: CheckSquare },
+      ]
+    },
+    {
+      id: 'budgets',
+      title: 'Budgets',
+      items: [
+        { path: '/budgets', label: 'Budget Management', icon: Wallet },
+      ]
+    },
+    {
+      id: 'contracts',
+      title: 'Contracts',
+      items: [
+        { path: '/contracts', label: 'Contract Management', icon: ScrollText },
+      ]
+    },
+    {
+      id: 'resources',
+      title: 'Resources',
+      items: [
+        { path: '/resources', label: 'Resource Planning', icon: UserCog },
+      ]
+    },
+    {
+      id: 'forex',
+      title: 'Forex',
+      items: [
+        { path: '/forex', label: 'Multi-Currency', icon: DollarSign },
+      ]
+    },
+    {
+      id: 'billing',
+      title: 'Billing',
+      items: [
+        { path: '/billing', label: 'Billing Automation', icon: Receipt },
+      ]
+    },
+    {
+      id: 'doc-mgmt',
+      title: 'Documents',
+      items: [
+        { path: '/doc-management', label: 'Document Manager', icon: FolderOpen },
+      ]
+    },
+    {
+      id: 'notifications',
+      title: 'Notifications',
+      items: [
+        { path: '/notifications', label: 'Notification Center', icon: Bell },
+      ]
+    },
+    {
+      id: 'compliance',
+      title: 'Compliance',
+      items: [
+        { path: '/compliance', label: 'Audit & Compliance', icon: Shield },
+      ]
+    },
+    {
+      id: 'portal',
+      title: 'Client Portal',
+      items: [
+        { path: '/client-portal', label: 'Portal Setup', icon: Globe },
       ]
     },
     {
@@ -394,6 +475,16 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
                             <Route path="/leads/probability" element={<LeadProbabilityScore />} />
                             <Route path="/announcements" element={<AnnouncementsPage />} />
                             <Route path="/user-management" element={['creator', 'admin'].includes(user.role) ? <UserManagement /> : <Navigate to="/" replace />} />
+                            <Route path="/approvals" element={<ApprovalsPage />} />
+                            <Route path="/budgets" element={<BudgetsPage />} />
+                            <Route path="/contracts" element={<ContractsPage />} />
+                            <Route path="/resources" element={<ResourcesPage />} />
+                            <Route path="/forex" element={<ForexPage />} />
+                            <Route path="/billing" element={<BillingPage />} />
+                            <Route path="/doc-management" element={<DocumentsPage />} />
+                            <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/compliance" element={<CompliancePage />} />
+                            <Route path="/client-portal" element={<PortalPage />} />
                             <Route path="/login" element={<Navigate to="/" replace />} />
               </Routes>
         </div>

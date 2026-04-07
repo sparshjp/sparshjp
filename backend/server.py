@@ -1368,7 +1368,48 @@ RULES:
     from routes_customers import router as customers_router, set_db as set_customers_db
     set_customers_db(db)
     api_router.include_router(customers_router)
-    logging.info("ERP modules will be integrated")
+    # ── Advanced Enterprise Modules ──
+    from routes_approvals import router as approvals_router, set_db as set_approvals_db
+    set_approvals_db(db)
+    api_router.include_router(approvals_router)
+
+    from routes_budgets import router as budgets_router, set_db as set_budgets_db
+    set_budgets_db(db)
+    api_router.include_router(budgets_router)
+
+    from routes_contracts import router as contracts_router, set_db as set_contracts_db
+    set_contracts_db(db)
+    api_router.include_router(contracts_router)
+
+    from routes_resources import router as resources_router, set_db as set_resources_db
+    set_resources_db(db)
+    api_router.include_router(resources_router)
+
+    from routes_forex import router as forex_router, set_db as set_forex_db
+    set_forex_db(db)
+    api_router.include_router(forex_router)
+
+    from routes_billing import router as billing_router, set_db as set_billing_db
+    set_billing_db(db)
+    api_router.include_router(billing_router)
+
+    from routes_documents import router as docs_router, set_db as set_docs_db
+    set_docs_db(db)
+    api_router.include_router(docs_router)
+
+    from routes_notifications import router as notifications_router, set_db as set_notifications_db
+    set_notifications_db(db)
+    api_router.include_router(notifications_router)
+
+    from routes_compliance import router as compliance_router, set_db as set_compliance_db
+    set_compliance_db(db)
+    api_router.include_router(compliance_router)
+
+    from routes_portal import router as portal_router, set_db as set_portal_db
+    set_portal_db(db)
+    api_router.include_router(portal_router)
+
+    logging.info("ERP modules integrated (including 10 advanced modules)")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")
 
