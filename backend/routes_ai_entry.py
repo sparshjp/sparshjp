@@ -233,10 +233,16 @@ async def parse_entry(body: dict):
             else:
                 defaults[fname] = ""
         missing = [{"field": k, "label": v.get("label", k), "type": v.get("type"), "options": v.get("options")} for k, v in schema["fields"].items() if v.get("required")]
+        schema_out = {}
+        for k, v in schema["fields"].items():
+            entry = {"label": v.get("label", k), "type": v.get("type"), "options": v.get("options"), "required": v.get("required", False), "default": v.get("default")}
+            if v.get("fields"):
+                entry["fields"] = v["fields"]
+            schema_out[k] = entry
         return {
             "parsed": defaults,
             "missing_fields": missing,
-            "schema": {k: {"label": v.get("label", k), "type": v.get("type"), "options": v.get("options"), "required": v.get("required", False), "default": v.get("default")} for k, v in schema["fields"].items()},
+            "schema": schema_out,
             "module": module,
         }
 
@@ -287,10 +293,16 @@ Return ONLY the JSON object."""
         if fdef.get("required") and (parsed.get(fname) is None or parsed.get(fname) == ""):
             missing.append({"field": fname, "label": fdef.get("label", fname), "type": fdef.get("type", "string"), "options": fdef.get("options")})
 
+    schema_out = {}
+    for k, v in schema["fields"].items():
+        entry = {"label": v.get("label", k), "type": v.get("type"), "options": v.get("options"), "required": v.get("required", False), "default": v.get("default")}
+        if v.get("fields"):
+            entry["fields"] = v["fields"]
+        schema_out[k] = entry
     return {
         "parsed": parsed,
         "missing_fields": missing,
-        "schema": {k: {"label": v.get("label", k), "type": v.get("type"), "options": v.get("options"), "required": v.get("required", False), "default": v.get("default")} for k, v in schema["fields"].items()},
+        "schema": schema_out,
         "module": module,
     }
 
