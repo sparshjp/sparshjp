@@ -15,17 +15,17 @@ export default function TimesheetsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/timesheets`).then(r => r.json()),
-      fetch(`${API}/timesheets/utilization`).then(r => r.json()),
-      fetch(`${API}/timesheets/consolidation`).then(r => r.json()),
-      fetch(`${API}/timesheets/employees`).then(r => r.json()),
+      fetch(`${API}/timesheets`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/timesheets/utilization`).then(r => r.ok ? r.json() : null),
+      fetch(`${API}/timesheets/consolidation`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/timesheets/employees`).then(r => r.ok ? r.json() : []),
     ]).then(([ts, util, cons, emps]) => {
       setTimesheets(ts);
       setUtilization(util);
       setConsolidation(cons);
       setEmployees(emps);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const summary = utilization?.summary || {};

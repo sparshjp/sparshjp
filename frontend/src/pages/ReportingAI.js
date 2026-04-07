@@ -145,7 +145,7 @@ export default function ReportingAI() {
     setHistory(prev => [...prev, { role: 'user', text: query }]);
 
     try {
-      const res = await fetch(`${API}/api/company/ai-query`, {
+      const res = await fetch(`${API}/company/ai-query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: query })

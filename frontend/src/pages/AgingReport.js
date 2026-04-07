@@ -95,8 +95,8 @@ export default function AgingReport() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/api/aging/payables`).then(r => r.json()),
-      fetch(`${API}/api/aging/receivables`).then(r => r.json()),
+      fetch(`${API}/aging/payables`).then(r => r.json()),
+      fetch(`${API}/aging/receivables`).then(r => r.json()),
     ]).then(([ap, ar]) => { setApData(ap); setArData(ar); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 

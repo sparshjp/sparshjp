@@ -62,7 +62,7 @@ export default function CompanySetup() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${API}/api/company/settings`).then(r => r.json()).then(d => {
+    fetch(`${API}/company/settings`).then(r => r.json()).then(d => {
       if (d.exists) { delete d.exists; setData(d); }
       setLoaded(true);
     }).catch(() => setLoaded(true));
@@ -73,7 +73,7 @@ export default function CompanySetup() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`${API}/api/company/settings`, {
+      const res = await fetch(`${API}/company/settings`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
@@ -90,7 +90,7 @@ export default function CompanySetup() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch(`${API}/api/company/settings/logo`, { method: 'POST', body: formData });
+      const res = await fetch(`${API}/company/settings/logo`, { method: 'POST', body: formData });
       if (res.ok) {
         const { logo_url } = await res.json();
         set('logo_url', logo_url);

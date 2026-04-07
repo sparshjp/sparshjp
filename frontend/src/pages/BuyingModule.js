@@ -36,23 +36,23 @@ export default function BuyingModule() {
   const loadData = useCallback(async () => {
     try {
       if (activeSection === 'purchase-orders') {
-        const r = await fetch(`${API}/api/purchase/orders`); setOrders(await r.json());
+        const r = await fetch(`${API}/purchase/orders`); setOrders(await r.json());
       } else if (activeSection === 'grn') {
         const [pending, all] = await Promise.all([
-          fetch(`${API}/api/purchase/grn/pending`).then(r => r.json()),
-          fetch(`${API}/api/purchase/grn`).then(r => r.json())
+          fetch(`${API}/purchase/grn/pending`).then(r => r.json()),
+          fetch(`${API}/purchase/grn`).then(r => r.json())
         ]);
         setPendingGRN(pending); setGrns(all);
       } else if (activeSection === 'invoices') {
         const [pending, all] = await Promise.all([
-          fetch(`${API}/api/purchase/invoices/pending`).then(r => r.json()),
-          fetch(`${API}/api/purchase/invoices`).then(r => r.json())
+          fetch(`${API}/purchase/invoices/pending`).then(r => r.json()),
+          fetch(`${API}/purchase/invoices`).then(r => r.json())
         ]);
         setPendingInvoice(pending); setInvoices(all);
       } else if (activeSection === 'payments') {
         const [out, all] = await Promise.all([
-          fetch(`${API}/api/purchase/payments/outstanding`).then(r => r.json()),
-          fetch(`${API}/api/purchase/payments`).then(r => r.json())
+          fetch(`${API}/purchase/payments/outstanding`).then(r => r.json()),
+          fetch(`${API}/purchase/payments`).then(r => r.json())
         ]);
         setOutstanding(out); setPayments(all);
       }
@@ -64,7 +64,7 @@ export default function BuyingModule() {
   async function confirmReceipt(poId) {
     setProcessing(poId);
     try {
-      const r = await fetch(`${API}/api/purchase/grn/from-po/${poId}`, { method: 'POST' });
+      const r = await fetch(`${API}/purchase/grn/from-po/${poId}`, { method: 'POST' });
       if (r.ok) { const grn = await r.json(); toast.success(`GRN ${grn.grn_number} created - Goods received, JE posted`); loadData(); }
       else { const err = await r.json(); toast.error(err.detail || 'Failed'); }
     } catch (e) { toast.error('Network error'); }
@@ -74,7 +74,7 @@ export default function BuyingModule() {
   async function createInvoiceFromGRN(grnId) {
     setProcessing(grnId);
     try {
-      const r = await fetch(`${API}/api/purchase/invoices/from-grn/${grnId}`, {
+      const r = await fetch(`${API}/purchase/invoices/from-grn/${grnId}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vendor_invoice_no: formData[`vinv_${grnId}`] || '' })
       });
@@ -87,7 +87,7 @@ export default function BuyingModule() {
   async function payInvoice(invId) {
     setProcessing(invId);
     try {
-      const r = await fetch(`${API}/api/purchase/payments/for-invoice/${invId}`, {
+      const r = await fetch(`${API}/purchase/payments/for-invoice/${invId}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payment_mode: 'Bank Transfer' })
       });

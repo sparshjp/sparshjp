@@ -21,15 +21,15 @@ export default function RevenueRecognition() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/revenue/schedule`).then(r => r.json()),
-      fetch(`${API}/revenue/ind-as-115`).then(r => r.json()),
-      fetch(`${API}/revenue/transactions`).then(r => r.json()),
+      fetch(`${API}/revenue/schedule`).then(r => r.ok ? r.json() : {}),
+      fetch(`${API}/revenue/ind-as-115`).then(r => r.ok ? r.json() : {}),
+      fetch(`${API}/revenue/transactions`).then(r => r.ok ? r.json() : []),
     ]).then(([sch, disc, txns]) => {
       setSchedule(sch);
       setDisclosure(disc);
       setTransactions(txns);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const fmt = (v) => v != null ? `₹${(v / 100000).toFixed(2)}L` : '—';

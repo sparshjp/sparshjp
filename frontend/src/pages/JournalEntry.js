@@ -12,7 +12,7 @@ function JournalEntry() {
 
   const fetchEntries = async () => {
     try {
-      const res = await fetch(`${API}/api/journal-entries/manual`);
+      const res = await fetch(`${API}/journal-entries/manual`);
       setEntries(await res.json());
     } catch (error) {
       toast.error('Failed to fetch journal entries');
@@ -21,7 +21,7 @@ function JournalEntry() {
 
   const postEntry = async (entryId) => {
     try {
-      await fetch(`${API}/api/journal-entries/manual/${entryId}/post`, { method: 'POST' });
+      await fetch(`${API}/journal-entries/manual/${entryId}/post`, { method: 'POST' });
       toast.success('Entry posted to ledger!');
       fetchEntries();
     } catch (error) {

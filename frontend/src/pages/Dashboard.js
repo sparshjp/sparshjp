@@ -20,7 +20,7 @@ function Dashboard() {
 
   useEffect(() => {
     fetchModuleStats();
-    fetch(`${API}/company/settings`).then(r => r.json()).then(setCompany).catch(() => {});
+    fetch(`${API}/company/settings`).then(r => r.ok ? r.json() : {}).then(setCompany).catch(() => {});
   }, []);
 
   const fetchModuleStats = async () => {

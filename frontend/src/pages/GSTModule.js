@@ -21,13 +21,13 @@ export default function GSTModule() {
     setLoading(true);
     try {
       if (activeTab === 'gstr1') {
-        const r = await fetch(`${API}/api/statutory/gstr1`);
+        const r = await fetch(`${API}/statutory/gstr1`);
         setGstr1(await r.json());
       } else if (activeTab === 'gstr3b') {
-        const r = await fetch(`${API}/api/statutory/gstr3b`);
+        const r = await fetch(`${API}/statutory/gstr3b`);
         setGstr3b(await r.json());
       } else if (activeTab === 'tds') {
-        const r = await fetch(`${API}/api/statutory/tds-return`);
+        const r = await fetch(`${API}/statutory/tds-return`);
         setTds(await r.json());
       }
     } catch (e) { console.error(e); }
@@ -38,7 +38,7 @@ export default function GSTModule() {
     const endpoints = { gstr1: 'gstr1/export', gstr3b: 'gstr3b/export', tds: 'tds-return/export' };
     const filenames = { gstr1: 'GSTR1.csv', gstr3b: 'GSTR3B.json', tds: 'TDS_Return_26Q.csv' };
     try {
-      const r = await fetch(`${API}/api/statutory/${endpoints[type]}`);
+      const r = await fetch(`${API}/statutory/${endpoints[type]}`);
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

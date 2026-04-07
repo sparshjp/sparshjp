@@ -22,7 +22,7 @@ export default function ManufacturingModule() {
   async function fetchWorkOrders() {
     try {
       setLoading(true);
-      const r = await fetch(`${API}/api/manufacturing/work-orders`);
+      const r = await fetch(`${API}/manufacturing/work-orders`);
       if (r.ok) setWorkOrders(await r.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -30,7 +30,7 @@ export default function ManufacturingModule() {
 
   async function startWO(woId) {
     try {
-      const r = await fetch(`${API}/api/manufacturing/work-orders/${woId}/start`, { method: 'POST' });
+      const r = await fetch(`${API}/manufacturing/work-orders/${woId}/start`, { method: 'POST' });
       if (r.ok) { toast.success('Work Order started - materials issued'); fetchWorkOrders(); }
       else { const err = await r.json(); toast.error(err.detail || 'Failed'); }
     } catch (e) { toast.error('Network error'); }
@@ -38,7 +38,7 @@ export default function ManufacturingModule() {
 
   async function completeWO(woId) {
     try {
-      const r = await fetch(`${API}/api/manufacturing/work-orders/${woId}/complete`, {
+      const r = await fetch(`${API}/manufacturing/work-orders/${woId}/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(completeData)
       });
@@ -49,7 +49,7 @@ export default function ManufacturingModule() {
 
   async function cancelWO(woId) {
     try {
-      const r = await fetch(`${API}/api/manufacturing/work-orders/${woId}/cancel`, { method: 'POST' });
+      const r = await fetch(`${API}/manufacturing/work-orders/${woId}/cancel`, { method: 'POST' });
       if (r.ok) { toast.success('Work Order cancelled'); fetchWorkOrders(); }
       else { const err = await r.json(); toast.error(err.detail || 'Failed'); }
     } catch (e) { toast.error('Network error'); }

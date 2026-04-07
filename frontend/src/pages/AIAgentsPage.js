@@ -282,6 +282,7 @@ export default function AIAgentsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ agent_type: mode, title: 'New Session' }),
     });
+    if (!res.ok) throw new Error(`Session creation failed: ${res.status}`);
     const session = await res.json();
     setSessions(prev => [session, ...prev]);
     setActiveSession(session.id);
@@ -292,6 +293,7 @@ export default function AIAgentsPage() {
 
   const loadSession = async (sid) => {
     const res = await fetch(`${API}/agents/sessions/${sid}`);
+    if (!res.ok) return;
     const session = await res.json();
     setActiveSession(sid);
     setMessages(session.messages || []);

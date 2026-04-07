@@ -50,13 +50,13 @@ export default function CustomersPage() {
 
   useEffect(() => {
     loadCustomers();
-    fetch(`${API}/api/gst/states`).then(r => r.json()).then(s => setStates(s)).catch(() => {});
+    fetch(`${API}/gst/states`).then(r => r.json()).then(s => setStates(s)).catch(() => {});
   }, []);
 
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/api/entities?entity_type=customer`);
+      const r = await fetch(`${API}/entities?entity_type=customer`);
       setCustomers(await r.json());
     } catch { toast.error('Failed to load customers'); }
     setLoading(false);
@@ -66,7 +66,7 @@ export default function CustomersPage() {
     if (!form.name) { toast.error('Customer name is required'); return; }
     setSaving(true);
     try {
-      const r = await fetch(`${API}/api/entities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const r = await fetch(`${API}/entities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
       const data = await r.json();
       toast.success(`Customer "${data.name}" created`);

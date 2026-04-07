@@ -4,7 +4,7 @@ import { FileText, Download, Calendar, TrendingUp, TrendingDown, ChevronDown, Ch
 const API = process.env.REACT_APP_BACKEND_URL;
 
 function downloadExport(endpoint, filename) {
-  const url = `${API}/api/financial-statements/${endpoint}`;
+  const url = `${API}/financial-statements/${endpoint}`;
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
@@ -106,7 +106,7 @@ export default function FinancialStatements() {
   const [company, setCompany] = useState({});
 
   useEffect(() => {
-    fetch(`${API}/api/company/settings`).then(r => r.json()).then(setCompany).catch(() => {});
+    fetch(`${API}/company/settings`).then(r => r.ok ? r.json() : {}).then(setCompany).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -118,7 +118,8 @@ export default function FinancialStatements() {
     try {
       const endpoint = tab === 'balance-sheet' ? 'balance-sheet' :
                        tab === 'profit-loss' ? 'profit-and-loss' : 'trial-balance';
-      const r = await fetch(`${API}/api/financial-statements/${endpoint}`);
+      const r = await fetch(`${API}/financial-statements/${endpoint}`);
+      if (!r.ok) throw new Error(`Failed: ${r.status}`);
       const data = await r.json();
       if (tab === 'balance-sheet') setBsData(data);
       else if (tab === 'profit-loss') setPlData(data);

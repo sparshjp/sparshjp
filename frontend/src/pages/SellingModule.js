@@ -38,23 +38,23 @@ export default function SellingModule() {
   const loadData = useCallback(async () => {
     try {
       if (activeSection === 'sales-orders') {
-        const r = await fetch(`${API}/api/selling/sales-orders`); setSalesOrders(await r.json());
+        const r = await fetch(`${API}/selling/sales-orders`); setSalesOrders(await r.json());
       } else if (activeSection === 'delivery-notes') {
         const [pending, all] = await Promise.all([
-          fetch(`${API}/api/selling/delivery-notes/pending`).then(r => r.json()),
-          fetch(`${API}/api/selling/delivery-notes`).then(r => r.json())
+          fetch(`${API}/selling/delivery-notes/pending`).then(r => r.json()),
+          fetch(`${API}/selling/delivery-notes`).then(r => r.json())
         ]);
         setPendingDN(pending); setDeliveryNotes(all);
       } else if (activeSection === 'invoices') {
         const [pending, all] = await Promise.all([
-          fetch(`${API}/api/selling/invoices/pending`).then(r => r.json()),
-          fetch(`${API}/api/selling/invoices`).then(r => r.json())
+          fetch(`${API}/selling/invoices/pending`).then(r => r.json()),
+          fetch(`${API}/selling/invoices`).then(r => r.json())
         ]);
         setPendingInvoice(pending); setInvoices(all);
       } else if (activeSection === 'payments') {
         const [out, all] = await Promise.all([
-          fetch(`${API}/api/selling/payments/outstanding`).then(r => r.json()),
-          fetch(`${API}/api/selling/payments`).then(r => r.json())
+          fetch(`${API}/selling/payments/outstanding`).then(r => r.json()),
+          fetch(`${API}/selling/payments`).then(r => r.json())
         ]);
         setOutstanding(out); setPayments(all);
       }
@@ -66,7 +66,7 @@ export default function SellingModule() {
   async function confirmDelivery(soId) {
     setProcessing(soId);
     try {
-      const r = await fetch(`${API}/api/selling/delivery-notes/from-so/${soId}`, { method: 'POST' });
+      const r = await fetch(`${API}/selling/delivery-notes/from-so/${soId}`, { method: 'POST' });
       if (r.ok) { const dn = await r.json(); toast.success(`DN ${dn.dn_number} created - Goods dispatched`); if (dn.warning) toast.warning(dn.warning); loadData(); }
       else { const err = await r.json(); toast.error(err.detail || 'Failed'); }
     } catch (e) { toast.error('Network error'); }
@@ -76,7 +76,7 @@ export default function SellingModule() {
   async function createInvoiceFromDN(dnId) {
     setProcessing(dnId);
     try {
-      const r = await fetch(`${API}/api/selling/invoices/from-dn/${dnId}`, {
+      const r = await fetch(`${API}/selling/invoices/from-dn/${dnId}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({})
       });
       if (r.ok) { const inv = await r.json(); toast.success(`Invoice ${inv.invoice_number} created - Revenue + COGS JE posted`); loadData(); }
@@ -88,7 +88,7 @@ export default function SellingModule() {
   async function receivePayment(invId) {
     setProcessing(invId);
     try {
-      const r = await fetch(`${API}/api/selling/payments/for-invoice/${invId}`, {
+      const r = await fetch(`${API}/selling/payments/for-invoice/${invId}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payment_mode: 'Bank Transfer' })
       });

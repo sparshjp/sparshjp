@@ -27,7 +27,7 @@ export default function GSTR3BPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/statutory/gstr3b`).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`${API}/statutory/gstr3b`).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-[#4A5B6E] py-12 text-center">Loading GSTR-3B...</div>;
@@ -57,7 +57,7 @@ export default function GSTR3BPage() {
             {data.gstin || 'GSTIN not set'} | {data.return_period}
           </span>
           <button data-testid="gstr3b-export-btn" onClick={() => {
-            fetch(`${API}/api/statutory/gstr3b/export`).then(r => r.blob()).then(b => {
+            fetch(`${API}/statutory/gstr3b/export`).then(r => r.blob()).then(b => {
               const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'GSTR3B.json'; a.click();
             });
           }} className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-bold transition-colors">

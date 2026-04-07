@@ -132,7 +132,7 @@ export default function AuditTrail() {
       if (filterDateTo) params.set('date_to', filterDateTo);
       if (filterSearch) params.set('search', filterSearch);
 
-      const res = await fetch(`${API}/api/audit-trail?${params}`);
+      const res = await fetch(`${API}/audit-trail?${params}`);
       const data = await res.json();
       setEntries(data.entries || []);
       setTotal(data.total || 0);
@@ -145,8 +145,8 @@ export default function AuditTrail() {
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
-    fetch(`${API}/api/audit-trail/stats`).then(r => r.json()).then(setStats).catch(() => {});
-    fetch(`${API}/api/audit-trail/document-types`).then(r => r.json()).then(setDocTypes).catch(() => {});
+    fetch(`${API}/audit-trail/stats`).then(r => r.json()).then(setStats).catch(() => {});
+    fetch(`${API}/audit-trail/document-types`).then(r => r.json()).then(setDocTypes).catch(() => {});
   }, []);
 
   const handleExport = async () => {
@@ -156,7 +156,7 @@ export default function AuditTrail() {
       if (filterAction) params.set('action', filterAction);
       if (filterDateFrom) params.set('date_from', filterDateFrom);
       if (filterDateTo) params.set('date_to', filterDateTo);
-      const r = await fetch(`${API}/api/audit-trail/export?${params}`);
+      const r = await fetch(`${API}/audit-trail/export?${params}`);
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

@@ -50,13 +50,13 @@ export default function VendorsPage() {
 
   useEffect(() => {
     loadVendors();
-    fetch(`${API}/api/gst/states`).then(r => r.json()).then(s => setStates(s)).catch(() => {});
+    fetch(`${API}/gst/states`).then(r => r.json()).then(s => setStates(s)).catch(() => {});
   }, []);
 
   const loadVendors = async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/api/entities?entity_type=vendor`);
+      const r = await fetch(`${API}/entities?entity_type=vendor`);
       setVendors(await r.json());
     } catch { toast.error('Failed to load vendors'); }
     setLoading(false);
@@ -66,7 +66,7 @@ export default function VendorsPage() {
     if (!form.name) { toast.error('Vendor name is required'); return; }
     setSaving(true);
     try {
-      const r = await fetch(`${API}/api/entities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const r = await fetch(`${API}/entities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
       const data = await r.json();
       toast.success(`Vendor "${data.name}" created`);

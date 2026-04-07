@@ -452,7 +452,7 @@ export function ModuleAIPrompt({ placeholder, defaultIntent, onCreated }) {
     if (!prompt.trim() || parsing) return;
     setParsing(true);
     try {
-      const res = await fetch(`${API}/api/ai/parse-prompt`, {
+      const res = await fetch(`${API}/ai/parse-prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
@@ -474,23 +474,23 @@ export function ModuleAIPrompt({ placeholder, defaultIntent, onCreated }) {
 
       switch (intent) {
         case 'purchase_order':
-          url = `${API}/api/purchase/orders`; break;
+          url = `${API}/purchase/orders`; break;
         case 'sales_order':
-          url = `${API}/api/selling/sales-orders`; break;
+          url = `${API}/selling/sales-orders`; break;
         case 'work_order':
-          url = `${API}/api/manufacturing/work-orders`;
+          url = `${API}/manufacturing/work-orders`;
           body = { ...payload, bom_items: payload.bom_items || [] }; break;
         case 'journal_entry':
-          url = `${API}/api/journal-entries/manual`;
+          url = `${API}/journal-entries/manual`;
           body = { posting_date: payload.posting_date || new Date().toISOString().split('T')[0], cost_center: payload.cost_center || 'General', journal_entries: payload.entries, narration: payload.narration }; break;
         case 'goods_receipt':
-          url = `${API}/api/purchase/grn/from-po/${payload.po_id}`;
+          url = `${API}/purchase/grn/from-po/${payload.po_id}`;
           body = {}; break;
         case 'delivery_note':
-          url = `${API}/api/selling/delivery-notes/from-so/${payload.so_id}`;
+          url = `${API}/selling/delivery-notes/from-so/${payload.so_id}`;
           body = {}; break;
         case 'crm_lead':
-          url = `${API}/api/crm/leads`;
+          url = `${API}/crm/leads`;
           body = { lead_name: payload.contact_name, company_name: payload.company, ...payload }; break;
         default: throw new Error(`Unsupported intent: ${intent}`);
       }

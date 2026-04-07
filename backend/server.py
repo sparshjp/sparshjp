@@ -1357,6 +1357,16 @@ RULES:
     from routes_chart_of_accounts import router as chart_of_accounts_router, set_db as set_chart_of_accounts_db
     set_chart_of_accounts_db(db)
     api_router.include_router(chart_of_accounts_router)
+    
+    # Vendors
+    from routes_vendors import router as vendors_router, set_db as set_vendors_db
+    set_vendors_db(db)
+    api_router.include_router(vendors_router)
+    
+    # Customers
+    from routes_customers import router as customers_router, set_db as set_customers_db
+    set_customers_db(db)
+    api_router.include_router(customers_router)
     logging.info("ERP modules will be integrated")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

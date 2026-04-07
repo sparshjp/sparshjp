@@ -52,7 +52,7 @@ export default function ItemsPage() {
   const loadItems = async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/api/stock/items`);
+      const r = await fetch(`${API}/stock/items`);
       setItems(await r.json());
     } catch { toast.error('Failed to load items'); }
     setLoading(false);
@@ -62,7 +62,7 @@ export default function ItemsPage() {
     if (!form.item_name && !form.description) { toast.error('Enter item name or description first'); return; }
     setSuggesting(true);
     try {
-      const r = await fetch(`${API}/api/gst/suggest-hsn`, {
+      const r = await fetch(`${API}/gst/suggest-hsn`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: form.description || form.item_name, item_name: form.item_name }),
       });
@@ -87,7 +87,7 @@ export default function ItemsPage() {
         current_stock: parseFloat(form.opening_stock) || 0,
         reorder_level: parseFloat(form.reorder_level) || 0,
       };
-      const r = await fetch(`${API}/api/stock/items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const r = await fetch(`${API}/stock/items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
       toast.success(`Item "${form.item_name}" created`);
       setShowForm(false);

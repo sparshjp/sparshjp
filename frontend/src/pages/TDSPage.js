@@ -13,7 +13,7 @@ export default function TDSPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/statutory/tds-return`).then(r => r.json()).then(d => { setTds(d); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`${API}/statutory/tds-return`).then(r => r.json()).then(d => { setTds(d); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-[#4A5B6E] py-12 text-center">Loading TDS Return...</div>;
@@ -36,7 +36,7 @@ export default function TDSPage() {
             TAN: {tds.tan || 'Not set'} | {tds.quarter} FY {tds.financial_year}
           </span>
           <button data-testid="tds-export-btn" onClick={() => {
-            fetch(`${API}/api/statutory/tds-return/export`).then(r => r.blob()).then(b => {
+            fetch(`${API}/statutory/tds-return/export`).then(r => r.blob()).then(b => {
               const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'TDS_Return_26Q.csv'; a.click();
             });
           }} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-bold transition-colors">

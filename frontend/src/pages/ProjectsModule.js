@@ -15,21 +15,21 @@ export default function ProjectsModule() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/projects`).then(r => r.json()),
-      fetch(`${API}/projects/health/dashboard`).then(r => r.json()),
+      fetch(`${API}/projects`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/projects/health/dashboard`).then(r => r.ok ? r.json() : []),
     ]).then(([p, h]) => {
       setProjects(p);
       setHealthData(h);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const loadProjectDetail = async (pid) => {
     if (selectedProject === pid) { setSelectedProject(null); return; }
     setSelectedProject(pid);
     const [ts, txns] = await Promise.all([
-      fetch(`${API}/projects/${pid}/timesheets`).then(r => r.json()),
-      fetch(`${API}/projects/${pid}/transactions`).then(r => r.json()),
+      fetch(`${API}/projects/${pid}/timesheets`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/projects/${pid}/transactions`).then(r => r.ok ? r.json() : []),
     ]);
     setProjectTimesheets(ts);
     setProjectTxns(txns);

@@ -35,14 +35,14 @@ export default function EInvoicePage() {
   const [loadingJson, setLoadingJson] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/statutory/e-invoices`).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`${API}/statutory/e-invoices`).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   async function viewIRN(invoiceNumber) {
     setLoadingJson(true);
     setSelectedInv(invoiceNumber);
     try {
-      const r = await fetch(`${API}/api/statutory/e-invoice/${encodeURIComponent(invoiceNumber)}/json`);
+      const r = await fetch(`${API}/statutory/e-invoice/${encodeURIComponent(invoiceNumber)}/json`);
       const d = await r.json();
       setIrnJson(d);
     } catch { toast.error('Failed to load IRN JSON'); }

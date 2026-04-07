@@ -39,7 +39,7 @@ export default function GSTR1Page() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/statutory/gstr1`).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`${API}/statutory/gstr1`).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-[#4A5B6E] py-12 text-center">Loading GSTR-1...</div>;
@@ -64,7 +64,7 @@ export default function GSTR1Page() {
             {data.gstin || 'GSTIN not set'} | {data.return_period}
           </span>
           <button data-testid="gstr1-export-btn" onClick={() => {
-            fetch(`${API}/api/statutory/gstr1/export`).then(r => r.blob()).then(b => {
+            fetch(`${API}/statutory/gstr1/export`).then(r => r.blob()).then(b => {
               const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'GSTR1.csv'; a.click();
             });
           }} className="flex items-center gap-2 px-4 py-2 bg-[#00C9A7] hover:bg-[#00B396] text-[#0D1B2A] rounded-lg text-sm font-bold transition-colors">

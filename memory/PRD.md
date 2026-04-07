@@ -13,8 +13,8 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 - AI: 5 LLM Providers — Claude 4.5, Gemini 3 Flash, GPT-5, Groq Llama 3.3, OpenRouter
 - DB: MongoDB
 
-## Kairos AI Engine v4 — Full Access (Updated 2026-04-06)
-### 27 Tools + 2 Compound (parity with E1):
+## Kairos AI Engine v4 — Full Access (Updated 2026-04-07)
+### 30 Tools (full parity with E1):
 **File I/O**: read_file, create_file, write_file, patch_file, insert_lines, delete_lines, delete_file, move_file
 **Search**: grep_search, list_files
 **Bash**: run_command (full access, 120s timeout — rm, mv, cp, sudo, apt, yarn all allowed)
@@ -26,6 +26,9 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 **Code Quality**: lint_code (ruff for Python, eslint for JS)
 **Git**: git_info (log, status, diff)
 **Compound**: scaffold_module, create_page
+**NEW**: call_subagent (4 subagents: tester, designer, integrator, troubleshooter)
+**NEW**: batch_operations (parallel multi-file create/write/delete/move/patch/read, max 20 ops)
+**NEW**: generate_image (GPT Image 1 via Emergent LLM Key, saves to /app/backend/uploads/)
 
 ### LLM Providers (Priority Order):
 1. Claude Sonnet 4.5 (Emergent Key) — Primary
@@ -39,6 +42,7 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 - Auto-continue logic when LLM outputs plan without tool calls
 - Task state persisted to MongoDB for restart resilience
 - Smart provider routing with failure tracking
+- Context window summarization when context exceeds threshold
 
 ## Modules Implemented
 ### Core: Dashboard, Company Setup, CRM, Selling, Buying, Stock, HR & Payroll
@@ -47,6 +51,12 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 ### Finance: Expense Management, Journal Entries, CoA, Financial Statements, AP/AR Aging, Audit Trail, GST, TDS
 ### Other: Leave Management, Employee Analytics, Bank Reconciliation, Client Feedback, Announcements
 
+## Bug Fixes (2026-04-07)
+- Fixed backend STOPPED causing "body stream already read" errors across all ERP modules
+- Fixed double `/api` prefix bug in 18 frontend files (FinancialStatements, AgingReport, AuditTrail, BuyingModule, CompanySetup, CustomersPage, EInvoicePage, GSTModule, GSTR1/3B, ItemsPage, JournalEntry, ManufacturingModule, ReportingAI, SellingModule, TDSPage, VendorsPage, AISmartEntry, UniversalAI)
+- Added resilient error handling (`r.ok` checks) to fetch calls in ProjectsModule, TimesheetsPage, RevenueRecognition, FinancialStatements, Dashboard, AIAgentsPage
+
 ## Backlog
 ### P1: Client Portal, Inventory Landed Cost, Fixed Asset Depreciation
 ### P2: E-Way Bill, Mobile Responsiveness
+### P3: Refactor routes_agents.py (>2100 lines, extract tools into tools.py)
