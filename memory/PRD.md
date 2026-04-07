@@ -1,68 +1,92 @@
-# Kairos AI ERP - Product Requirements Document
+# Nexora IT ERP — Product Requirements Document
 
 ## Original Problem Statement
-Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nexora IT ERP") with Project Management, Timesheets, Revenue Accrual (Ind AS 115), and a Unified AI Engine that acts as an autonomous developer. Role-based access control with Creator/Admin/specialized roles.
+Build an IT Services ERP ("Nexora IT ERP") with a Kairos AI Engine (autonomous developer), then layer enterprise modules: Project Management, Timesheets, Revenue Accrual, JWT RBAC Auth, and 10 Advanced Enterprise features.
 
-## Company: Nexora Digital Solutions Pvt. Ltd.
-- **CIN:** U72200GJ2019PTC108341 | **GSTIN:** 24AABCN4567P1Z8
-- **Industry:** IT Services | **Billing:** INR, USD, GBP
+## Core Architecture
+- **Backend**: FastAPI + Motor (async MongoDB)
+- **Frontend**: React + Shadcn UI, dark theme
+- **Auth**: JWT-based RBAC (roles: creator, admin, finance_manager, project_manager, hr_manager, ap_clerk, ar_clerk, tax_compliance, viewer)
+- **AI**: Kairos AI Engine v4 (autonomous execution, multi-file editing, custom API keys)
 
-## Architecture
-- Frontend: React 18, Tailwind CSS, Shadcn/UI, Lucide React, DOMPurify
-- Backend: FastAPI, Motor (async MongoDB), bcrypt, PyJWT, anthropic SDK, openai SDK
-- AI: 7 LLM Providers (Direct keys first, then Emergent, then 3rd party)
-- DB: MongoDB
-- Auth: JWT (24h access + 7d refresh), bcrypt password hashing, brute force protection
+## What's Been Implemented (Complete)
 
-## RBAC System (Implemented 2026-04-07)
-### Roles (9 total):
-| Role | Level | Access |
-|------|-------|--------|
-| creator | 100 | Everything + Kairos AI Engine |
-| admin | 90 | Everything except Kairos AI |
-| finance_manager | 70 | Financial Statements, Journal Entries, CoA, Bank Recon, Audit Trail |
-| project_manager | 70 | Projects, Timesheets, Revenue Recognition |
-| hr_manager | 70 | Employees, Payroll, Leave Management |
-| ap_clerk | 50 | Buying, Vendor Bills, Purchase Orders |
-| ar_clerk | 50 | Selling, Invoices, Customer Receipts |
-| tax_compliance | 50 | GST, TDS, E-Invoice, GSTR filings |
-| viewer | 10 | Dashboard + Reports (read-only) |
+### Phase 1 — Core ERP (Done)
+- Dashboard with module summaries
+- CRM (Leads, Customers)
+- Selling (Sales Orders, Invoices)
+- Buying (Purchase Orders)
+- Stock & Manufacturing (Inventory, Manufacturing, Quality)
+- HR (Employees, Payroll)
+- Delivery / Projects / Timesheets
+- Accounting (Journal Entries, Revenue Recognition IndAS 115, Financial Statements, AP/AR Aging, Bank Reconciliation, Expense Management, Audit Trail)
+- GST (GSTR-1, GSTR-3B, GST Returns)
+- TDS (TDS Entries, TDS Returns)
+- Reporting AI (Ask Kairos)
+- Company Setup, Admin Settings
 
-### Auth Endpoints:
-- POST /api/auth/login — JWT login with brute force protection
-- POST /api/auth/register — Self-register (viewer default, no creator)
-- GET /api/auth/me — Current user profile
-- POST /api/auth/logout — Clear auth cookies
-- POST /api/auth/refresh — Refresh access token
-- POST /api/auth/forgot-password — Request password reset
-- POST /api/auth/reset-password — Complete password reset
-- GET /api/auth/roles — List all roles and section access
-- GET/POST/PUT/DELETE /api/auth/users — User CRUD (admin/creator only)
+### Phase 2 — Kairos AI Engine (Done)
+- Autonomous tool execution (create/edit files, run commands, analyze)
+- Multi-file editing support
+- Custom API key support (OpenAI, Anthropic, Groq, OpenRouter)
+- Emergent LLM Key fallback
+- Security hardened (no shell=True, no exec())
 
-## Kairos AI Engine v4 — 30 Tools (Creator-only access)
-### LLM Providers: Claude Direct, GPT-4o Direct, Claude/Gemini/GPT-5 (Emergent), Groq, OpenRouter
+### Phase 3 — JWT Auth & RBAC (Done)
+- JWT email/password login
+- Role-based sidebar and API access
+- User Management (admin/creator can manage roles)
+- Seed credentials: kairoserp / ¢re@tor@AIengine
 
-## Modules Implemented
-### Core: Dashboard, Company Setup, CRM, Selling, Buying, Stock, HR & Payroll
-### Delivery: Project Management, Timesheets, Revenue Recognition (Ind AS 115)
-### Intelligence: Transaction Explorer, Unified AI Engine v4
-### Finance: Expense Management, Journal Entries, CoA, Financial Statements, AP/AR Aging, Audit Trail, GST, TDS
-### Auth: Login, User Management, Role-Based Navigation
-### Other: Leave Management, Employee Analytics, Bank Reconciliation, Client Feedback, Announcements
+### Phase 4 — 10 Advanced Enterprise Modules (Done — April 7, 2026)
+All backend CRUD APIs + React frontend pages + RBAC sidebar integration:
+1. **Approval Workflows** — Configurable approval chains, approve/reject, stats
+2. **Budget Management** — Department/project budgets, variance tracking, overspend alerts
+3. **Contract Management** — SOW/MSA/NDA tracking, milestones, renewal alerts
+4. **Resource Planning** — Allocations, bench view, utilization, staffing forecast
+5. **Forex Management** — Exchange rates, forex gain/loss, mark-to-market revaluation
+6. **Billing Automation** — Auto-invoice from timesheets & milestone completions
+7. **Document Management** — Upload/attach files, categorized, download
+8. **Notifications Center** — Reminders for overdue/expiring, mark read, filters
+9. **Compliance Dashboard** — SOC 2 & ISO 27001 control status, readiness %, access logs
+10. **Client Portal** — Manage portal clients, JWT tokens, client-facing endpoints
 
-## Must-Have Features (Pending)
-### P0 (Next priority):
-1. Approval Workflows — PO/invoice/expense approvals with configurable chains
-2. Budget Management — Department/project budgets, actuals vs budget, alerts
-3. Multi-Currency with Forex — Auto forex gain/loss, live rate fetch
-4. Contract Management — SOW/MSA tracking, auto-renewal alerts, billing triggers
-5. Resource Planning — Bench management, skill matrix, staffing forecast
-6. Client Portal — External client access to project status, invoices, timesheets
-7. Billing Automation — Auto-generate invoices from timesheets and milestones
-8. Document Management — Attach contracts, POs, receipts to transactions
-9. Email Notifications — Invoice reminders, approval requests, due date alerts
-10. Audit & Compliance Dashboard — SOC2/ISO readiness, data access logs
+## Prioritized Backlog
 
-### P1: Inventory Landed Cost, Fixed Asset Depreciation
-### P2: E-Way Bill, Mobile Responsiveness
-### P3: Refactor routes_agents.py, Split large React components
+### P2
+- E-Way Bill generation module
+- Mobile Responsiveness
+
+### P3
+- Refactor `routes_agents.py` monolithic `execute_tool` into `kairos_tools.py`
+- Split large React components further
+
+## Key Endpoints (New Modules)
+- `/api/approvals/*` — Workflows, Requests, Stats
+- `/api/budgets/*` — CRUD, Variance, Alerts
+- `/api/contracts/*` — CRUD, Milestones, Renewals
+- `/api/resources/*` — Allocations, Bench, Utilization, Forecast
+- `/api/forex/*` — Rates, Transactions, Revaluation
+- `/api/billing/*` — Stats, Unbilled, Generate Invoice, Milestone Invoice
+- `/api/documents/*` — CRUD, Upload, Download, Categories
+- `/api/notifications/*` — CRUD, Generate Reminders, Read/Unread
+- `/api/compliance/*` — Frameworks, Dashboard, Controls, Access Logs
+- `/api/portal/*` — Clients, Portal Token Access (my/projects, my/invoices)
+
+## DB Collections (New)
+- approval_workflows, approval_requests
+- budgets
+- contracts
+- resource_allocations
+- forex_rates, forex_transactions
+- billing_invoices
+- erp_documents
+- notifications
+- compliance_controls, compliance_access_logs
+- portal_clients
+
+## Test Reports
+- Iteration 31: Direct API keys feature (PASS)
+- Iteration 32: Security and hook fixes (PASS)
+- Iteration 33: JWT Auth implementation (PASS)
+- Iteration 34: 10 Enterprise modules — 42/42 backend, 10/10 frontend (PASS)
