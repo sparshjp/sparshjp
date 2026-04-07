@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../App';
-import { RefreshCw, Plus, TrendingUp, TrendingDown, DollarSign, Loader2, ArrowRightLeft } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, DollarSign, ArrowRightLeft, Sparkles } from 'lucide-react';
+import AiEntryModal from '../components/AiEntryModal';
 
 export default function ForexPage() {
   const [tab, setTab] = useState('rates');
@@ -9,9 +10,7 @@ export default function ForexPage() {
   const [revaluation, setRevaluation] = useState({ transactions: [], total_unrealized_gain_loss: 0 });
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ type: 'invoice', reference_name: '', currency: 'USD', foreign_amount: 0, booking_rate: 0 });
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -31,23 +30,14 @@ export default function ForexPage() {
 
   const fetchLiveRates = async () => {
     setFetching(true);
-    try {
-      await fetch(`${API}/forex/rates/fetch-live`, { method: 'POST' });
-      load();
-    } catch {}
+    try { await fetch(`${API}/forex/rates/fetch-live`, { method: 'POST' }); load(); } catch {}
     setFetching(false);
   };
 
-  const createTransaction = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await fetch(`${API}/forex/transactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      setShowForm(false);
-      setForm({ type: 'invoice', reference_name: '', currency: 'USD', foreign_amount: 0, booking_rate: 0 });
-      load();
-    } catch {}
-    setSubmitting(false);
+  const createTransaction = async (data) => {
+    const res = await fetch(`${API}/forex/transactions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to create forex transaction');
+    load();
   };
 
   const settle = async (txnId) => {
@@ -69,7 +59,7 @@ export default function ForexPage() {
           <p className="text-[#4A5B6E] text-sm mt-1">Exchange rates, gain/loss tracking & revaluation</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowForm(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-forex-txn-btn"><Plus size={16} /> New Transaction</button>
+          <button onClick={() => setShowAiModal(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-forex-txn-btn"><Sparkles size={16} /> New Transaction</button>
           <button onClick={fetchLiveRates} disabled={fetching} className="px-3 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm hover:bg-[#152236] flex items-center gap-1" data-testid="fetch-rates-btn"><RefreshCw size={14} className={fetching ? 'animate-spin' : ''} /> Live Rates</button>
         </div>
       </div>
@@ -162,30 +152,7 @@ export default function ForexPage() {
         </div>
       )}
 
-      {/* Create Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={createTransaction} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 w-full max-w-lg space-y-4">
-            <h2 className="text-lg font-bold text-[#E8EDF2]">New Forex Transaction</h2>
-            <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none">
-              <option value="invoice">Invoice</option><option value="payment">Payment</option><option value="receipt">Receipt</option>
-            </select>
-            <input placeholder="Reference Name" value={form.reference_name} onChange={e => setForm(p => ({ ...p, reference_name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="forex-ref-name" />
-            <div className="grid grid-cols-3 gap-3">
-              <select value={form.currency} onChange={e => setForm(p => ({ ...p, currency: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none">
-                {['USD', 'GBP', 'EUR', 'AUD', 'CAD', 'SGD', 'JPY', 'AED'].map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <input type="number" placeholder="Foreign Amount" value={form.foreign_amount || ''} onChange={e => setForm(p => ({ ...p, foreign_amount: Number(e.target.value) }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="forex-amount" />
-              <input type="number" step="0.01" placeholder="Booking Rate" value={form.booking_rate || ''} onChange={e => setForm(p => ({ ...p, booking_rate: Number(e.target.value) }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="forex-rate" />
-            </div>
-            <p className="text-sm text-[#4A5B6E]">INR Value: {(form.foreign_amount * form.booking_rate).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</p>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm">Cancel</button>
-              <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1" data-testid="create-forex-txn-btn">{submitting && <Loader2 size={14} className="animate-spin" />} Create</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <AiEntryModal open={showAiModal} onClose={() => setShowAiModal(false)} module="forex_transaction" title="New Forex Transaction" placeholder='e.g. "Invoice to TechCorp USD 25000 at rate 84.50"' onSubmit={createTransaction} />
     </div>
   );
 }

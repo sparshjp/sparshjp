@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../App';
-import { Wallet, Plus, TrendingDown, TrendingUp, AlertTriangle, Loader2, BarChart3 } from 'lucide-react';
+import { Wallet, Plus, TrendingDown, TrendingUp, AlertTriangle, Loader2, BarChart3, Sparkles } from 'lucide-react';
+import AiEntryModal from '../components/AiEntryModal';
 
 const ALERT_COLORS = { on_track: '#22c55e', warning: '#f59e0b', over_budget: '#ef4444' };
 
@@ -12,6 +13,7 @@ export default function BudgetsPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: '', type: 'department', department: '', fiscal_year: '2025-26', line_items: [{ category: '', amount: 0 }] });
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -29,23 +31,10 @@ export default function BudgetsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const createBudget = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await fetch(`${API}/budgets`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      setShowForm(false);
-      setForm({ name: '', type: 'department', department: '', fiscal_year: '2025-26', line_items: [{ category: '', amount: 0 }] });
-      load();
-    } catch {}
-    setSubmitting(false);
-  };
-
-  const addLineItem = () => setForm(p => ({ ...p, line_items: [...p.line_items, { category: '', amount: 0 }] }));
-  const updateLineItem = (i, field, value) => {
-    const items = [...form.line_items];
-    items[i][field] = field === 'amount' ? Number(value) : value;
-    setForm(p => ({ ...p, line_items: items }));
+  const createBudget = async (data) => {
+    const res = await fetch(`${API}/budgets`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to create budget');
+    load();
   };
 
   const totalBudget = variance.reduce((s, v) => s + v.total_budget, 0);
@@ -60,7 +49,7 @@ export default function BudgetsPage() {
           <h1 className="text-2xl font-bold text-[#E8EDF2]" data-testid="budgets-title">Budget Management</h1>
           <p className="text-[#4A5B6E] text-sm mt-1">Department & project budgets with variance tracking</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-budget-btn"><Plus size={16} /> New Budget</button>
+        <button onClick={() => setShowAiModal(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-budget-btn"><Sparkles size={16} /> New Budget</button>
       </div>
 
       {/* Summary */}
@@ -122,36 +111,7 @@ export default function BudgetsPage() {
         )}
       </div>
 
-      {/* Create Budget Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={createBudget} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 w-full max-w-lg space-y-4 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[#E8EDF2]">New Budget</h2>
-            <input placeholder="Budget Name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" required data-testid="budget-name" />
-            <div className="grid grid-cols-3 gap-3">
-              <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none">
-                <option value="department">Department</option><option value="project">Project</option>
-              </select>
-              <input placeholder="Department" value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" />
-              <input placeholder="FY 2025-26" value={form.fiscal_year} onChange={e => setForm(p => ({ ...p, fiscal_year: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2"><span className="text-xs text-[#4A5B6E] uppercase tracking-wider">Line Items</span><button type="button" onClick={addLineItem} className="text-xs text-[#00C9A7] hover:underline">+ Add</button></div>
-              {form.line_items.map((li, i) => (
-                <div key={i} className="flex gap-2 mb-2">
-                  <input placeholder="Category" value={li.category} onChange={e => updateLineItem(i, 'category', e.target.value)} className="flex-1 px-2 py-1.5 bg-[#152236] border border-[#1B2D42] rounded text-sm text-[#E8EDF2] outline-none" />
-                  <input type="number" placeholder="Amount" value={li.amount || ''} onChange={e => updateLineItem(i, 'amount', e.target.value)} className="w-32 px-2 py-1.5 bg-[#152236] border border-[#1B2D42] rounded text-sm text-[#E8EDF2] outline-none" />
-                </div>
-              ))}
-              <p className="text-xs text-[#4A5B6E] text-right">Total: {form.line_items.reduce((s, li) => s + (li.amount || 0), 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</p>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm">Cancel</button>
-              <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1" data-testid="create-budget-btn">{submitting && <Loader2 size={14} className="animate-spin" />} Create</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <AiEntryModal open={showAiModal} onClose={() => setShowAiModal(false)} module="budget" title="New Budget" placeholder='e.g. "Engineering dept budget FY2025-26: Salaries 80L, Cloud infra 15L, Training 5L"' onSubmit={createBudget} />
     </div>
   );
 }

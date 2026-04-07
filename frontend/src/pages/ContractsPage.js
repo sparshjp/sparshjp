@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../App';
-import { FileText, Plus, AlertTriangle, CheckCircle2, Clock, Loader2, Calendar, DollarSign } from 'lucide-react';
+import { FileText, AlertTriangle, CheckCircle2, Clock, DollarSign, Sparkles } from 'lucide-react';
+import AiEntryModal from '../components/AiEntryModal';
 
 const STATUS_COLORS = { active: '#22c55e', expired: '#ef4444', terminated: '#6b7280', draft: '#f59e0b' };
 
@@ -9,10 +10,8 @@ export default function ContractsPage() {
   const [alerts, setAlerts] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const [expanded, setExpanded] = useState(null);
-  const [form, setForm] = useState({ title: '', type: 'msa', client_name: '', start_date: '', end_date: '', value: 0, currency: 'INR', billing_type: 'fixed', auto_renew: false, milestones: [] });
 
   const load = useCallback(async () => {
     try {
@@ -30,16 +29,10 @@ export default function ContractsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const createContract = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await fetch(`${API}/contracts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      setShowForm(false);
-      setForm({ title: '', type: 'msa', client_name: '', start_date: '', end_date: '', value: 0, currency: 'INR', billing_type: 'fixed', auto_renew: false, milestones: [] });
-      load();
-    } catch {}
-    setSubmitting(false);
+  const createContract = async (data) => {
+    const res = await fetch(`${API}/contracts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to create contract');
+    load();
   };
 
   const completeMilestone = async (contractId, msId) => {
@@ -59,7 +52,7 @@ export default function ContractsPage() {
           <h1 className="text-2xl font-bold text-[#E8EDF2]" data-testid="contracts-title">Contract Management</h1>
           <p className="text-[#4A5B6E] text-sm mt-1">SOW/MSA tracking, milestones & renewal alerts</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-contract-btn"><Plus size={16} /> New Contract</button>
+        <button onClick={() => setShowAiModal(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-contract-btn"><Sparkles size={16} /> New Contract</button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -136,39 +129,7 @@ export default function ContractsPage() {
         ))}
       </div>
 
-      {/* Create Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={createContract} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 w-full max-w-lg space-y-4 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[#E8EDF2]">New Contract</h2>
-            <input placeholder="Contract Title" value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" required data-testid="contract-title-input" />
-            <input placeholder="Client Name" value={form.client_name} onChange={e => setForm(p => ({ ...p, client_name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="contract-client" />
-            <div className="grid grid-cols-2 gap-3">
-              <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none">
-                <option value="msa">MSA</option><option value="sow">SOW</option><option value="nda">NDA</option><option value="amendment">Amendment</option>
-              </select>
-              <select value={form.billing_type} onChange={e => setForm(p => ({ ...p, billing_type: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none">
-                <option value="fixed">Fixed Price</option><option value="tm">T&M</option><option value="retainer">Retainer</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-xs text-[#4A5B6E]">Start Date</label><input type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" /></div>
-              <div><label className="text-xs text-[#4A5B6E]">End Date</label><input type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <input type="number" placeholder="Contract Value" value={form.value || ''} onChange={e => setForm(p => ({ ...p, value: Number(e.target.value) }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="contract-value" />
-              <select value={form.currency} onChange={e => setForm(p => ({ ...p, currency: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none">
-                <option value="INR">INR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option>
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-[#7A8BA0]"><input type="checkbox" checked={form.auto_renew} onChange={e => setForm(p => ({ ...p, auto_renew: e.target.checked }))} className="rounded" /> Auto-renew</label>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm">Cancel</button>
-              <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1" data-testid="create-contract-btn">{submitting && <Loader2 size={14} className="animate-spin" />} Create</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <AiEntryModal open={showAiModal} onClose={() => setShowAiModal(false)} module="contract" title="New Contract" placeholder='e.g. "SOW for CloudMigrate with TechCorp, $200K fixed-price, Apr-Dec 2026, 3 milestones"' onSubmit={createContract} />
     </div>
   );
 }

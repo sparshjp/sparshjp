@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../App';
-import { Users, Plus, BarChart3, UserCheck, UserMinus, Loader2, Briefcase } from 'lucide-react';
+import { Users, BarChart3, UserCheck, UserMinus, Briefcase, Sparkles } from 'lucide-react';
+import AiEntryModal from '../components/AiEntryModal';
 
 export default function ResourcesPage() {
   const [tab, setTab] = useState('allocations');
@@ -9,9 +10,7 @@ export default function ResourcesPage() {
   const [utilization, setUtilization] = useState({});
   const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ employee_name: '', project_name: '', role: '', allocation_pct: 100, start_date: '', end_date: '', billable: true, bill_rate: 0 });
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -31,16 +30,10 @@ export default function ResourcesPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const createAllocation = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await fetch(`${API}/resources/allocations`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      setShowForm(false);
-      setForm({ employee_name: '', project_name: '', role: '', allocation_pct: 100, start_date: '', end_date: '', billable: true, bill_rate: 0 });
-      load();
-    } catch {}
-    setSubmitting(false);
+  const createAllocation = async (data) => {
+    const res = await fetch(`${API}/resources/allocations`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to create allocation');
+    load();
   };
 
   if (loading) return <div className="p-8 text-center text-[#4A5B6E]">Loading resources...</div>;
@@ -52,7 +45,7 @@ export default function ResourcesPage() {
           <h1 className="text-2xl font-bold text-[#E8EDF2]" data-testid="resources-title">Resource Planning</h1>
           <p className="text-[#4A5B6E] text-sm mt-1">Allocations, bench management & utilization</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-allocation-btn"><Plus size={16} /> Allocate</button>
+        <button onClick={() => setShowAiModal(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-allocation-btn"><Sparkles size={16} /> Allocate</button>
       </div>
 
       {/* Utilization Cards */}
@@ -148,32 +141,7 @@ export default function ResourcesPage() {
         </div>
       )}
 
-      {/* Create Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={createAllocation} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 w-full max-w-lg space-y-4">
-            <h2 className="text-lg font-bold text-[#E8EDF2]">New Resource Allocation</h2>
-            <input placeholder="Employee Name" value={form.employee_name} onChange={e => setForm(p => ({ ...p, employee_name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" required data-testid="alloc-employee" />
-            <input placeholder="Project Name" value={form.project_name} onChange={e => setForm(p => ({ ...p, project_name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" required data-testid="alloc-project" />
-            <div className="grid grid-cols-2 gap-3">
-              <input placeholder="Role" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" />
-              <input type="number" placeholder="Allocation %" value={form.allocation_pct} onChange={e => setForm(p => ({ ...p, allocation_pct: Number(e.target.value) }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" max={100} data-testid="alloc-pct" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-xs text-[#4A5B6E]">Start</label><input type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" /></div>
-              <div><label className="text-xs text-[#4A5B6E]">End</label><input type="date" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex items-center gap-2 text-sm text-[#7A8BA0]"><input type="checkbox" checked={form.billable} onChange={e => setForm(p => ({ ...p, billable: e.target.checked }))} /> Billable</label>
-              <input type="number" placeholder="Bill Rate/hr" value={form.bill_rate || ''} onChange={e => setForm(p => ({ ...p, bill_rate: Number(e.target.value) }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm">Cancel</button>
-              <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1" data-testid="create-alloc-btn">{submitting && <Loader2 size={14} className="animate-spin" />} Allocate</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <AiEntryModal open={showAiModal} onClose={() => setShowAiModal(false)} module="resource_allocation" title="New Resource Allocation" placeholder='e.g. "Allocate Priya 100% to CloudMigrate as Tech Lead, billable at 3000/hr, Apr-Sep 2026"' onSubmit={createAllocation} />
     </div>
   );
 }

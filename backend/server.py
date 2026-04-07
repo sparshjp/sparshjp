@@ -1412,6 +1412,10 @@ RULES:
     import module_events
     module_events.set_db(db)
 
+    from routes_ai_entry import router as ai_entry_router, set_config as set_ai_entry_config
+    set_ai_entry_config(EMERGENT_KEY, db, os.environ.get("ANTHROPIC_API_KEY", ""), os.environ.get("OPENAI_API_KEY", ""))
+    api_router.include_router(ai_entry_router)
+
     logging.info("ERP modules integrated (including 10 advanced modules)")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

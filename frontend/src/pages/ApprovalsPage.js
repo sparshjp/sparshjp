@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../App';
-import { CheckCircle2, XCircle, Clock, Plus, ChevronDown, ChevronUp, Shield, Loader2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Shield, Sparkles } from 'lucide-react';
+import AiEntryModal from '../components/AiEntryModal';
 
 const STATUS_COLORS = { pending: '#f59e0b', approved: '#22c55e', rejected: '#ef4444' };
-const TYPES = ['purchase_order', 'sales_invoice', 'expense', 'journal_entry', 'leave_request', 'timesheet'];
 
 export default function ApprovalsPage() {
   const [tab, setTab] = useState('requests');
@@ -11,11 +11,8 @@ export default function ApprovalsPage() {
   const [workflows, setWorkflows] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
-  const [showWfForm, setShowWfForm] = useState(false);
-  const [showReqForm, setShowReqForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [wfForm, setWfForm] = useState({ name: '', type: 'purchase_order', threshold_amount: 0, steps: [{ role: 'admin', label: 'Admin Approval' }] });
-  const [reqForm, setReqForm] = useState({ type: 'purchase_order', reference_name: '', amount: 0, requester_name: '', comments: '' });
+  const [showWfModal, setShowWfModal] = useState(false);
+  const [showReqModal, setShowReqModal] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -33,37 +30,22 @@ export default function ApprovalsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const createWorkflow = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await fetch(`${API}/approvals/workflows`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(wfForm) });
-      setShowWfForm(false);
-      setWfForm({ name: '', type: 'purchase_order', threshold_amount: 0, steps: [{ role: 'admin', label: 'Admin Approval' }] });
-      load();
-    } catch {}
-    setSubmitting(false);
+  const createWorkflow = async (data) => {
+    const res = await fetch(`${API}/approvals/workflows`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to create workflow');
+    load();
   };
 
-  const submitRequest = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await fetch(`${API}/approvals/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reqForm) });
-      setShowReqForm(false);
-      setReqForm({ type: 'purchase_order', reference_name: '', amount: 0, requester_name: '', comments: '' });
-      load();
-    } catch {}
-    setSubmitting(false);
+  const submitRequest = async (data) => {
+    const res = await fetch(`${API}/approvals/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to submit request');
+    load();
   };
 
   const handleAction = async (reqId, action) => {
     await fetch(`${API}/approvals/requests/${reqId}/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approved_by: 'admin', rejected_by: 'admin', comments: '' }) });
     load();
   };
-
-  const addStep = () => setWfForm(p => ({ ...p, steps: [...p.steps, { role: 'admin', label: '' }] }));
-  const removeStep = (i) => setWfForm(p => ({ ...p, steps: p.steps.filter((_, idx) => idx !== i) }));
 
   if (loading) return <div className="p-8 text-center text-[#4A5B6E]">Loading approvals...</div>;
 
@@ -77,8 +59,8 @@ export default function ApprovalsPage() {
           <p className="text-[#4A5B6E] text-sm mt-1">Configurable approval chains for POs, invoices, expenses</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowReqForm(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] transition-colors flex items-center gap-1" data-testid="new-request-btn"><Plus size={16} /> New Request</button>
-          <button onClick={() => setShowWfForm(true)} className="px-3 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm hover:bg-[#152236] transition-colors flex items-center gap-1" data-testid="new-workflow-btn"><Shield size={16} /> New Workflow</button>
+          <button onClick={() => setShowReqModal(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] transition-colors flex items-center gap-1" data-testid="new-request-btn"><Sparkles size={16} /> New Request</button>
+          <button onClick={() => setShowWfModal(true)} className="px-3 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm hover:bg-[#152236] transition-colors flex items-center gap-1" data-testid="new-workflow-btn"><Shield size={16} /> New Workflow</button>
         </div>
       </div>
 
@@ -167,59 +149,9 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      {/* Workflow Form Modal */}
-      {showWfForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowWfForm(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={createWorkflow} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 w-full max-w-lg space-y-4">
-            <h2 className="text-lg font-bold text-[#E8EDF2]">New Approval Workflow</h2>
-            <input placeholder="Workflow Name" value={wfForm.name} onChange={e => setWfForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] focus:border-[#00C9A7] outline-none" required data-testid="wf-name" />
-            <div className="grid grid-cols-2 gap-3">
-              <select value={wfForm.type} onChange={e => setWfForm(p => ({ ...p, type: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="wf-type">
-                {TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
-              </select>
-              <input type="number" placeholder="Threshold Amount" value={wfForm.threshold_amount} onChange={e => setWfForm(p => ({ ...p, threshold_amount: Number(e.target.value) }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="wf-threshold" />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2"><span className="text-xs text-[#4A5B6E] uppercase tracking-wider">Approval Steps</span><button type="button" onClick={addStep} className="text-xs text-[#00C9A7] hover:underline">+ Add Step</button></div>
-              {wfForm.steps.map((s, i) => (
-                <div key={i} className="flex gap-2 mb-2">
-                  <select value={s.role} onChange={e => { const ns = [...wfForm.steps]; ns[i].role = e.target.value; setWfForm(p => ({ ...p, steps: ns })); }} className="flex-1 px-2 py-1.5 bg-[#152236] border border-[#1B2D42] rounded text-sm text-[#E8EDF2] outline-none">
-                    {['admin', 'creator', 'finance_manager', 'project_manager', 'hr_manager'].map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
-                  </select>
-                  <input placeholder="Step Label" value={s.label} onChange={e => { const ns = [...wfForm.steps]; ns[i].label = e.target.value; setWfForm(p => ({ ...p, steps: ns })); }} className="flex-1 px-2 py-1.5 bg-[#152236] border border-[#1B2D42] rounded text-sm text-[#E8EDF2] outline-none" />
-                  {wfForm.steps.length > 1 && <button type="button" onClick={() => removeStep(i)} className="text-[#ef4444] text-xs px-2">X</button>}
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowWfForm(false)} className="px-4 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm">Cancel</button>
-              <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1" data-testid="create-workflow-btn">{submitting && <Loader2 size={14} className="animate-spin" />} Create</button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Request Form Modal */}
-      {showReqForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowReqForm(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={submitRequest} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 w-full max-w-lg space-y-4">
-            <h2 className="text-lg font-bold text-[#E8EDF2]">Submit Approval Request</h2>
-            <select value={reqForm.type} onChange={e => setReqForm(p => ({ ...p, type: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="req-type">
-              {TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
-            </select>
-            <input placeholder="Reference Name" value={reqForm.reference_name} onChange={e => setReqForm(p => ({ ...p, reference_name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" required data-testid="req-ref-name" />
-            <div className="grid grid-cols-2 gap-3">
-              <input type="number" placeholder="Amount" value={reqForm.amount} onChange={e => setReqForm(p => ({ ...p, amount: Number(e.target.value) }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="req-amount" />
-              <input placeholder="Requester Name" value={reqForm.requester_name} onChange={e => setReqForm(p => ({ ...p, requester_name: e.target.value }))} className="px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="req-requester" />
-            </div>
-            <textarea placeholder="Comments" value={reqForm.comments} onChange={e => setReqForm(p => ({ ...p, comments: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none h-20 resize-none" />
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowReqForm(false)} className="px-4 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm">Cancel</button>
-              <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1" data-testid="submit-request-btn">{submitting && <Loader2 size={14} className="animate-spin" />} Submit</button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* AI Entry Modals */}
+      <AiEntryModal open={showWfModal} onClose={() => setShowWfModal(false)} module="approval_workflow" title="New Approval Workflow" placeholder='e.g. "PO approval: above 50K needs finance_manager, above 5L needs admin"' onSubmit={createWorkflow} />
+      <AiEntryModal open={showReqModal} onClose={() => setShowReqModal(false)} module="approval_request" title="Submit Approval Request" placeholder='e.g. "Submit expense claim for Raj - 45000 INR for client travel"' onSubmit={submitRequest} />
     </div>
   );
 }

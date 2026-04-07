@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../App';
-import { Globe, Plus, Trash2, Copy, Loader2, Users, Key } from 'lucide-react';
+import { Globe, Trash2, Copy, Users, Key, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import AiEntryModal from '../components/AiEntryModal';
 
 export default function PortalPage() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ client_name: '', contact_name: '', email: '', projects: [] });
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -20,16 +19,10 @@ export default function PortalPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const createClient = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await fetch(`${API}/portal/clients`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      setShowForm(false);
-      setForm({ client_name: '', contact_name: '', email: '', projects: [] });
-      load();
-    } catch {}
-    setSubmitting(false);
+  const createClient = async (data) => {
+    const res = await fetch(`${API}/portal/clients`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to add portal client');
+    load();
   };
 
   const deleteClient = async (id) => {
@@ -52,7 +45,7 @@ export default function PortalPage() {
           <h1 className="text-2xl font-bold text-[#E8EDF2]" data-testid="portal-title">Client Portal</h1>
           <p className="text-[#4A5B6E] text-sm mt-1">Manage external client access to projects, invoices & timesheets</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-portal-client-btn"><Plus size={16} /> Add Client</button>
+        <button onClick={() => setShowAiModal(true)} className="px-3 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-semibold hover:bg-[#00b396] flex items-center gap-1" data-testid="new-portal-client-btn"><Sparkles size={16} /> Add Client</button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -100,22 +93,7 @@ export default function PortalPage() {
         ))}
       </div>
 
-      {/* Create Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={createClient} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 w-full max-w-lg space-y-4">
-            <h2 className="text-lg font-bold text-[#E8EDF2]">Add Portal Client</h2>
-            <input placeholder="Client / Company Name" value={form.client_name} onChange={e => setForm(p => ({ ...p, client_name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" required data-testid="portal-client-name" />
-            <input placeholder="Contact Person" value={form.contact_name} onChange={e => setForm(p => ({ ...p, contact_name: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="portal-contact-name" />
-            <input type="email" placeholder="Email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none" data-testid="portal-email" />
-            <p className="text-xs text-[#4A5B6E]">A JWT portal token will be auto-generated upon creation. Share this token with the client to access their portal.</p>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm">Cancel</button>
-              <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#00C9A7] text-[#0A1628] rounded-lg text-sm font-bold hover:bg-[#00b396] disabled:opacity-50 flex items-center gap-1" data-testid="create-portal-client-btn">{submitting && <Loader2 size={14} className="animate-spin" />} Create</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <AiEntryModal open={showAiModal} onClose={() => setShowAiModal(false)} module="portal_client" title="Add Portal Client" placeholder='e.g. "Add TechCorp to portal, contact: John Smith, john@techcorp.com"' onSubmit={createClient} />
     </div>
   );
 }
