@@ -107,6 +107,9 @@ async def approve_request(req_id: str, body: dict):
     else:
         req["current_step"] = step_idx + 1
     await db.approval_requests.update_one({"id": req_id}, {"$set": {"steps": req["steps"], "current_step": req["current_step"], "status": req["status"]}})
+    # Event: Approval actioned → Notification
+    import module_events
+    await module_events.on_approval_actioned(req, "approve", body.get("approved_by", "admin"))
     return req
 
 @router.post("/requests/{req_id}/reject")
@@ -122,6 +125,9 @@ async def reject_request(req_id: str, body: dict):
         req["steps"][step_idx]["comments"] = body.get("comments", "")
     req["status"] = "rejected"
     await db.approval_requests.update_one({"id": req_id}, {"$set": {"steps": req["steps"], "status": "rejected"}})
+    # Event: Rejection → Notification
+    import module_events
+    await module_events.on_approval_actioned(req, "reject", body.get("rejected_by", "admin"))
     return req
 
 @router.get("/pending/{role}")

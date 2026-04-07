@@ -1409,6 +1409,9 @@ RULES:
     set_portal_db(db)
     api_router.include_router(portal_router)
 
+    import module_events
+    module_events.set_db(db)
+
     logging.info("ERP modules integrated (including 10 advanced modules)")
 except Exception as e:
     logging.error(f"Failed to integrate ERP modules: {e}")

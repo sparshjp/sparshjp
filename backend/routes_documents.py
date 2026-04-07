@@ -50,6 +50,9 @@ async def upload_document(file: UploadFile = File(...), entity_type: str = Form(
     }
     await db.documents.insert_one(doc)
     doc.pop("_id", None)
+    # Event: Document uploaded → Compliance access log
+    import module_events
+    await module_events.on_document_uploaded(doc)
     return doc
 
 @router.get("/download/{doc_id}")

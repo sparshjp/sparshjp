@@ -38,6 +38,9 @@ async def create_allocation(body: dict):
     }
     await db.resource_allocations.insert_one(alloc)
     alloc.pop("_id", None)
+    # Event: Resource allocated → Update project team
+    import module_events
+    await module_events.on_resource_allocated(alloc)
     return alloc
 
 @router.put("/allocations/{alloc_id}")

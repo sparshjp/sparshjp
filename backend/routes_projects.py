@@ -2,6 +2,8 @@
 from fastapi import APIRouter, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import uuid
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -14,6 +16,65 @@ async def list_projects():
     db = get_db()
     projects = await db.projects.find({}, {"_id": 0}).to_list(100)
     return projects
+
+@router.post("")
+async def create_project(body: dict):
+    db = get_db()
+    project_id = body.get("id") or f"PRJ-{str(uuid.uuid4())[:6].upper()}"
+    project = {
+        "id": project_id,
+        "name": body.get("name", ""),
+        "client": body.get("client", ""),
+        "type": body.get("type", "T&M"),
+        "pm": body.get("pm", ""),
+        "status": body.get("status", "ACTIVE"),
+        "health": body.get("health", "GREEN"),
+        "pct_complete": body.get("pct_complete", 0),
+        "value_inr": body.get("value_inr", 0),
+        "value_usd": body.get("value_usd", 0),
+        "currency": body.get("currency", "INR"),
+        "billing": body.get("billing", "Monthly"),
+        "duration": body.get("duration", ""),
+        "team_names": body.get("team_names", []),
+        "milestones": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    for ms in body.get("milestones", []):
+        project["milestones"].append({
+            "id": ms.get("id") or f"MS-{str(uuid.uuid4())[:4].upper()}",
+            "name": ms.get("name", ""),
+            "value": ms.get("value", 0),
+            "currency": ms.get("currency", project["currency"]),
+            "status": ms.get("status", "Pending"),
+            "date": ms.get("date", ""),
+        })
+    await db.projects.insert_one(project)
+    result = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    return result
+
+@router.put("/{project_id}")
+async def update_project(project_id: str, body: dict):
+    db = get_db()
+    update_fields = {}
+    for key in ["name", "client", "type", "pm", "status", "health", "pct_complete",
+                 "value_inr", "value_usd", "currency", "billing", "duration", "team_names", "milestones"]:
+        if key in body:
+            update_fields[key] = body[key]
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.projects.update_one({"id": project_id}, {"$set": update_fields})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return await db.projects.find_one({"id": project_id}, {"_id": 0})
+
+@router.delete("/{project_id}")
+async def delete_project(project_id: str):
+    db = get_db()
+    result = await db.projects.delete_one({"id": project_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"status": "deleted"}
 
 @router.get("/{project_id}")
 async def get_project(project_id: str):
@@ -99,14 +160,4 @@ async def project_health_dashboard():
         })
     return result
 
-@router.put("/{project_id}/status")
-async def update_project_status(project_id: str, body: dict):
-    db = get_db()
-    update_fields = {}
-    for key in ["status", "health", "pct_complete"]:
-        if key in body:
-            update_fields[key] = body[key]
-    if not update_fields:
-        raise HTTPException(status_code=400, detail="No fields to update")
-    await db.projects.update_one({"id": project_id}, {"$set": update_fields})
-    return {"status": "updated"}
+

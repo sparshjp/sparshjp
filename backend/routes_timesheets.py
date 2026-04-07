@@ -37,12 +37,17 @@ async def create_timesheet(body: dict):
 @router.put("/{timesheet_id}/approve")
 async def approve_timesheet(timesheet_id: str):
     db = get_db()
+    ts = await db.timesheets.find_one({"id": timesheet_id}, {"_id": 0})
     result = await db.timesheets.update_one(
         {"id": timesheet_id},
         {"$set": {"status": "Approved", "approved_at": datetime.now(timezone.utc).isoformat()}}
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Timesheet not found")
+    # Event: Timesheet approved → Billing queue + Notification
+    if ts:
+        import module_events
+        await module_events.on_timesheet_approved(ts)
     return {"status": "approved"}
 
 @router.put("/{timesheet_id}/reject")

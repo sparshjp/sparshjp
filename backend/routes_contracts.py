@@ -49,6 +49,9 @@ async def create_contract(body: dict):
         m["invoiced"] = m.get("invoiced", False)
     await db.contracts.insert_one(contract)
     contract.pop("_id", None)
+    # Event: Contract created → Auto-create project
+    import module_events
+    await module_events.on_contract_created(contract)
     return contract
 
 @router.get("/{contract_id}")
@@ -76,6 +79,12 @@ async def complete_milestone(contract_id: str, ms_id: str, body: dict):
             m["completed_at"] = datetime.now(timezone.utc).isoformat()
             m["completed_by"] = body.get("completed_by", "")
     await db.contracts.update_one({"id": contract_id}, {"$set": {"milestones": c["milestones"]}})
+    # Event: Milestone completed → Billing + Notification
+    for m in c.get("milestones", []):
+        if m["id"] == ms_id and m["status"] == "completed":
+            import module_events
+            await module_events.on_milestone_completed(c, m)
+            break
     return c
 
 @router.get("/alerts/renewals")

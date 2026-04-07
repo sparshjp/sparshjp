@@ -235,6 +235,56 @@ Banks: HDFC(6840000), Axis(2250000), EEFC USD(3042000) | TB: 28142000 (balanced)
 TECH: FastAPI+Motor(MongoDB) backend:8001 | React+Tailwind+Shadcn frontend:3000
 Design: Dark #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00d4aa accent
 
+## ERP MODULE MAP (22 Modules — All Interlinked)
+
+### Core Modules & Endpoints
+- **Projects** `/api/projects` — GET list, GET /{id}, GET /{id}/timesheets, GET /{id}/transactions, GET /health/dashboard, PUT /{id}/status. DB: `projects`. **MISSING: POST create — ADD IT.**
+- **Timesheets** `/api/timesheets` — GET list(?employee_id,week,project_id), POST create, PUT /{id}/approve, PUT /{id}/reject, GET /utilization, GET /consolidation, GET /employees. DB: `timesheets`
+- **Approvals** `/api/approvals` — GET /workflows, POST /workflows, GET /requests, POST /requests, POST /requests/{id}/approve, POST /requests/{id}/reject, GET /stats. DB: `approval_workflows`, `approval_requests`
+- **Budgets** `/api/budgets` — GET list, POST create, GET /variance, GET /alerts. DB: `budgets`
+- **Contracts** `/api/contracts` — GET list, POST create, GET /{id}, GET /alerts/renewals, GET /stats/summary, POST /{id}/milestones/{ms_id}/complete. DB: `contracts`
+- **Resources** `/api/resources` — GET /allocations, POST /allocations, GET /bench, GET /utilization, GET /forecast. DB: `resource_allocations`
+- **Forex** `/api/forex` — GET /rates, POST /rates/fetch-live, GET /transactions, POST /transactions, POST /transactions/{id}/settle, GET /revaluation. DB: `forex_rates`, `forex_transactions`
+- **Billing** `/api/billing` — GET /stats, GET /unbilled, POST /generate-invoice, GET /milestone-invoices, POST /milestone-invoice. DB: `billing_invoices`
+- **Documents** `/api/documents` — GET list, POST /upload, GET /download/{id}, DELETE /{id}, GET /categories, GET /stats. DB: `erp_documents`
+- **Notifications** `/api/notifications` — GET list, POST create, PUT /{id}/read, PUT /read-all, DELETE /{id}, GET /unread-count, POST /generate-reminders. DB: `notifications`
+- **Compliance** `/api/compliance` — GET /frameworks, GET /dashboard, PUT /controls/{fw}/{id}, GET /access-logs, POST /access-logs. DB: `compliance_controls`, `compliance_access_logs`
+- **Portal** `/api/portal` — GET /clients, POST /clients, DELETE /clients/{id}, GET /my/dashboard, GET /my/projects, GET /my/invoices. DB: `portal_clients`
+
+### INTER-MODULE LINKING RULES (Event-Driven Pipeline)
+When you modify any module, ALWAYS implement these cross-module triggers:
+
+1. **Contract Created → Auto-create Project**: When POST /contracts with milestones, also insert into `projects` collection with matching project_id, client, value, type, milestones.
+2. **Contract Milestone Completed → Billing + Notification**: When POST /contracts/{id}/milestones/{ms_id}/complete, insert a record in `billing_invoices` (draft) AND insert a notification ("Milestone X completed, invoice ready").
+3. **Timesheet Approved → Billing Queue + Resource Update**: When PUT /timesheets/{id}/approve, mark those entries as billing-ready in the timesheet doc (invoiceable=true). Update resource utilization.
+4. **Budget Threshold Exceeded → Approval Request + Notification**: When POST /budgets or budget variance check shows >80% usage, auto-create an approval_request of type "budget_override" AND a notification.
+5. **Approval Approved/Rejected → Notification**: When POST /approvals/requests/{id}/approve or reject, insert a notification for the requester.
+6. **Resource Allocated → Link to Project Team**: When POST /resources/allocations, update the project's team_names array.
+7. **Contract Expiring (<30d) → Notification**: The /contracts/alerts/renewals endpoint feeds into /notifications/generate-reminders.
+8. **Invoice Generated → Forex Transaction**: When billing generates an invoice for a non-INR contract, auto-create a forex_transaction.
+9. **Document Uploaded → Compliance Log**: When POST /documents/upload, log to compliance_access_logs.
+
+### Frontend Pages (all in /app/frontend/src/pages/)
+Projects: ProjectsModule.js — NEEDS "New Project" form with fields: name, client, type(Fixed-Price/T&M/Retainer/etc), pm, value, currency, team_names[], milestones[], billing, duration, status, health
+Timesheets: TimesheetsPage.js — NEEDS "New Timesheet" form with fields: employee_id, employee_name, week, week_start, week_end, entries[{project_id, hours, billable, note, rate, currency}], leave_hours, leave_type
+Both pages are currently READ-ONLY with no create/edit UI. This is a critical gap.
+
+### DB Schema Quick Reference
+- projects: {id, name, client, type, pm, status, health, pct_complete, value_inr, value_usd, currency, billing, duration, team_names[], milestones[{id,name,value,currency,status,date}]}
+- timesheets: {id, employee_id, employee_name, week, week_start, week_end, total_hours, status, entries[{project_id,hours,billable,note,rate,currency,ot_hours}], leave_hours, leave_type}
+- approval_workflows: {id, name, type, threshold_amount, steps[{role,label}], is_active}
+- approval_requests: {id, type, reference_name, amount, requester_name, status, steps[], comments}
+- budgets: {id, name, type, department, fiscal_year, line_items[{category,amount,actual}], status}
+- contracts: {id, contract_number, title, type, client_name, start_date, end_date, value, currency, billing_type, auto_renew, status, milestones[{id,name,amount,status,invoiced}]}
+- resource_allocations: {id, employee_name, project_name, role, allocation_pct, start_date, end_date, billable, bill_rate}
+- forex_rates: {base_currency, rates:{USD:x,...}, date, source}
+- forex_transactions: {id, type, reference_name, currency, foreign_amount, booking_rate, booking_inr, settlement_rate, settled, forex_gain_loss}
+- billing_invoices: {id, project_id, project_name, client, period, entries[], total_amount, status(draft/sent/paid), source(timesheet/milestone)}
+- erp_documents: {id, filename, content_type, size, entity_type, entity_id, entity_name, category, uploaded_at, file_path}
+- notifications: {id, title, message, type, priority, read, target_roles[], created_at}
+- compliance_controls: stored in frameworks dict, compliance_access_logs: {id, user_name, action, resource, ip_address, timestamp}
+- portal_clients: {id, client_name, contact_name, email, portal_token, is_active, projects[]}
+
 ## REASONING METHODOLOGY (CRITICAL)
 Before executing, mentally:
 1. **Decompose** — Break task into atomic steps. Identify dependencies.
@@ -1135,7 +1185,9 @@ async def _scaffold_module(args):
     with open(server_path, "r") as f:
         server_content = f.read()
 
-    marker = 'logging.info("ERP modules will be integrated")'
+    marker = 'logging.info("ERP modules integrated (including 10 advanced modules)")'
+    if marker not in server_content:
+        marker = 'logging.info("ERP modules will be integrated")'
     if marker in server_content:
         server_content = server_content.replace(marker, f"{registration_code}\n    {marker}")
         with open(server_path, "w") as f:
