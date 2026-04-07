@@ -1,55 +1,40 @@
 # Nexora IT ERP — Product Requirements Document
 
 ## Original Problem Statement
-Build an IT Services ERP ("Nexora IT ERP") with a Kairos AI Engine (autonomous developer), then layer enterprise modules: Project Management, Timesheets, Revenue Accrual, JWT RBAC Auth, and 10 Advanced Enterprise features.
+Build an IT Services ERP ("Nexora IT ERP") with a Kairos AI Engine (autonomous developer), then layer enterprise modules: Project Management, Timesheets, Revenue Accrual, JWT RBAC Auth, and 10 Advanced Enterprise features with full inter-module linking.
 
 ## Core Architecture
 - **Backend**: FastAPI + Motor (async MongoDB)
-- **Frontend**: React + Shadcn UI, dark theme
+- **Frontend**: React + Tailwind + Shadcn UI, dark theme (#0D1B2A bg, #00C9A7 accent)
 - **Auth**: JWT-based RBAC (roles: creator, admin, finance_manager, project_manager, hr_manager, ap_clerk, ar_clerk, tax_compliance, viewer)
-- **AI**: Kairos AI Engine v4 (autonomous execution, multi-file editing, custom API keys)
+- **AI**: Kairos AI Engine v4 (autonomous execution, multi-file editing, custom API keys, full module knowledge)
+- **Event System**: `module_events.py` — cross-module triggers (Contract→Project, Milestone→Billing+Forex, Timesheet→Billing, etc.)
 
-## What's Been Implemented (Complete)
+## What's Been Implemented
 
 ### Phase 1 — Core ERP (Done)
-- Dashboard with module summaries
-- CRM (Leads, Customers)
-- Selling (Sales Orders, Invoices)
-- Buying (Purchase Orders)
-- Stock & Manufacturing (Inventory, Manufacturing, Quality)
-- HR (Employees, Payroll)
-- Delivery / Projects / Timesheets
-- Accounting (Journal Entries, Revenue Recognition IndAS 115, Financial Statements, AP/AR Aging, Bank Reconciliation, Expense Management, Audit Trail)
-- GST (GSTR-1, GSTR-3B, GST Returns)
-- TDS (TDS Entries, TDS Returns)
-- Reporting AI (Ask Kairos)
-- Company Setup, Admin Settings
+Dashboard, CRM, Selling, Buying, Stock, Manufacturing, HR, Delivery, Projects, Timesheets, Accounting, GST, TDS, Reporting AI, Settings
 
 ### Phase 2 — Kairos AI Engine (Done)
-- Autonomous tool execution (create/edit files, run commands, analyze)
-- Multi-file editing support
-- Custom API key support (OpenAI, Anthropic, Groq, OpenRouter)
-- Emergent LLM Key fallback
-- Security hardened (no shell=True, no exec())
+Autonomous tool execution, multi-file editing, custom API keys, Emergent LLM Key fallback, security hardened
 
 ### Phase 3 — JWT Auth & RBAC (Done)
-- JWT email/password login
-- Role-based sidebar and API access
-- User Management (admin/creator can manage roles)
-- Seed credentials: kairoserp / ¢re@tor@AIengine
+JWT login, role-based sidebar/API access, User Management, seed credentials
 
 ### Phase 4 — 10 Advanced Enterprise Modules (Done — April 7, 2026)
-All backend CRUD APIs + React frontend pages + RBAC sidebar integration:
-1. **Approval Workflows** — Configurable approval chains, approve/reject, stats
-2. **Budget Management** — Department/project budgets, variance tracking, overspend alerts
-3. **Contract Management** — SOW/MSA/NDA tracking, milestones, renewal alerts
-4. **Resource Planning** — Allocations, bench view, utilization, staffing forecast
-5. **Forex Management** — Exchange rates, forex gain/loss, mark-to-market revaluation
-6. **Billing Automation** — Auto-invoice from timesheets & milestone completions
-7. **Document Management** — Upload/attach files, categorized, download
-8. **Notifications Center** — Reminders for overdue/expiring, mark read, filters
-9. **Compliance Dashboard** — SOC 2 & ISO 27001 control status, readiness %, access logs
-10. **Client Portal** — Manage portal clients, JWT tokens, client-facing endpoints
+Approvals, Budgets, Contracts, Resources, Forex, Billing, Documents, Notifications, Compliance, Client Portal
+
+### Phase 5 — Inter-Module Linking & UI Gaps Fixed (Done — April 7, 2026)
+1. **Project CRUD** — Added POST/PUT/DELETE endpoints + "New Project" form with milestones, team, currency
+2. **Timesheet CRUD** — Added "New Timesheet" form with project entries, approve/reject buttons
+3. **Inter-Module Event System** (`module_events.py`):
+   - Contract Created → Auto-create Project + Notification
+   - Milestone Completed → Draft Billing Invoice + Forex Transaction (if non-INR) + Notification
+   - Timesheet Approved → Mark billing-ready + Notification
+   - Approval Actioned → Notification to requester
+   - Resource Allocated → Update Project team_names
+   - Document Uploaded → Compliance access log
+4. **Kairos AI Knowledge** — Updated system prompt with all 22 module endpoints, DB schemas, and inter-module linking rules
 
 ## Prioritized Backlog
 
@@ -59,34 +44,14 @@ All backend CRUD APIs + React frontend pages + RBAC sidebar integration:
 
 ### P3
 - Refactor `routes_agents.py` monolithic `execute_tool` into `kairos_tools.py`
-- Split large React components further
 
-## Key Endpoints (New Modules)
-- `/api/approvals/*` — Workflows, Requests, Stats
-- `/api/budgets/*` — CRUD, Variance, Alerts
-- `/api/contracts/*` — CRUD, Milestones, Renewals
-- `/api/resources/*` — Allocations, Bench, Utilization, Forecast
-- `/api/forex/*` — Rates, Transactions, Revaluation
-- `/api/billing/*` — Stats, Unbilled, Generate Invoice, Milestone Invoice
-- `/api/documents/*` — CRUD, Upload, Download, Categories
-- `/api/notifications/*` — CRUD, Generate Reminders, Read/Unread
-- `/api/compliance/*` — Frameworks, Dashboard, Controls, Access Logs
-- `/api/portal/*` — Clients, Portal Token Access (my/projects, my/invoices)
-
-## DB Collections (New)
-- approval_workflows, approval_requests
-- budgets
-- contracts
-- resource_allocations
-- forex_rates, forex_transactions
-- billing_invoices
-- erp_documents
-- notifications
-- compliance_controls, compliance_access_logs
-- portal_clients
+## Key Files
+- `/app/backend/module_events.py` — Central event trigger system
+- `/app/backend/routes_projects.py` — Project CRUD with POST/PUT/DELETE
+- `/app/backend/routes_agents.py` — Kairos AI with full module knowledge
+- `/app/frontend/src/pages/ProjectsModule.js` — New Project form
+- `/app/frontend/src/pages/TimesheetsPage.js` — New Timesheet form + approve/reject
 
 ## Test Reports
-- Iteration 31: Direct API keys feature (PASS)
-- Iteration 32: Security and hook fixes (PASS)
-- Iteration 33: JWT Auth implementation (PASS)
 - Iteration 34: 10 Enterprise modules — 42/42 backend, 10/10 frontend (PASS)
+- Iteration 35: Inter-module linking + Project/Timesheet CRUD — 17/17 backend, 7/7 frontend (PASS)
