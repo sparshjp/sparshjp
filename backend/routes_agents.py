@@ -20,14 +20,18 @@ router = APIRouter(prefix="/agents", tags=["AI Engine"])
 EMERGENT_KEY = None
 GROQ_KEY = ""
 OPENROUTER_KEY = ""
+ANTHROPIC_API_KEY = ""
+OPENAI_API_KEY = ""
 db = None
 
 def set_config(key, database):
-    global EMERGENT_KEY, db, GROQ_KEY, OPENROUTER_KEY
+    global EMERGENT_KEY, db, GROQ_KEY, OPENROUTER_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY
     EMERGENT_KEY = key
     db = database
     GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
     OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 # ══════════════════════════════════════════════════════════
 # MULTI-PROVIDER LLM CLIENT (Claude → Gemini → GPT-5 → Groq → OpenRouter)
@@ -84,6 +88,38 @@ async def _call_gpt5(system: str, messages: list) -> str:
     combined = "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in messages])
     return await chat.send_message(UserMessage(text=combined))
 
+
+async def _call_claude_direct(system: str, messages: list) -> str:
+    """Call Claude directly using user's own Anthropic API key (zero Emergent credits)."""
+    import anthropic
+    client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+    msgs = []
+    for m in messages:
+        msgs.append({"role": m["role"], "content": m["content"]})
+    response = await client.messages.create(
+        model="claude-sonnet-4-5-20250929",
+        max_tokens=16000,
+        system=system,
+        messages=msgs,
+        temperature=0.3,
+    )
+    return response.content[0].text
+
+
+async def _call_gpt_direct(system: str, messages: list) -> str:
+    """Call OpenAI directly using user's own API key (zero Emergent credits)."""
+    from openai import AsyncOpenAI
+    client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+    msgs = [{"role": "system", "content": system}]
+    msgs.extend(messages)
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=msgs,
+        max_tokens=16000,
+        temperature=0.3,
+    )
+    return response.choices[0].message.content
+
 # Track recent provider failures for smart routing
 _provider_failures = {}  # {"groq": [timestamp, ...], ...}
 _FAILURE_WINDOW = 300  # 5 minutes — skip provider if failed recently
@@ -107,23 +143,40 @@ def _clear_failures(provider: str):
 
 async def call_llm(system: str, messages: list, preferred: str = "auto") -> tuple:
     PROVIDER_ORDERS = {
-        "claude": ["claude", "gemini", "gpt5", "groq", "openrouter"],
-        "gemini": ["gemini", "claude", "gpt5", "groq", "openrouter"],
-        "gpt5": ["gpt5", "claude", "gemini", "groq", "openrouter"],
-        "groq": ["groq", "claude", "gemini", "gpt5", "openrouter"],
-        "openrouter": ["openrouter", "groq", "claude", "gemini", "gpt5"],
+        "claude": ["claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "groq", "openrouter"],
+        "gemini": ["gemini", "claude_direct", "claude", "gpt_direct", "gpt5", "groq", "openrouter"],
+        "gpt5": ["gpt_direct", "gpt5", "claude_direct", "claude", "gemini", "groq", "openrouter"],
+        "groq": ["groq", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "openrouter"],
+        "openrouter": ["openrouter", "groq", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5"],
     }
-    # Smart default: Claude > Gemini > GPT-5 > Groq > OpenRouter
-    order = PROVIDER_ORDERS.get(preferred, ["claude", "gemini", "gpt5", "groq", "openrouter"])
+    # Smart default: direct keys first (zero Emergent credits), then Emergent, then 3rd party
+    default_order = []
+    if ANTHROPIC_API_KEY:
+        default_order.append("claude_direct")
+    if OPENAI_API_KEY:
+        default_order.append("gpt_direct")
+    default_order.extend(["claude", "gemini", "gpt5", "groq", "openrouter"])
+
+    order = PROVIDER_ORDERS.get(preferred, default_order)
+    # If user has direct keys, inject them at front of any provider order
+    if preferred not in PROVIDER_ORDERS:
+        order = default_order
     errors = []
     loop = asyncio.get_event_loop()
     for provider in order:
-        # Skip providers that have been failing recently
         if _should_skip_provider(provider):
             errors.append(f"{provider}: skipped (recent failures)")
             continue
         try:
-            if provider == "groq" and GROQ_KEY:
+            if provider == "claude_direct" and ANTHROPIC_API_KEY:
+                text = await _call_claude_direct(system, messages)
+                _clear_failures(provider)
+                return text, "claude (direct key)"
+            elif provider == "gpt_direct" and OPENAI_API_KEY:
+                text = await _call_gpt_direct(system, messages)
+                _clear_failures(provider)
+                return text, "gpt-4o (direct key)"
+            elif provider == "groq" and GROQ_KEY:
                 text = await loop.run_in_executor(None, _call_groq_sync, system, messages)
                 _clear_failures(provider)
                 return text, "groq"
@@ -171,174 +224,84 @@ def is_safe_path(path):
 # ══════════════════════════════════════════════════════════
 MAX_ITERATIONS = 10
 
-ENGINE_SYSTEM_PROMPT = """You are the Kairos AI Engine v3 — a FAST, AUTONOMOUS developer for Nexora Digital Solutions IT ERP.
-You work in an agentic loop. BE EFFICIENT: issue ALL tool calls in ONE response, prefer compound tools, minimize iterations.
+ENGINE_SYSTEM_PROMPT = """You are the Kairos AI Engine v4 — an AUTONOMOUS, senior-level full-stack developer for Nexora Digital Solutions IT ERP.
+You execute tasks immediately without planning pauses. You think like a principal engineer: plan internally, execute decisively, verify rigorously.
 
 COMPANY: Nexora Digital Solutions | GSTIN: 24AABCN4567P1Z8 | Gujarat | IT Services
 Revenue: INR/USD(84.50)/GBP(106.80) | 8 Projects, 20 Employees, 7 Clients, 10 Vendors
-Bank Accounts: HDFC Bank - Current (6840000), Axis Bank - Current (2250000), EEFC USD (3042000)
-TB Balance: 28142000 (balanced) | 26 CoA ledgers
-
-PROJECTS: PRJ-001 FinTrack(FP 45L,88%,asset=1.6L), PRJ-002 CloudMigration(T&M USD95/hr), PRJ-003 Analytics(Milestone 28L,50%,asset=7L), PRJ-004 ManagedSvcs(Retainer 4.5L/mo,liability=4.5L), PRJ-005 PayEdge(FP USD120K,CLOSED), PRJ-006 DevOps(T&M GBP140/hr), PRJ-007 DataWarehouse(Milestone 18L,33%,asset=7.08L)
+Banks: HDFC(6840000), Axis(2250000), EEFC USD(3042000) | TB: 28142000 (balanced) | 26 CoA
 
 TECH: FastAPI+Motor(MongoDB) backend:8001 | React+Tailwind+Shadcn frontend:3000
-Design: Dark theme #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00d4aa accent
+Design: Dark #0D1B2A bg, #152236 cards, #1B2D42 borders, #E8EDF2 text, #00d4aa accent
 
-## SPEED RULES (CRITICAL)
-- Issue ALL tool calls you need in a SINGLE response. Tools run in PARALLEL.
-- Use `scaffold_module` for new backend modules (1 tool = creates file + registers + restarts + tests).
-- Use `create_page` for new frontend pages (1 tool = creates file + registers route).
-- Backend auto-restarts after file changes. Do NOT manually call restart_service.
-- Answer from knowledge when possible. Only use tools when you need live data.
-- Target 1-2 steps per task. Only complex work needs 3+.
+## REASONING METHODOLOGY (CRITICAL)
+Before executing, mentally:
+1. **Decompose** — Break task into atomic steps. Identify dependencies.
+2. **Risk assess** — What could break? What are the edge cases?
+3. **Plan tool calls** — Batch all independent operations into ONE response.
+4. **Execute** — Issue tool calls. No planning-only responses.
+5. **Verify** — After changes, ALWAYS verify with test_api or verify_deployment.
+6. **Self-heal** — If something fails, read logs, diagnose, fix, retry. Never stop at an error.
 
-## TOOLS
+## DEBUGGING DISCIPLINE
+When fixing bugs:
+1. **Reproduce first** — Read the file, understand the current state before changing anything.
+2. **Trace the chain** — Follow the error from symptom → cause. Don't patch symptoms.
+3. **Fix root cause** — One precise change, not shotgun fixes.
+4. **Verify fix** — test_api or verify_deployment after every fix.
+5. **Regression check** — Ensure the fix doesn't break adjacent functionality.
 
-### File Operations
-1. **read_file(path, start_line?, end_line?)** — Read file content with line numbers.
-2. **create_file(path, content)** — Create NEW files only. Fails if exists.
-3. **patch_file(path, old_str, new_str)** — Search-and-replace. old_str must match exactly.
-4. **insert_lines(path, after_line, content)** — Insert text after a line number.
-5. **delete_lines(path, start_line, end_line)** — Delete line range.
-6. **write_file(path, content)** — Full overwrite (ONLY files <50 lines).
+## TOKEN EFFICIENCY
+- Keep tool call args minimal. Don't repeat file content in responses.
+- Use patch_file (search/replace) over write_file for targeted edits.
+- Use scaffold_module for new backend modules (1 tool = 5+ manual steps).
+- Compress your responses. Be terse. Code speaks louder than explanations.
+- When reading files, request specific line ranges, not entire files.
 
-### Compound Tools (FAST — prefer these for new modules)
-7. **scaffold_module(module_name, prefix, endpoints, imports?)** — Creates complete backend route file + registers in server.py + restarts backend + verifies startup. One call replaces 5+ manual steps.
-   Format: endpoints is a list of {method, path, name, body}
-   Body is the Python code inside the async function (indented 4 spaces, using `db` global).
-   Example:
-   ```TOOL_CALL
-   {"tool": "scaffold_module", "args": {"module_name": "leave_management", "prefix": "/leave", "endpoints": [{"method": "GET", "path": "", "name": "list_leaves", "body": "items = await db.leaves.find({}, {\\"_id\\": 0}).to_list(500)\\n    return items"}, {"method": "POST", "path": "", "name": "create_leave", "body": "body[\\"id\\"] = str(uuid.uuid4())\\n    body[\\"created_at\\"] = datetime.now(timezone.utc).isoformat()\\n    await db.leaves.insert_one(body)\\n    return {k:v for k,v in body.items() if k != \\"_id\\"}"}]}}
-   ```
-8. **create_page(page_name, route_path, title, api_endpoints?, content?)** — Creates React page + registers in App.js.
+## TOOLS (30)
 
-### Database & Infrastructure
-9. **get_schema(collection)** — Get field names/types from MongoDB collection.
-10. **run_query(query_type)** — full_health_check|tb_balance|entity_validation|project_health|collection_stats
-11. **restart_service(service)** — "backend" or "frontend" (auto-done by scaffold_module).
-12. **test_api(method, url, body?)** — Test /api/* endpoint. Returns status + response body.
-13. **check_logs(service, lines?)** — Read service logs. Default 50 lines.
-14. **install_package(package, manager?)** — pip/yarn install.
-15. **run_tests(test_path?)** — Run pytest.
+**File I/O**: read_file(path,start_line?,end_line?), create_file(path,content), write_file(path,content), patch_file(path,old_str,new_str), insert_lines(path,after_line,content), delete_lines(path,start_line,end_line), delete_file(path), move_file(source,destination)
+**Compound**: scaffold_module(module_name,prefix,endpoints,imports?), create_page(page_name,route_path,title,api_endpoints?,content?,icon?,nav_section?)
+**DB**: get_schema(collection), run_query(query_type)
+**Infra**: restart_service(service), install_package(package,manager?), check_logs(service,lines?), run_tests(test_path?)
+**Verification**: verify_deployment(checks[]), test_api(method,url,body?)
+**Search**: grep_search(pattern,directory?,file_ext?), list_files(directory), run_command(command)
+**Research**: web_search(query,max_results?), crawl_url(url), take_screenshot(url,full_page?,wait_ms?)
+**Config**: manage_env(action,file?,key?,value?)
+**Quality**: lint_code(path,fix?)
+**Git**: git_info(action,file?)
+**Subagents**: call_subagent(agent_type,task,context?) — types: tester, designer, integrator, troubleshooter
+**Batch**: batch_operations(operations[]) — parallel file ops: create/write/delete/move/patch/read, max 20
+**Image**: generate_image(prompt,size?)
 
-### Search
-16. **grep_search(pattern, directory?, file_ext?)** — Extended regex, case-insensitive code search.
-17. **list_files(directory)** — List project files.
-18. **run_command(command)** — Read-only bash (grep, wc, find, cat, head, tail).
-
-### Verification
-19. **verify_deployment(checks)** — Comprehensive deployment verification. Runs multiple checks in one call.
-   checks is a list of: {"type": "backend_health"}, {"type": "api", "url": "/api/...", "method": "GET", "expected_status": 200}, {"type": "frontend_route", "route": "/some-path"}, {"type": "file_exists", "path": "/app/..."}
-   Example:
-   ```TOOL_CALL
-   {"tool": "verify_deployment", "args": {"checks": [{"type": "backend_health"}, {"type": "api", "url": "/api/expenses", "method": "GET"}, {"type": "frontend_route", "route": "/expense-management"}, {"type": "file_exists", "path": "/app/backend/routes_expense_management.py"}]}}
-   ```
-
-### Research & Visual
-20. **web_search(query, max_results?)** — Search the web via DuckDuckGo. max_results defaults to 5.
-21. **take_screenshot(url, full_page?, wait_ms?)** — Screenshot any URL with headless Chromium. Path-only = local frontend.
-22. **crawl_url(url)** — Fetch and extract text content from any URL for research.
-
-### File Operations
-23. **delete_file(path)** — Delete a file in allowed directories.
-24. **move_file(source, destination)** — Move or rename a file. Creates dest dir if needed.
-
-### Environment & Config
-25. **manage_env(action, file?, key?, value?)** — Read/write .env files safely. action: read|set|delete. file: backend|frontend. Protected: MONGO_URL, DB_NAME, REACT_APP_BACKEND_URL.
-
-### Code Quality
-26. **lint_code(path, fix?)** — Run ruff (Python) or eslint (JS/JSX/TS/TSX). fix=true auto-fixes safe issues.
-
-### Version Control
-27. **git_info(action, file?)** — Git info. action: log|status|diff.
-
-### Subagents
-28. **call_subagent(agent_type, task, context?)** — Call a specialized AI expert for help. agent_type: "tester" (generates test plans & curl commands), "designer" (UI/UX specs & JSX skeletons), "integrator" (3rd party API playbooks), "troubleshooter" (root cause analysis & fix steps). context is optional extra info.
-   Example:
-   ```TOOL_CALL
-   {"tool": "call_subagent", "args": {"agent_type": "tester", "task": "Generate test plan for the expenses API endpoints", "context": "Endpoints: GET /api/expenses, POST /api/expenses, PUT /api/expenses/:id"}}
-   ```
-   ```TOOL_CALL
-   {"tool": "call_subagent", "args": {"agent_type": "designer", "task": "Design a Client Portal dashboard page with project status cards and invoice summary"}}
-   ```
-
-### Parallel File Operations
-29. **batch_operations(operations)** — Execute multiple file operations in parallel. Each op: {action: create|write|delete|move|patch|read, path, content?, destination?, search?, replace?}. Up to 20 ops per call.
-   Example:
-   ```TOOL_CALL
-   {"tool": "batch_operations", "args": {"operations": [{"action": "create", "path": "/app/backend/routes_new.py", "content": "..."}, {"action": "create", "path": "/app/frontend/src/pages/NewPage.js", "content": "..."}, {"action": "patch", "path": "/app/backend/server.py", "search": "old", "replace": "new"}]}}
-   ```
-
-### Image Generation
-30. **generate_image(prompt, size?)** — Generate an image using AI (GPT Image 1). size: "1024x1024", "1024x1536", "1536x1024". Returns image URL.
-   Example:
-   ```TOOL_CALL
-   {"tool": "generate_image", "args": {"prompt": "Modern dark-themed dashboard mockup for IT services ERP", "size": "1536x1024"}}
-   ```
-
-### NOTES on tools
-- **run_command** has full bash access (timeout up to 120s). Use for: `rm`, `mv`, `cp`, `sudo`, `apt install`, `yarn add`, file redirects, piped commands, etc.
-- **install_package(package, manager?)** — manager can be "pip" or "yarn". Use `yarn` for frontend packages.
-- **restart_service(service)** — service can be "backend" OR "frontend". Use after changing .env or installing packages.
-
-## CODE PATTERNS
-- Route file: `router = APIRouter(prefix="/x")` + `set_db(database)` — NEVER create own motor client
-- IDs: `str(uuid.uuid4())` | Timestamps: `datetime.now(timezone.utc).isoformat()`
-- ALWAYS exclude `_id`: `{"_id": 0}` in projection
-- Frontend: `import { API } from '../App'` then `fetch(\`\${API}/endpoint\`)`
-- Lucide React icons, Shadcn/UI components, data-testid on all elements
-
-BUSINESS: GST intra=CGST+SGST, inter=IGST. Export=zero-rated LUT. TDS: 194J(10%), 194C(2%), 194I(10%). Revenue Ind AS 115: FP=POC, T&M=right-to-invoice, Milestone=acceptance, Retainer=straight-line.
-
-## OUTPUT FORMAT
-Issue MULTIPLE tool calls in one response:
+## TOOL CALL FORMAT
 ```TOOL_CALL
 {"tool": "tool_name", "args": {...}}
 ```
-```TOOL_CALL
-{"tool": "another_tool", "args": {...}}
-```
+Multiple tool calls in ONE response = PARALLEL execution.
+
 ```DONE
 Summary of what was accomplished
 ```
 ```QUESTION
-Clarifying question
+Clarifying question (ONLY when genuinely blocked)
 ```
 
-RULES:
-- ALL tool calls in ONE response run in PARALLEL. Be aggressive with batching.
-- Prefer scaffold_module + test_api over manual create_file + insert_lines + restart_service + check_logs.
-- Use `web_search` to find documentation, code examples, or library info when you don't know something. Combine with the existing `crawl-url` upload endpoint to read full pages.
-- Use `take_screenshot` after creating/modifying frontend pages to visually verify UI changes.
-- **ALWAYS verify your work before finishing.** After creating/modifying backend modules, use `verify_deployment` to confirm: backend health, API endpoints return expected status, frontend routes are registered, files exist. NEVER say DONE without verification.
-- Maximum """ + str(MAX_ITERATIONS) + """ iterations.
+## CODE PATTERNS
+- Routes: `router = APIRouter(prefix="/x")` + `set_db(database)` — NEVER create own motor client
+- IDs: `str(uuid.uuid4())` | Timestamps: `datetime.now(timezone.utc).isoformat()`
+- ALWAYS exclude `_id`: `{"_id": 0}` in projection
+- Frontend: `import { API } from '../App'` then `fetch(\`\${API}/endpoint\`)` — API already includes /api
+- Lucide React icons, Shadcn/UI, data-testid on all elements
 
-## EXECUTION STYLE (CRITICAL)
-You are an AUTONOMOUS developer. You work exactly like a senior engineer:
-1. **ACT IMMEDIATELY** — When given a task, start executing tool calls RIGHT AWAY. Do NOT output a plan and wait. Do NOT ask "shall I proceed?" or "would you like me to...". Just DO IT.
-2. **Execute in batches** — Issue multiple tool calls per response. Read files + write code + test all in one step when possible.
-3. **Show your work via tool calls** — The user can see your progress through the tools you execute. Your thinking is visible in the step trail.
-4. **Only ask QUESTION when you genuinely cannot proceed** — Missing database name, ambiguous business rules, conflicting requirements. Never ask for permission to execute.
-5. **Always verify and report** — After making changes, verify deployment and output DONE with a clear summary of what was built/changed.
-6. **If something fails, fix it yourself** — Read error logs, diagnose, and fix. Don't stop and report the error. Fix it and continue.
+## EXECUTION RULES
+1. **ACT IMMEDIATELY** — Start executing tool calls. Never ask "shall I proceed?"
+2. **Batch aggressively** — Multiple independent tool calls in ONE response.
+3. **Self-heal on failure** — Read logs, diagnose, fix. Don't stop and report errors.
+4. **ALWAYS verify** — End with verify_deployment or test_api before DONE.
+5. **Maximum """ + str(MAX_ITERATIONS) + """ iterations.**
 
-BAD (do NOT do this):
-"Here's my plan:
-1. Create a new route file
-2. Add endpoints
-3. Register in server.py
-Shall I proceed?"
-
-GOOD (do this):
-```TOOL_CALL
-{"tool": "scaffold_module", "args": {...}}
-```
-```TOOL_CALL
-{"tool": "create_page", "args": {...}}
-```
-```TOOL_CALL
-{"tool": "verify_deployment", "args": {...}}
-```"""
+GST: intra=CGST+SGST, inter=IGST. Export=zero-rated LUT. TDS: 194J(10%), 194C(2%), 194I(10%). Revenue Ind AS 115: FP=POC, T&M=right-to-invoice, Milestone=acceptance, Retainer=straight-line."""
 
 BA_ONLY_SUFFIX = "\n\nMODE: Business Analysis Only. Focus on requirements, compliance, accounting. No code generation."
 DEV_ONLY_SUFFIX = "\n\nMODE: Coding Only. Read files, generate code, deploy. Skip business analysis."
@@ -2019,8 +1982,8 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                     _tasks[task_id]["thinking_text"] = "Plan received — now executing..."
 
                     # Smart context management — keep more messages
-                    if len(loop_messages) > 14:
-                        loop_messages = [loop_messages[0]] + loop_messages[-12:]
+                    if len(loop_messages) > 10:
+                        loop_messages = [loop_messages[0]] + loop_messages[-8:]
                     continue
                 else:
                     break
@@ -2092,17 +2055,17 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                 for tr in step_tool_results
             ]
             tool_summary = json.dumps(compressed_results, indent=1, default=str)
-            if len(tool_summary) > 12000:
-                tool_summary = tool_summary[:12000] + "\n... [COMPRESSED]"
+            if len(tool_summary) > 8000:
+                tool_summary = tool_summary[:8000] + "\n... [COMPRESSED]"
 
             loop_messages.append({"role": "assistant", "content": response_text})
             loop_messages.append({"role": "user", "content": f"[TOOL RESULTS — Step {step_num}]\n{tool_summary}\n\nAnalyze results. If there are errors, fix them immediately with new tool calls. If everything passed, run `verify_deployment` and then output ```DONE``` with a summary. Do NOT ask for permission — just continue working."})
 
             _tasks[task_id]["progress"] = f"Step {step_num} complete. Analyzing results..."
 
-            # Smart context management — keep more conversation history
-            if len(loop_messages) > 14:
-                loop_messages = [loop_messages[0]] + loop_messages[-12:]
+            # Smart context management — keep conversation focused, reduce token waste
+            if len(loop_messages) > 10:
+                loop_messages = [loop_messages[0]] + loop_messages[-8:]
 
         # ── SAVE RESULTS ──
         final_response = "\n\n".join(all_response_parts)
@@ -2195,13 +2158,96 @@ async def get_providers():
         if _should_skip_provider(name):
             return "rate_limited"
         return "active"
+    providers = [
+        {"name": "claude", "model": "claude-sonnet-4-5", "status": provider_status("claude", EMERGENT_KEY), "priority": 1, "key_type": "emergent"},
+        {"name": "gemini", "model": "gemini-3-flash", "status": provider_status("gemini", EMERGENT_KEY), "priority": 2, "key_type": "emergent"},
+        {"name": "gpt5", "model": "gpt-5", "status": provider_status("gpt5", EMERGENT_KEY), "priority": 3, "key_type": "emergent"},
+        {"name": "groq", "model": "llama-3.3-70b-versatile", "status": provider_status("groq", GROQ_KEY), "priority": 4, "key_type": "user"},
+        {"name": "openrouter", "model": "auto (free models)", "status": provider_status("openrouter", OPENROUTER_KEY), "priority": 5, "key_type": "user"},
+    ]
+    # Add direct key providers at the top if configured
+    if ANTHROPIC_API_KEY:
+        providers.insert(0, {"name": "claude_direct", "model": "claude-sonnet-4-5 (your key)", "status": "active", "priority": 0, "key_type": "direct"})
+    if OPENAI_API_KEY:
+        providers.insert(0 if not ANTHROPIC_API_KEY else 1, {"name": "gpt_direct", "model": "gpt-4o (your key)", "status": "active", "priority": 0, "key_type": "direct"})
     return {
-        "providers": [
-            {"name": "claude", "model": "claude-sonnet-4-5", "status": provider_status("claude", EMERGENT_KEY), "priority": 1},
-            {"name": "gemini", "model": "gemini-3-flash", "status": provider_status("gemini", EMERGENT_KEY), "priority": 2},
-            {"name": "gpt5", "model": "gpt-5", "status": provider_status("gpt5", EMERGENT_KEY), "priority": 3},
-            {"name": "groq", "model": "llama-3.3-70b-versatile", "status": provider_status("groq", GROQ_KEY), "priority": 4},
-            {"name": "openrouter", "model": "auto (free models)", "status": provider_status("openrouter", OPENROUTER_KEY), "priority": 5},
-        ],
+        "providers": providers,
         "fallback_order": ["claude", "gemini", "gpt5", "groq", "openrouter"],
+        "direct_keys": {
+            "anthropic": bool(ANTHROPIC_API_KEY),
+            "openai": bool(OPENAI_API_KEY),
+        },
+    }
+
+
+@router.get("/api-keys")
+async def get_api_keys():
+    """Check which direct API keys are configured."""
+    return {
+        "anthropic": {"configured": bool(ANTHROPIC_API_KEY), "masked": f"sk-ant-...{ANTHROPIC_API_KEY[-4:]}" if ANTHROPIC_API_KEY else None},
+        "openai": {"configured": bool(OPENAI_API_KEY), "masked": f"sk-...{OPENAI_API_KEY[-4:]}" if OPENAI_API_KEY else None},
+        "groq": {"configured": bool(GROQ_KEY), "masked": f"gsk_...{GROQ_KEY[-4:]}" if GROQ_KEY else None},
+        "openrouter": {"configured": bool(OPENROUTER_KEY), "masked": f"sk-or-...{OPENROUTER_KEY[-4:]}" if OPENROUTER_KEY else None},
+    }
+
+
+@router.post("/api-keys")
+async def set_api_key(body: dict):
+    """Set a direct API key. Saved to backend .env for persistence."""
+    global ANTHROPIC_API_KEY, OPENAI_API_KEY, GROQ_KEY, OPENROUTER_KEY
+    provider = body.get("provider", "")
+    key = body.get("key", "").strip()
+
+    key_map = {
+        "anthropic": ("ANTHROPIC_API_KEY", lambda k: globals().__setitem__("ANTHROPIC_API_KEY", k)),
+        "openai": ("OPENAI_API_KEY", lambda k: globals().__setitem__("OPENAI_API_KEY", k)),
+        "groq": ("GROQ_API_KEY", lambda k: globals().__setitem__("GROQ_API_KEY", k)),
+        "openrouter": ("OPENROUTER_API_KEY", lambda k: globals().__setitem__("OPENROUTER_API_KEY", k)),
+    }
+
+    if provider not in key_map:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}. Use: anthropic, openai, groq, openrouter")
+
+    env_var, setter = key_map[provider]
+
+    # Update in-memory
+    if provider == "anthropic":
+        ANTHROPIC_API_KEY = key
+    elif provider == "openai":
+        OPENAI_API_KEY = key
+    elif provider == "groq":
+        GROQ_KEY = key
+    elif provider == "openrouter":
+        OPENROUTER_KEY = key
+
+    # Persist to .env
+    env_path = "/app/backend/.env"
+    lines = []
+    found = False
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            for line in f:
+                if line.strip().startswith(f"{env_var}="):
+                    if key:
+                        lines.append(f"{env_var}={key}\n")
+                    found = True
+                else:
+                    lines.append(line)
+    if not found and key:
+        lines.append(f"{env_var}={key}\n")
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+
+    # Clear failure tracking for this provider
+    _clear_failures(provider)
+    if provider == "anthropic":
+        _clear_failures("claude_direct")
+    elif provider == "openai":
+        _clear_failures("gpt_direct")
+
+    return {
+        "status": "ok",
+        "provider": provider,
+        "configured": bool(key),
+        "masked": f"...{key[-4:]}" if key else None,
     }

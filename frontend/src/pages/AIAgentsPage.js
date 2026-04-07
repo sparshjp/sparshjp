@@ -6,7 +6,7 @@ import {
   AlertCircle, CheckCircle2, ChevronUp, Zap, Settings2, Play,
   Paperclip, Globe, Image, Link2, Search, Activity, GitBranch, Package,
   Brain, Camera, Eye, Trash, ArrowRightLeft, Settings, FileCode, GitCommit,
-  Bot, Layers, ImagePlus
+  Bot, Layers, ImagePlus, Key
 } from 'lucide-react';
 
 const MODES = [
@@ -262,6 +262,10 @@ export default function AIAgentsPage() {
   const [taskProgress, setTaskProgress] = useState('');
   const [liveSteps, setLiveSteps] = useState([]);
   const [thinkingText, setThinkingText] = useState('');
+  const [showApiKeys, setShowApiKeys] = useState(false);
+  const [apiKeys, setApiKeys] = useState({});
+  const [keyInputs, setKeyInputs] = useState({ anthropic: '', openai: '', groq: '', openrouter: '' });
+  const [keySaving, setKeySaving] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -269,7 +273,8 @@ export default function AIAgentsPage() {
   const pollingRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${API}/agents/sessions`).then(r => r.json()).then(setSessions).catch(() => {});
+    fetch(`${API}/agents/sessions`).then(r => r.ok ? r.json() : []).then(setSessions).catch(() => {});
+    fetch(`${API}/agents/api-keys`).then(r => r.ok ? r.json() : {}).then(setApiKeys).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -304,6 +309,40 @@ export default function AIAgentsPage() {
     await fetch(`${API}/agents/sessions/${sid}`, { method: 'DELETE' });
     setSessions(prev => prev.filter(s => s.id !== sid));
     if (activeSession === sid) { setActiveSession(null); setMessages([]); }
+  };
+
+  const saveApiKey = async (provider) => {
+    const key = keyInputs[provider];
+    setKeySaving(provider);
+    try {
+      const res = await fetch(`${API}/agents/api-keys`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, key }),
+      });
+      if (res.ok) {
+        const updated = await fetch(`${API}/agents/api-keys`).then(r => r.json());
+        setApiKeys(updated);
+        setKeyInputs(prev => ({ ...prev, [provider]: '' }));
+      }
+    } catch (e) { console.error(e); }
+    setKeySaving(null);
+  };
+
+  const removeApiKey = async (provider) => {
+    setKeySaving(provider);
+    try {
+      const res = await fetch(`${API}/agents/api-keys`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, key: '' }),
+      });
+      if (res.ok) {
+        const updated = await fetch(`${API}/agents/api-keys`).then(r => r.json());
+        setApiKeys(updated);
+      }
+    } catch (e) { console.error(e); }
+    setKeySaving(null);
   };
 
   const pollTask = useCallback(async (taskId, sessionId, userMsg, currentAttachments) => {
@@ -670,6 +709,14 @@ export default function AIAgentsPage() {
                 </>
               )}
             </div>
+            <button onClick={() => setShowApiKeys(!showApiKeys)} data-testid="api-keys-btn"
+              className={`px-2 py-1.5 rounded text-[9px] font-bold border transition-colors flex items-center gap-1 ${
+                Object.values(apiKeys).some(v => v?.configured)
+                  ? 'bg-[#00d4aa]/10 border-[#00d4aa]/30 text-[#00d4aa]'
+                  : 'bg-[#152236] border-[#1B2D42] text-[#4A5B6E] hover:text-[#a78bfa] hover:border-[#a78bfa]/30'
+              }`}>
+              <Key size={11} />API Keys
+            </button>
           </div>
         </div>
 
@@ -680,6 +727,59 @@ export default function AIAgentsPage() {
             <span className="text-[10px] font-mono text-[#22c55e]">{selectedFile}</span>
             <span className="text-[9px] text-[#4A5B6E]">({(fileContent.length / 1024).toFixed(1)}KB attached)</span>
             <button onClick={() => { setSelectedFile(null); setFileContent(''); }} className="ml-auto text-[#4A5B6E] hover:text-[#ef4444] transition-colors"><X size={12} /></button>
+          </div>
+        )}
+
+        {/* API Keys Settings Panel */}
+        {showApiKeys && (
+          <div className="border-b border-[#1B2D42] bg-[#060e1a] p-4" data-testid="api-keys-panel">
+            <div className="max-w-2xl mx-auto space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[#E8EDF2] flex items-center gap-2"><Key size={14} className="text-[#a78bfa]" /> Your API Keys</h3>
+                  <p className="text-[10px] text-[#4A5B6E] mt-0.5">Link your own keys to bypass Emergent credits. Direct keys are always used first.</p>
+                </div>
+                <button onClick={() => setShowApiKeys(false)} className="text-[#4A5B6E] hover:text-[#E8EDF2]"><X size={14} /></button>
+              </div>
+              {[
+                { id: 'anthropic', label: 'Anthropic (Claude)', placeholder: 'sk-ant-api03-...', color: '#a78bfa' },
+                { id: 'openai', label: 'OpenAI (GPT-4o)', placeholder: 'sk-proj-...', color: '#10a37f' },
+                { id: 'groq', label: 'Groq (Llama 3.3)', placeholder: 'gsk_...', color: '#f97316' },
+                { id: 'openrouter', label: 'OpenRouter', placeholder: 'sk-or-v1-...', color: '#06b6d4' },
+              ].map(p => (
+                <div key={p.id} className="flex items-center gap-2" data-testid={`api-key-${p.id}`}>
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: apiKeys[p.id]?.configured ? p.color : '#1B2D42' }} />
+                  <span className="text-[10px] font-bold text-[#7A8BA0] w-32 shrink-0">{p.label}</span>
+                  {apiKeys[p.id]?.configured ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-[#00d4aa]">{apiKeys[p.id].masked}</span>
+                      <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20">active</span>
+                      <button onClick={() => removeApiKey(p.id)} disabled={keySaving === p.id}
+                        className="text-[9px] text-[#ef4444]/60 hover:text-[#ef4444] transition-colors ml-auto">
+                        {keySaving === p.id ? <Loader2 size={10} className="animate-spin" /> : 'Remove'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center gap-1.5">
+                      <input
+                        type="password"
+                        placeholder={p.placeholder}
+                        value={keyInputs[p.id]}
+                        onChange={e => setKeyInputs(prev => ({ ...prev, [p.id]: e.target.value }))}
+                        className="flex-1 bg-[#0D1B2A] border border-[#1B2D42] rounded px-2 py-1 text-[10px] font-mono text-[#E8EDF2] placeholder-[#2A3F56] focus:border-[#00d4aa]/50 focus:outline-none"
+                        data-testid={`api-key-input-${p.id}`}
+                      />
+                      <button onClick={() => saveApiKey(p.id)} disabled={!keyInputs[p.id] || keySaving === p.id}
+                        className="px-2 py-1 rounded text-[9px] font-bold bg-[#00d4aa]/10 border border-[#00d4aa]/30 text-[#00d4aa] hover:bg-[#00d4aa]/20 transition-colors disabled:opacity-30"
+                        data-testid={`api-key-save-${p.id}`}>
+                        {keySaving === p.id ? <Loader2 size={10} className="animate-spin" /> : 'Save'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <p className="text-[9px] text-[#2A3F56] mt-2">Keys are stored in your backend .env file and never leave your server. When a direct key is configured, it takes priority over Emergent credits.</p>
+            </div>
           </div>
         )}
 

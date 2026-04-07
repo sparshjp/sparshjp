@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronRight, IndianRupee, FileSpreadsheet } from 'lucide-react';
-
-const API = process.env.REACT_APP_BACKEND_URL;
+import { API } from '../App';
 
 function downloadExport(endpoint, filename) {
   const url = `${API}/financial-statements/${endpoint}`;

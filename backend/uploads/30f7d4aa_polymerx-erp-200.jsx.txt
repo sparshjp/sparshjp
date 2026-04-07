@@ -1,0 +1,1289 @@
+import { useState, useMemo } from "react";
+
+// ─── COMPANY ────────────────────────────────────────────────────────────────
+const CO = {
+  name: "PolyMerx Specialty Chemicals Pvt. Ltd.",
+  reg: "U24100GJ2018PTC102847",
+  gstin: "24AABCP9876Z1A3",
+  iec: "AABCP9876Z",          // Import-Export Code
+  industry: "Specialty Chemicals",
+  hq: "GIDC Nandesari, Vadodara, Gujarat",
+  plant: "GIDC Nandesari Unit-1 & Unit-2",
+  period: "March 2026",
+  currency: "INR (exports in USD)",
+  usd_rate: 84.50,
+  costCenters: ["Production-U1","Production-U2","QC & R&D","Sales & Marketing","Logistics","Finance & Admin","Corporate"],
+  products_fg: ["EP-1000 Epoxy Resin","EP-2500 High-Clarity Epoxy","PU-C450 Polyurethane Coating","PU-F200 Flexible PU Foam","SA-700 Structural Adhesive","SA-350 Industrial Adhesive","SV-120 Chlorinated Solvent","SV-200 Acetone Blend","HB-50 Hardener Base","CB-10 Catalyst Blend"],
+  raw_materials: ["Bisphenol-A (BPA)","Epichlorohydrin (ECH)","MDI (Diphenylmethane diisocyanate)","TDI (Toluene diisocyanate)","Polyol","Methylene Chloride","Acetone","Triethylamine (TEA)","Titanium Dioxide","Carbon Black","Solvents (Toluene)","MIBK (Methyl Isobutyl Ketone)"],
+  gst_rates: { "18%": "Standard chemicals", "12%": "Certain polymers", "28%": "Select hazmat items" },
+};
+
+// ─── MASTER ──────────────────────────────────────────────────────────────────
+const EMPLOYEES = [
+  { id:"EMP001", name:"Vikram Rao",      dept:"Production-U1",     role:"Plant Head",            ctc:1_45_000, pf:true,  esi:false },
+  { id:"EMP002", name:"Meera Joshi",     dept:"QC & R&D",          role:"QC Manager",            ctc:98_000,  pf:true,  esi:false },
+  { id:"EMP003", name:"Arpit Shah",      dept:"Production-U1",     role:"Sr. Process Engineer",  ctc:82_000,  pf:true,  esi:false },
+  { id:"EMP004", name:"Kavita Nair",     dept:"Sales & Marketing",  role:"Sales Manager",         ctc:1_10_000,pf:true,  esi:false },
+  { id:"EMP005", name:"Rajan Pillai",    dept:"Sales & Marketing",  role:"Export Sales Exec",     ctc:75_000,  pf:true,  esi:false },
+  { id:"EMP006", name:"Sunita Gupta",    dept:"Finance & Admin",    role:"Finance Controller",    ctc:1_20_000,pf:true,  esi:false },
+  { id:"EMP007", name:"Deepak Verma",    dept:"Logistics",          role:"Supply Chain Head",     ctc:88_000,  pf:true,  esi:false },
+  { id:"EMP008", name:"Priya Menon",     dept:"QC & R&D",          role:"R&D Chemist",           ctc:65_000,  pf:true,  esi:false },
+  { id:"EMP009", name:"Sanjay Patil",    dept:"Production-U2",     role:"Shift Supervisor",      ctc:52_000,  pf:true,  esi:true  },
+  { id:"EMP010", name:"Laleh Hussain",   dept:"Production-U2",     role:"Reactor Operator",      ctc:38_000,  pf:true,  esi:true  },
+  { id:"EMP011", name:"Rajesh Yadav",    dept:"Production-U1",     role:"Maintenance Technician",ctc:35_000,  pf:true,  esi:true  },
+  { id:"EMP012", name:"Anita Bose",      dept:"Finance & Admin",   role:"Sr. Accountant",        ctc:55_000,  pf:true,  esi:false },
+  { id:"EMP013", name:"Harsh Trivedi",   dept:"Corporate",          role:"MD / Director",         ctc:3_50_000,pf:false, esi:false },
+  { id:"EMP014", name:"Fatima Sheikh",   dept:"Sales & Marketing",  role:"Inside Sales",          ctc:42_000,  pf:true,  esi:true  },
+  { id:"EMP015", name:"Om Prakash",      dept:"Logistics",          role:"Warehouse Supervisor",  ctc:40_000,  pf:true,  esi:true  },
+];
+
+const VENDORS = [
+  { id:"V001", name:"INEOS India Pvt. Ltd.",       cat:"Raw Material",   city:"Mumbai",     gstin:"27AABCI1234A1Z5", terms:"Net 30",     curr:"INR" },
+  { id:"V002", name:"Jubilant Chem Solutions",     cat:"Raw Material",   city:"Gajraula",   gstin:"09AAABJ5678B1Z8", terms:"Net 45",     curr:"INR" },
+  { id:"V003", name:"Huntsman Corp (Import)",      cat:"Raw Material",   city:"Singapore",  gstin:"IMPORT",          terms:"LC 60 days", curr:"USD" },
+  { id:"V004", name:"LANXESS India",               cat:"Raw Material",   city:"Mumbai",     gstin:"27AABCL9012C1Z2", terms:"Net 30",     curr:"INR" },
+  { id:"V005", name:"Reliance Petrochemicals",     cat:"Raw Material",   city:"Vadodara",   gstin:"24AAACR3456D1Z7", terms:"Net 15",     curr:"INR" },
+  { id:"V006", name:"Gujarat Containers Ltd.",     cat:"Packaging",      city:"Vadodara",   gstin:"24AABCG7890E1Z3", terms:"Net 30",     curr:"INR" },
+  { id:"V007", name:"SafeStore Chemicals (3PL)",   cat:"Storage/3PL",    city:"Nandesari",  gstin:"24AAABS1234F1Z9", terms:"Monthly",    curr:"INR" },
+  { id:"V008", name:"TransTech Freight Pvt.",      cat:"Logistics",      city:"Vadodara",   gstin:"24AABCT5678G1Z6", terms:"Net 15",     curr:"INR" },
+  { id:"V009", name:"Analytical Labs Pvt. Ltd.",   cat:"Testing Service", city:"Ahmedabad", gstin:"24AABCA9012H1Z4", terms:"Net 20",     curr:"INR" },
+  { id:"V010", name:"Thermax Engineering",         cat:"CapEx / Maint.", city:"Pune",       gstin:"27AAACT3456I1Z1", terms:"Net 60",     curr:"INR" },
+  { id:"V011", name:"Henkel AG (Import)",          cat:"Specialty Input", city:"Germany",   gstin:"IMPORT",          terms:"TT Advance", curr:"EUR" },
+  { id:"V012", name:"Ashland Global Holdings",     cat:"Specialty Input", city:"USA",       gstin:"IMPORT",          terms:"LC 90 days", curr:"USD" },
+];
+
+const CLIENTS = [
+  { id:"C001", name:"Asian Paints Ltd.",            seg:"Paints & Coatings", city:"Mumbai",     gstin:"27AAACA4321A1Z2", credit:50_00_000, curr:"INR" },
+  { id:"C002", name:"L&T Construction",            seg:"Infrastructure",    city:"Mumbai",     gstin:"27AAACL8765B1Z9", credit:75_00_000, curr:"INR" },
+  { id:"C003", name:"Motherson Sumi Systems",      seg:"Automotive",        city:"Noida",      gstin:"09AAACM2109C1Z6", credit:40_00_000, curr:"INR" },
+  { id:"C004", name:"Gulf Chemical Industries",    seg:"Export – GCC",      city:"Dubai, UAE", gstin:"EXPORT",          credit:30_00_000, curr:"USD" },
+  { id:"C005", name:"PT Chemindo Interbuana",      seg:"Export – SEA",      city:"Jakarta, ID",gstin:"EXPORT",          credit:20_00_000, curr:"USD" },
+  { id:"C006", name:"Pidilite Industries",         seg:"Adhesives",         city:"Mumbai",     gstin:"27AAABP5432D1Z3", credit:35_00_000, curr:"INR" },
+  { id:"C007", name:"Berger Paints India",         seg:"Paints & Coatings", city:"Kolkata",    gstin:"19AAACB6789E1Z7", credit:25_00_000, curr:"INR" },
+  { id:"C008", name:"Kansai Nerolac Paints",       seg:"Paints & Coatings", city:"Mumbai",     gstin:"27AAACK1234F1Z4", credit:30_00_000, curr:"INR" },
+  { id:"C009", name:"Wacker Chemie India",         seg:"Specialty Chemical", city:"Mumbai",    gstin:"27AAACW9876G1Z1", credit:20_00_000, curr:"INR" },
+  { id:"C010", name:"HUL – Industrial Division",   seg:"FMCG-Industrial",   city:"Mumbai",     gstin:"27AAACH4567H1Z8", credit:60_00_000, curr:"INR" },
+];
+
+const PRODUCTS = [
+  { sku:"EP-1000",  name:"Epoxy Resin Standard Grade",      uom:"KG",  std_cost:320, sale_inr:520,  sale_usd:6.20, hsn:"3907", gst:"18%" },
+  { sku:"EP-2500",  name:"Epoxy Resin High-Clarity",        uom:"KG",  std_cost:480, sale_inr:780,  sale_usd:9.30, hsn:"3907", gst:"18%" },
+  { sku:"PU-C450",  name:"Polyurethane Coating",            uom:"KG",  std_cost:390, sale_inr:640,  sale_usd:7.60, hsn:"3909", gst:"18%" },
+  { sku:"PU-F200",  name:"PU Flexible Foam System",         uom:"KG",  std_cost:280, sale_inr:460,  sale_usd:5.50, hsn:"3909", gst:"18%" },
+  { sku:"SA-700",   name:"Structural Adhesive (2-part)",    uom:"KG",  std_cost:520, sale_inr:850,  sale_usd:10.10,hsn:"3506", gst:"18%" },
+  { sku:"SA-350",   name:"Industrial Adhesive",             uom:"KG",  std_cost:310, sale_inr:510,  sale_usd:6.00, hsn:"3506", gst:"18%" },
+  { sku:"SV-120",   name:"Chlorinated Solvent Blend",       uom:"LTR", std_cost:95,  sale_inr:175,  sale_usd:2.10, hsn:"2903", gst:"18%" },
+  { sku:"SV-200",   name:"Acetone Blend Solvent",           uom:"LTR", std_cost:68,  sale_inr:130,  sale_usd:1.55, hsn:"2914", gst:"18%" },
+  { sku:"HB-50",    name:"Hardener Base (Aliphatic)",       uom:"KG",  std_cost:410, sale_inr:670,  sale_usd:7.95, hsn:"2921", gst:"18%" },
+  { sku:"CB-10",    name:"Catalyst Blend",                  uom:"KG",  std_cost:890, sale_inr:1450, sale_usd:17.20,hsn:"3815", gst:"18%" },
+  // Raw materials (purchase only)
+  { sku:"RM-BPA",   name:"Bisphenol-A",                     uom:"KG",  std_cost:185, sale_inr:null, sale_usd:null, hsn:"2905", gst:"18%" },
+  { sku:"RM-ECH",   name:"Epichlorohydrin",                  uom:"KG",  std_cost:210, sale_inr:null, sale_usd:null, hsn:"2910", gst:"18%" },
+  { sku:"RM-MDI",   name:"MDI (Imported)",                  uom:"KG",  std_cost:310, sale_inr:null, sale_usd:null, hsn:"2929", gst:"18%" },
+  { sku:"RM-TDI",   name:"TDI (Imported)",                  uom:"KG",  std_cost:290, sale_inr:null, sale_usd:null, hsn:"2929", gst:"18%" },
+  { sku:"RM-POL",   name:"Polyol (Domestic)",               uom:"KG",  std_cost:145, sale_inr:null, sale_usd:null, hsn:"3907", gst:"18%" },
+  { sku:"RM-ACE",   name:"Acetone (Drum)",                  uom:"KG",  std_cost:72,  sale_inr:null, sale_usd:null, hsn:"2914", gst:"18%" },
+  { sku:"RM-TiO2",  name:"Titanium Dioxide Pigment",        uom:"KG",  std_cost:260, sale_inr:null, sale_usd:null, hsn:"3206", gst:"18%" },
+  { sku:"RM-PKG",   name:"HDPE Drums 200L",                 uom:"PCS", std_cost:850, sale_inr:null, sale_usd:null, hsn:"3923", gst:"12%" },
+];
+
+// ─── 200 TRANSACTIONS ─────────────────────────────────────────────────────────
+const TRANSACTIONS = [
+// ══ CRM (T001–T022) ══════════════════════════════════════════════════════════
+{id:"T001",date:"01-Mar-26",module:"CRM",type:"Lead Creation",priority:"Normal",
+ prompt:"Create Lead: 'Asian Paints R&D Centre', Contact: Dr. Suchit Sharma (Head – Formulation), Phone: 9820334455, Email: suchit.sharma@asianpaints.com, Source: Industry Conference (PaintIndia 2026), Interest: EP-2500 High-Clarity Epoxy for premium exterior coatings, Est. Value: ₹28,00,000/quarter, Stage: New. Assign to Kavita Nair.",
+ accounting:"No entry",integrity:"Lead pipeline tracking"},
+
+{id:"T002",date:"01-Mar-26",module:"CRM",type:"Lead Creation",priority:"High",
+ prompt:"Create Lead: 'Gulf Chemical Industries Dubai', Contact: Mr. Ahmad Al-Rashid, Phone: +971-50-1234567, Source: Export Portal (Chemexcil), Interest: EP-1000 Epoxy Resin 50MT/month, Est. Value: USD 1,56,000/month. Stage: New. Assign to Rajan Pillai (Export). Mark currency: USD.",
+ accounting:"No entry",integrity:"Export lead pipeline"},
+
+{id:"T003",date:"02-Mar-26",module:"CRM",type:"Lead Activity",priority:"Normal",
+ prompt:"Log activity on Lead 'Asian Paints R&D': Meeting conducted at their Bhandup lab. Technical sample of EP-2500 (5 KG) sent via courier. Next step: Awaiting lab test results by 12-Mar. Add note. Stage remains: New.",
+ accounting:"No entry",integrity:"Sample dispatch tracking"},
+
+{id:"T004",date:"03-Mar-26",module:"CRM",type:"Lead → Qualified",priority:"High",
+ prompt:"Qualify Lead 'Gulf Chemical Industries': Verified financials, credit check done via D&B (Dun & Bradstreet). Export creditworthiness: A-grade. Stage: Qualified. Add note: ECGC cover applicable, Policy: ECGC/2026/07721. Probability: 60%.",
+ accounting:"No entry",integrity:"Export credit qualification"},
+
+{id:"T005",date:"04-Mar-26",module:"CRM",type:"Lead Creation",priority:"Normal",
+ prompt:"Create Lead: 'PT Chemindo Interbuana, Jakarta', Contact: Budi Santoso (Procurement), Phone: +62-21-5551234, Source: SEA Distributor Network, Interest: PU-C450 Coating + SA-700 Adhesive, Est. Value: USD 80,000/shipment bi-monthly. Stage: New. Assign to Rajan Pillai.",
+ accounting:"No entry",integrity:"SEA export pipeline"},
+
+{id:"T006",date:"05-Mar-26",module:"CRM",type:"Lead Creation",priority:"Normal",
+ prompt:"Create Lead: 'L&T Construction – Infra Division', Contact: Rajiv Mehrotra (Category Manager), Source: LinkedIn outreach by Kavita Nair, Interest: SA-700 Structural Adhesive for bridge deck joints, Est. Value: ₹45,00,000 project-based. Stage: New.",
+ accounting:"No entry",integrity:"Project-based sales pipeline"},
+
+{id:"T007",date:"06-Mar-26",module:"CRM",type:"Lead → Opportunity",priority:"High",
+ prompt:"Convert Lead 'Asian Paints R&D Centre' to Opportunity. Lab test results received — EP-2500 approved for trial batch. Quotation OQ-2026-031 shared: EP-2500 @ ₹780/KG for 2,000 KG/month. Expected close: 20-Mar-26. Probability: 75%. Stage: Proposal Sent.",
+ accounting:"No entry",integrity:"Opportunity valuation"},
+
+{id:"T008",date:"07-Mar-26",module:"CRM",type:"Lead → Opportunity",priority:"High",
+ prompt:"Convert Lead 'Gulf Chemical Industries' to Opportunity. Export quotation EQ-2026-004 sent: EP-1000 @ USD 6.20/KG, 50MT = USD 3,10,000. Incoterms: FOB Mundra. Payment: 30% advance + 70% on BL. LC format attached. Stage: Negotiation.",
+ accounting:"No entry",integrity:"Export opportunity"},
+
+{id:"T009",date:"08-Mar-26",module:"CRM",type:"Negotiation Activity",priority:"High",
+ prompt:"Log negotiation call with Gulf Chemical Industries. Counter-offer received: USD 5.90/KG (vs ₹USD 6.20 quoted). Response: MD Harsh Trivedi approved USD 6.05/KG for order >40MT. Counter-quote EQ-2026-004-R1 shared. Awaiting reply.",
+ accounting:"No entry",integrity:"Price negotiation log"},
+
+{id:"T010",date:"09-Mar-26",module:"CRM",type:"Lead – Lost",priority:"Normal",
+ prompt:"Mark Lead 'Kansai Nerolac Paints' (created Feb) as LOST. Reason: Competitor (Atul Ltd.) offered EP-1000 equivalent at ₹490/KG (vs our ₹520). Lost-to competitor analysis: note price gap ₹30/KG. Inform MD. Archive opportunity.",
+ accounting:"No entry",integrity:"Lost deal analytics"},
+
+{id:"T011",date:"10-Mar-26",module:"CRM",type:"Lead → Won",priority:"Critical",
+ prompt:"Mark Opportunity 'Gulf Chemical Industries' as WON at USD 6.05/KG for 45MT EP-1000. Total order: USD 2,72,250. Advance: USD 81,675 (30%) received by wire. Convert to Sales Order SO-EXP-2026-001. Incoterms: FOB Mundra. HS Code: 3907. Apply IGST for deemed exports.",
+ accounting:"Advance Dr Bank USD 81,675 × 84.50 = ₹69,01,538 | Cr Advance from Customer; Forex rate to be marked",integrity:"Export sales conversion"},
+
+{id:"T012",date:"11-Mar-26",module:"CRM",type:"Lead → Won",priority:"High",
+ prompt:"Mark Opportunity 'Asian Paints R&D' as WON. PO received: APRL/PO/2026/1122. EP-2500 2,000 KG @ ₹780 = ₹15,60,000 + GST 18% = ₹18,40,800. Payment: Net 45. Convert to Sales Order SO-DOM-2026-011.",
+ accounting:"Sales Order created – no accounting entry",integrity:"Domestic conversion"},
+
+{id:"T013",date:"12-Mar-26",module:"CRM",type:"Lead – Activity",priority:"Normal",
+ prompt:"PT Chemindo (Jakarta) activity: Video call conducted. Samples of PU-C450 (10 KG) and SA-700 (5 KG) dispatched via DHL Express (AWB: 1234567890). Freight cost: ₹18,500 (charged to Selling Expense). Stage: Sample Evaluation. Follow-up: 22-Mar.",
+ accounting:"Dr: Selling Expense ₹18,500 | Cr: Bank ₹18,500",integrity:"Sample expense"},
+
+{id:"T014",date:"14-Mar-26",module:"CRM",type:"Lead → Opportunity",priority:"High",
+ prompt:"Convert 'PT Chemindo Interbuana' to Opportunity. Sample test report: PU-C450 cleared ISO 12944 corrosion test. Quotation EQ-2026-005 sent: PU-C450 8MT @ USD 7.60/KG + SA-700 3MT @ USD 10.10/KG. Total: USD 91,100. Payment: TT advance 50% before shipment.",
+ accounting:"No entry",integrity:"Export opportunity"},
+
+{id:"T015",date:"15-Mar-26",module:"CRM",type:"Lead Creation",priority:"Normal",
+ prompt:"Create Lead: 'Motherson Sumi Systems – Pune Plant', Contact: Anand Kulkarni (Purchase Head), Source: Referral from Pidilite, Interest: SA-700 Structural Adhesive for auto assembly line (IATF 16949 compliant required), Est. Value: ₹22,00,000/annum. Stage: New. Assign: Kavita Nair.",
+ accounting:"No entry",integrity:"Automotive lead"},
+
+{id:"T016",date:"18-Mar-26",module:"CRM",type:"Lead → Won",priority:"High",
+ prompt:"'L&T Construction' opportunity confirmed WON. PO: LTCI/PO/2026/3345. SA-700 5,000 KG @ ₹850 = ₹42,50,000 + GST 18% = ₹50,15,000. Payment: 40% mobilization advance + 60% on delivery. Convert to SO-DOM-2026-015.",
+ accounting:"Advance receipt Dr Bank ₹20,06,000 | Cr Advance from Customer",integrity:"Large project order"},
+
+{id:"T017",date:"19-Mar-26",module:"CRM",type:"Lead → Won",priority:"High",
+ prompt:"PT Chemindo opportunity WON at revised pricing: PU-C450 8MT @ USD 7.45, SA-700 3MT @ USD 9.85. Total: USD 89,150. Advance 50% = USD 44,575 received via TT (SWIFT ref: DTBIDABB2026031901). Convert to SO-EXP-2026-002. USD rate: ₹84.50.",
+ accounting:"Dr Bank ₹37,66,588 (USD 44,575 × 84.50) | Cr Advance from Customer; record forex rate",integrity:"Export advance"},
+
+{id:"T018",date:"22-Mar-26",module:"CRM",type:"Motherson – Qualified",priority:"Normal",
+ prompt:"Qualify 'Motherson Sumi' lead: IATF 16949 audit of SA-700 scheduled. Plant visit done by Arpit Shah + QC team. Compliance docs submitted. SA-700 TDS (Technical Data Sheet) + MSDS shared. Stage: Technical Evaluation. Probability 50%.",
+ accounting:"No entry",integrity:"Technical qualification"},
+
+{id:"T019",date:"25-Mar-26",module:"CRM",type:"Pidilite – New Opportunity",priority:"Normal",
+ prompt:"Create new opportunity for Pidilite Industries (existing client): Expansion quote OQ-2026-040 for SA-350 Industrial Adhesive 10MT/month ongoing. Price: ₹510/KG. Total monthly value: ₹51,00,000. Convert to blanket order framework. Attach to existing account C006.",
+ accounting:"No entry",integrity:"Account expansion"},
+
+{id:"T020",date:"28-Mar-26",module:"CRM",type:"Task — Follow-Up",priority:"Low",
+ prompt:"Set follow-up tasks: (1) Motherson Sumi — IATF audit result by 5-Apr. (2) Kansai Nerolac lost deal — revisit Q2 with revised pricing proposal. (3) Wacker Chemie — new product line pitch for SV-200 solvent by 10-Apr. Assign all to Kavita Nair.",
+ accounting:"No entry",integrity:"Pipeline management"},
+
+{id:"T021",date:"30-Mar-26",module:"CRM",type:"HUL Industrial – Lead",priority:"Normal",
+ prompt:"Create Lead: 'HUL – Industrial Division', Contact: Pramod Agarwal (Technical Purchase), Source: Trade show follow-up, Interest: SV-200 Acetone Blend 20,000 LTR/month, Est. value ₹26,00,000/month. Stage: Qualified (existing vendor relationship). Assign to Kavita Nair.",
+ accounting:"No entry",integrity:"Large volume lead"},
+
+{id:"T022",date:"31-Mar-26",module:"CRM",type:"Monthly Pipeline Report",priority:"Normal",
+ prompt:"Generate CRM Pipeline Report for March 2026: Total leads created: 9. Leads converted: 5 (Win rate: 55.5%). Revenue won (domestic): ₹86,10,800. Revenue won (export USD): USD 3,61,400. Leads lost: 1. Pipeline value pending: ₹68,00,000. Verify report figures match individual opportunity records.",
+ accounting:"Report validation",integrity:"Pipeline vs accounting reconciliation"},
+
+// ══ BUYING (T023–T065) ════════════════════════════════════════════════════════
+{id:"T023",date:"01-Mar-26",module:"Buying",type:"PO – Domestic RM",priority:"Critical",
+ prompt:"Create PO to INEOS India (V001): RM-BPA Bisphenol-A 5,000 KG @ ₹185/KG = ₹9,25,000 + GST 18% = ₹10,91,500. Delivery: 07-Mar. Plant: GIDC Unit-1. Cost center: Production-U1. Payment: Net 30. Ref: PO-DOM-2026-0301.",
+ accounting:"Commitment entry only",integrity:"RM procurement"},
+
+{id:"T024",date:"01-Mar-26",module:"Buying",type:"PO – Domestic RM",priority:"Critical",
+ prompt:"Create PO to Jubilant Chem Solutions (V002): RM-ECH Epichlorohydrin 3,000 KG @ ₹210/KG = ₹6,30,000 + GST 18% = ₹7,43,400. Delivery: 06-Mar. Cost center: Production-U1. Note: Hazmat — MSDS required, transporter authorization needed.",
+ accounting:"Commitment only",integrity:"Hazmat procurement tracking"},
+
+{id:"T025",date:"01-Mar-26",module:"Buying",type:"Import PO – USD",priority:"Critical",
+ prompt:"Create Import PO to Huntsman Corp Singapore (V003): RM-MDI 4,000 KG @ USD 3.10/KG = USD 12,400. INR equivalent @ ₹84.50 = ₹10,47,800. CIF Mundra. Customs duty 10% + IGST 18% on CIF+duty. Freight: USD 850. Estimated landed cost: ₹13,82,000. LC to be opened with HDFC Bank.",
+ accounting:"LC contingent liability until goods received",integrity:"Import procurement – forex"},
+
+{id:"T026",date:"02-Mar-26",module:"Buying",type:"Import PO – USD",priority:"Critical",
+ prompt:"Create Import PO to Ashland Global Holdings USA (V012): RM-TDI 2,000 KG @ USD 2.90/KG = USD 5,800. CIF Mumbai. Customs duty 7.5% + IGST 18%. Open LC with Axis Bank. Note: TDI is a controlled substance — Form-9 compliance required. Estimated landed cost INR: ₹6,42,000.",
+ accounting:"LC opened – contingent liability ₹6,42,000",integrity:"Import – controlled substance"},
+
+{id:"T027",date:"02-Mar-26",module:"Buying",type:"PO – Packaging",priority:"Normal",
+ prompt:"PO to Gujarat Containers Ltd. (V006): RM-PKG HDPE Drums 200L — 500 PCS @ ₹850 = ₹4,25,000 + GST 12% = ₹4,76,000. Delivery: 05-Mar. Cost center: Production-U1 & U2 (split 60:40).",
+ accounting:"On GRN: Dr RM Inventory ₹4,25,000 + GST Input ₹51,000 | Cr AP",integrity:"Packaging procurement"},
+
+{id:"T028",date:"03-Mar-26",module:"Buying",type:"PO – Domestic RM",priority:"Normal",
+ prompt:"PO to Reliance Petrochemicals (V005): RM-ACE Acetone 8,000 KG @ ₹72/KG = ₹5,76,000 + GST 18% = ₹6,79,680. Delivery: 04-Mar (urgent – production shortage). Cost center: Production-U2. Raise urgent PO flag. Payment terms: advance 30%.",
+ accounting:"Advance: Dr Advance to Vendor ₹2,03,904 | Cr Bank",integrity:"Urgent advance PO"},
+
+{id:"T029",date:"03-Mar-26",module:"Buying",type:"PO – CapEx",priority:"Normal",
+ prompt:"CapEx PO to Thermax Engineering (V010): High-Pressure Reactor Upgrade (5KL SS Reactor Vessel) ₹18,50,000 + GST 18% = ₹21,83,000. Payment: 40% advance + 60% on delivery & commissioning. Cost center: Production-U1. Asset code: PP-REACT-005. Expected delivery: 20-Mar.",
+ accounting:"Advance: Dr Capital WIP ₹7,40,000 | Cr Bank; on delivery capitalize to Asset",integrity:"CapEx PO – asset creation"},
+
+{id:"T030",date:"04-Mar-26",module:"Buying",type:"GRN – Acetone",priority:"Critical",
+ prompt:"Receive Acetone from Reliance Petro against PO-DOM-2026-0328: 8,000 KG received. Weigh bridge: 8,012 KG (12 KG excess – reject excess, accept 8,000 KG). Batch: ACE-MAR26-01. No quality hold (standard grade). Post GRN. Adjust advance ₹2,03,904 against payable.",
+ accounting:"Dr RM Inventory ₹5,76,000 + GST Input ₹1,03,680 | Cr AP ₹6,79,680; advance adjusted",integrity:"Weighbridge discrepancy handling"},
+
+{id:"T031",date:"05-Mar-26",module:"Buying",type:"GRN – Packaging",priority:"Normal",
+ prompt:"Receive HDPE Drums from Gujarat Containers (PO T027): 500 PCS received. Physical count matches. QC sample: 5 drums tested for leak — all pass. Post GRN. Batch: PKG-MAR26-01. Store: Packaging Store, Unit-1.",
+ accounting:"Dr RM Inventory ₹4,25,000 + GST Input ₹51,000 | Cr AP ₹4,76,000",integrity:"Packaging GRN"},
+
+{id:"T032",date:"05-Mar-26",module:"Buying",type:"Vendor Invoice",priority:"Normal",
+ prompt:"Post Vendor Invoice from Reliance Petro: Invoice# RP/VAD/2026/0887, Amount ₹6,79,680. Match against GRN (T030). 2-way match successful. Due date: 19-Mar-26 (Net 15). Flag for payment run.",
+ accounting:"Invoice confirmed – AP due ₹6,79,680",integrity:"Invoice matching"},
+
+{id:"T033",date:"06-Mar-26",module:"Buying",type:"GRN – ECH (Hazmat)",priority:"Critical",
+ prompt:"Receive Epichlorohydrin from Jubilant Chem (PO T024): 3,000 KG in 60 drums × 50 KG. Transporter authorization verified (Class 3 Flammable). MSDS checked. QC: sample sent to Analytical Labs for purity check (>99.5% required). Mark GRN status: Under QC Hold. Batch: ECH-MAR26-01.",
+ accounting:"GRN in transit – pending QC",integrity:"Hazmat QC hold"},
+
+{id:"T034",date:"07-Mar-26",module:"Buying",type:"GRN – BPA",priority:"Critical",
+ prompt:"Receive Bisphenol-A from INEOS India (PO T023): 5,000 KG received in big bags. Batch: BPA-MAR26-01. Physical weight: 4,985 KG (15 KG shortage). INEOS to issue credit note for 15 KG × ₹185 = ₹2,775. Accept 4,985 KG. Post GRN. QC: appearance pass.",
+ accounting:"Dr RM Inventory ₹9,22,225 (4985×₹185) + GST Input ₹1,66,001 | Cr AP ₹10,88,226; raise debit note for short delivery",integrity:"Short delivery – debit note"},
+
+{id:"T035",date:"07-Mar-26",module:"Buying",type:"QC – ECH Release",priority:"Critical",
+ prompt:"QC result from Analytical Labs for ECH Batch ECH-MAR26-01: Purity 99.6% (Pass). Moisture: 0.02% (Pass). Release QC hold. Transfer to Production store. Post GRN accounting entry. Invoice from Jubilant Chem: JCS/2026/4521 = ₹7,43,400 due 05-Apr.",
+ accounting:"Dr RM Inventory ₹6,30,000 + GST Input ₹1,13,400 | Cr AP ₹7,43,400",integrity:"QC release to inventory"},
+
+{id:"T036",date:"08-Mar-26",module:"Buying",type:"Debit Note – INEOS",priority:"Normal",
+ prompt:"Issue Debit Note DN-2026-001 to INEOS India for BPA short delivery: 15 KG × ₹185 = ₹2,775 + GST ₹499.50 = ₹3,274.50. Reason: Short delivery per weighbridge. Adjust against outstanding payable.",
+ accounting:"Dr AP ₹3,274.50 | Cr Purchase Return/Debit Note A/c ₹2,775 + GST Reversal ₹499.50",integrity:"Debit note – AP adjustment"},
+
+{id:"T037",date:"10-Mar-26",module:"Buying",type:"Import LC Opening",priority:"Critical",
+ prompt:"HDFC Bank LC opened for Huntsman Corp (PO T025): LC No HDFC/2026/IMP/00441. Amount USD 13,250 (goods + freight). LC margin 20% blocked: USD 2,650 = ₹2,23,925. LC charges: ₹18,500. Bank commission: ₹8,200. Post bank charges.",
+ accounting:"Dr LC Margin Account ₹2,23,925 | Cr Bank; Dr Bank Charges ₹26,700 | Cr Bank",integrity:"LC – blocked funds"},
+
+{id:"T038",date:"12-Mar-26",module:"Buying",type:"PO – Testing Service",priority:"Normal",
+ prompt:"PO to Analytical Labs (V009): Monthly testing contract for RM quality checks — 3 samples/week × ₹3,500 = ₹42,000/month + GST 18% = ₹49,560. Payment: Net 20. TDS applicable: 10% u/s 194J (professional services) = ₹4,200. Cost center: QC & R&D.",
+ accounting:"Dr: Testing Expense ₹42,000 + GST Input ₹7,560 | Cr AP ₹45,360 + TDS Payable ₹4,200",integrity:"TDS deduction on services"},
+
+{id:"T039",date:"12-Mar-26",module:"Buying",type:"PO – Domestic RM",priority:"Normal",
+ prompt:"PO to LANXESS India (V004): RM-TiO2 Titanium Dioxide 1,500 KG @ ₹260/KG = ₹3,90,000 + GST 18% = ₹4,60,200. Delivery: 16-Mar. Used in PU-C450 coatings for opacity. Cost center: Production-U2.",
+ accounting:"On GRN: Dr RM Inventory ₹3,90,000 | Cr AP",integrity:"RM procurement"},
+
+{id:"T040",date:"14-Mar-26",module:"Buying",type:"GRN – Import MDI",priority:"Critical",
+ prompt:"Customs clearance: MDI shipment from Huntsman arrived at Mundra. Customs duty paid: USD 1,240 (10%) = ₹1,04,780. IGST on CIF+duty: ₹2,16,400 (input credit eligible). Clearing agent: ₹28,000 (+ GST ₹5,040). LC disbursed. Post customs entry. Batch: MDI-MAR26-01. Plant delivery: 16-Mar.",
+ accounting:"Dr RM Inventory ₹10,47,800 (CIF) + Customs Duty ₹1,04,780 + Clearing ₹28,000 = ₹11,80,580 | Cr AP/Bank; IGST ₹2,16,400 Input Credit",integrity:"Import – landed cost computation"},
+
+{id:"T041",date:"15-Mar-26",module:"Buying",type:"GRN – CapEx Reactor",priority:"Normal",
+ prompt:"Partial delivery of Thermax Reactor (PO T029): Reactor vessel delivered. Commissioning pending (scheduled 22-Mar). Post partial GRN for delivered component: ₹14,80,000. Advance already paid ₹7,40,000. Balance payable on commissioning: ₹11,03,000.",
+ accounting:"Dr Capital WIP ₹14,80,000 + GST Input ₹2,66,400 | Cr AP ₹17,46,400; advance adjusted ₹7,40,000",integrity:"CapEx – partial delivery"},
+
+{id:"T042",date:"15-Mar-26",module:"Buying",type:"GRN – TiO2",priority:"Normal",
+ prompt:"Receive TiO2 from LANXESS India: 1,500 KG received, QC: particle size distribution pass, opacity pass. Post GRN. Batch: TIO2-MAR26-01.",
+ accounting:"Dr RM Inventory ₹3,90,000 + GST Input ₹70,200 | Cr AP ₹4,60,200",integrity:"RM GRN"},
+
+{id:"T043",date:"16-Mar-26",module:"Buying",type:"PO – 3PL Storage",priority:"Normal",
+ prompt:"Monthly invoice from SafeStore Chemicals (V007): Hazmat storage charges for Feb (ECH + TDI storage in bonded warehouse) ₹65,000 + GST 18% = ₹76,700. TDS 2% u/s 194C (works contract) = ₹1,300. Post invoice. Cost center: Logistics.",
+ accounting:"Dr Warehousing Expense ₹65,000 + GST Input ₹11,700 | Cr AP ₹75,400 + TDS Payable ₹1,300",integrity:"3PL invoice – TDS"},
+
+{id:"T044",date:"16-Mar-26",module:"Buying",type:"Import – TDI Customs",priority:"Critical",
+ prompt:"TDI shipment (V012 / PO T026) cleared customs at Mumbai: Customs duty 7.5% on CIF = ₹48,150. IGST 18% on CIF+duty: ₹1,24,700. Clearing: ₹22,000. Form-9 submitted for controlled substance release. Batch: TDI-MAR26-01. Transfer to bonded store.",
+ accounting:"Dr RM Inventory ₹5,82,000 landed | Cr AP/Bank; IGST Input ₹1,24,700",integrity:"Controlled substance compliance"},
+
+{id:"T045",date:"18-Mar-26",module:"Buying",type:"Vendor Payment Run",priority:"High",
+ prompt:"Execute payment run for due invoices: (1) Reliance Petro ₹6,79,680 due 19-Mar — pay via NEFT. (2) Jubilant Chem ₹7,43,400 due 5-Apr — skip (not due). (3) LANXESS ₹4,60,200 due 14-Apr — skip. (4) Analytical Labs ₹45,360 net of TDS = ₹41,160 — pay. Total outflow: ₹7,20,840.",
+ accounting:"Dr AP ₹7,20,840 | Cr Bank ₹7,20,840; TDS ₹4,200 stays in TDS Payable",integrity:"Payment run – due date filter"},
+
+{id:"T046",date:"19-Mar-26",module:"Buying",type:"PO – Polyol",priority:"Normal",
+ prompt:"PO to Reliance Petrochem (V005): RM-POL Polyol 6,000 KG @ ₹145/KG = ₹8,70,000 + GST 18% = ₹10,26,600. Delivery: 24-Mar. Cost center: Production-U2 (PU-F200 production).",
+ accounting:"Commitment",integrity:"RM procurement"},
+
+{id:"T047",date:"20-Mar-26",module:"Buying",type:"Freight Invoice",priority:"Normal",
+ prompt:"Invoice from TransTech Freight (V008): March inbound freight charges (5 domestic shipments) ₹1,28,000 + GST 18% = ₹1,51,040. TDS u/s 194C 2% = ₹2,560. Allocate freight to RM cost (Dr RM Inventory directly or separate freight expense). Cost center split: Production-U1 60%, U2 40%.",
+ accounting:"Dr Inward Freight ₹1,28,000 + GST Input ₹23,040 | Cr AP ₹1,48,480 + TDS Payable ₹2,560",integrity:"Freight capitalization or expense"},
+
+{id:"T048",date:"22-Mar-26",module:"Buying",type:"CapEx Commissioning",priority:"High",
+ prompt:"Thermax Reactor commissioned successfully (Unit-1). Final inspection passed. Remaining invoice ₹3,70,000 + GST ₹66,600. Post final GRN. Transfer Capital WIP to Fixed Asset: 5KL Reactor (PP-REACT-005). Total capitalized value: ₹18,50,000. Useful life: 15 years. Depreciation: SLM 6.67%/pa.",
+ accounting:"Dr Fixed Asset ₹18,50,000 | Cr Capital WIP ₹18,50,000; pay balance AP ₹4,36,600",integrity:"WIP to Fixed Asset capitalization"},
+
+{id:"T049",date:"22-Mar-26",module:"Buying",type:"GRN – Polyol",priority:"Normal",
+ prompt:"Receive Polyol from Reliance: 6,000 KG received. QC: OH number test pass, viscosity pass. Batch: POL-MAR26-01. Post GRN.",
+ accounting:"Dr RM Inventory ₹8,70,000 + GST Input ₹1,56,600 | Cr AP ₹10,26,600",integrity:"RM GRN"},
+
+{id:"T050",date:"24-Mar-26",module:"Buying",type:"Vendor Credit Note",priority:"Normal",
+ prompt:"Receive Credit Note from INEOS India against DN-2026-001 (BPA short delivery): CN/INEOS/2026/0821 = ₹3,274.50. Apply against outstanding AP balance. Verify GST reversal in GSTR-2A.",
+ accounting:"Dr AP ₹3,274.50 | Cr Purchase Returns ₹2,775 + IGST Input Reversal ₹499.50",integrity:"Credit note – AP netting"},
+
+{id:"T051",date:"25-Mar-26",module:"Buying",type:"PO – Acetone (repeat)",priority:"Normal",
+ prompt:"Repeat PO to Reliance Petro: RM-ACE Acetone 5,000 KG @ ₹74/KG (revised price) = ₹3,70,000 + GST 18% = ₹4,36,600. Delivery: 28-Mar. Note: price increased ₹2/KG vs last PO — post price variance alert.",
+ accounting:"Price variance alert on item card",integrity:"Price variance tracking"},
+
+{id:"T052",date:"26-Mar-26",module:"Buying",type:"GRN – Acetone 2nd",priority:"Normal",
+ prompt:"Receive Acetone 5,000 KG (PO T051). Batch: ACE-MAR26-02. QC: pass. Post GRN. System should calculate weighted average cost of ACE (Batch 1 @ ₹72 + Batch 2 @ ₹74 blended into FIFO/WAVG).",
+ accounting:"Dr RM Inventory ₹3,70,000 + GST Input ₹66,600 | Cr AP; verify WAVG cost update",integrity:"WAVG/FIFO inventory valuation"},
+
+{id:"T053",date:"27-Mar-26",module:"Buying",type:"Purchase Return",priority:"Normal",
+ prompt:"Return 200 KG of TiO2 (Batch TIO2-MAR26-01) to LANXESS — QC found agglomeration issue in sub-lot. Return note PR-2026-001: 200 KG × ₹260 = ₹52,000 + GST ₹9,360. Raise return shipment, debit note, and adjust AP.",
+ accounting:"Dr AP ₹61,360 | Cr RM Inventory ₹52,000 + GST Reversal ₹9,360",integrity:"Purchase return – inventory reduction"},
+
+{id:"T054",date:"28-Mar-26",module:"Buying",type:"Vendor Invoice",priority:"Normal",
+ prompt:"Post vendor invoices received in bulk: (1) INEOS India BPA: ₹10,88,226 (adj for debit note → net ₹10,84,952). (2) Jubilant Chem ECH: ₹7,43,400. (3) LANXESS TiO2 net of return: ₹3,99,060. (4) Reliance Acetone-2: ₹4,36,600. 3-way match all invoices.",
+ accounting:"AP ledgers confirmed; 3-way match: PO → GRN → Invoice",integrity:"Bulk invoice matching"},
+
+{id:"T055",date:"28-Mar-26",module:"Buying",type:"Advance Payment – Henkel",priority:"Normal",
+ prompt:"TT advance to Henkel AG Germany (V011): EUR 8,500 for specialty hardener catalyst (pre-production order). EUR/INR rate: ₹91.20. INR outflow: ₹7,75,200. Post advance, mark forex rate, create open PO: PM-IMP-2026-007.",
+ accounting:"Dr Advance to Vendor (Henkel) ₹7,75,200 | Cr Bank; Forex rate tagged: ₹91.20/EUR",integrity:"Foreign currency advance"},
+
+{id:"T056",date:"29-Mar-26",module:"Buying",type:"TDS Payment",priority:"High",
+ prompt:"Pay accumulated TDS for February transactions to TRACES: Section 194J ₹12,600 + Section 194C ₹6,840. Total TDS: ₹19,440. Challan ref: TDS/MAR/2026/002219. Due by 7-Mar (for Feb deductions) — post late fee ₹200 for 194J (delayed by 1 day).",
+ accounting:"Dr TDS Payable ₹19,440 + Late Fee ₹200 | Cr Bank ₹19,640",integrity:"TDS compliance – late fee"},
+
+{id:"T057",date:"30-Mar-26",module:"Buying",type:"Month-end PO Review",priority:"Normal",
+ prompt:"Review open POs as at 30-Mar: (1) Huntsman MDI balance — fully received. (2) Ashland TDI — fully received. (3) Thermax CapEx — complete. Generate 'Open PO Report' and mark all fully-delivered POs as Closed. Highlight any overdue deliveries.",
+ accounting:"No entry — status update",integrity:"PO lifecycle closure"},
+
+{id:"T058",date:"30-Mar-26",module:"Buying",type:"Accrued Purchases",priority:"Normal",
+ prompt:"GRN received but invoice not yet posted for: (1) TransTech Freight partial ₹42,000. (2) SafeStore March storage ₹32,500 (partial). Post accrued purchase journal entries so March P&L captures full expenses.",
+ accounting:"Dr Expenses ₹74,500 | Cr Accrued Purchases (Liability) ₹74,500",integrity:"Cut-off accrual"},
+
+{id:"T059",date:"31-Mar-26",module:"Buying",type:"Vendor Aging Report",priority:"Normal",
+ prompt:"Generate Vendor Aging Report as at 31-Mar-26. Verify: (1) Jubilant Chem ₹7,43,400 due 5-Apr (Current). (2) INEOS India net ₹10,84,952 (Current). (3) Any overdue above 30/45/60 days flagged. Reconcile AP ledger total with Trial Balance.",
+ accounting:"Report validation — AP sub-ledger vs TB",integrity:"Aging reconciliation"},
+
+{id:"T060",date:"31-Mar-26",module:"Buying",type:"Forex Revaluation",priority:"High",
+ prompt:"Revalue import payables in foreign currency at 31-Mar closing rate: Huntsman Corp (residual if any) — USD rate moved from ₹84.50 to ₹84.80 (+₹0.30). Henkel advance EUR rate moved ₹91.20 to ₹91.55 (+₹0.35). Post forex MTM loss entries for AP revaluation.",
+ accounting:"Dr Forex Loss ₹2,975 (blended) | Cr AP / Advance to Vendor ₹2,975",integrity:"Forex MTM revaluation"},
+
+// ══ STOCK / INVENTORY (T061–T090) ════════════════════════════════════════════
+{id:"T061",date:"02-Mar-26",module:"Stock",type:"RM Transfer – Production",priority:"Normal",
+ prompt:"Issue materials to Production (Work Order WO-EP-001 for EP-1000): RM-BPA 2,000 KG (Batch BPA-MAR26-01) + RM-ECH 1,200 KG (Batch ECH-MAR26-01). Transfer from Raw Material Store to Reactor Floor, Unit-1. Ref: MFG-ISS-001.",
+ accounting:"Dr WIP ₹6,37,000 | Cr RM Inventory ₹6,37,000 (at std cost)",integrity:"Material issue to WIP"},
+
+{id:"T062",date:"04-Mar-26",module:"Stock",type:"Packaging Issue",priority:"Normal",
+ prompt:"Issue 300 HDPE Drums (Batch PKG-MAR26-01) to Filling Station, Unit-1 for EP-1000 batch. Ref: MFG-ISS-002.",
+ accounting:"Dr WIP / FG Packaging ₹2,55,000 | Cr RM Inventory ₹2,55,000",integrity:"Packaging material issue"},
+
+{id:"T063",date:"06-Mar-26",module:"Stock",type:"Internal Transfer – Inter-unit",priority:"Normal",
+ prompt:"Transfer 1,000 KG RM-ACE Acetone from Unit-1 store to Unit-2 store for SV-200 production. Internal transfer document IT-2026-015. Both units are within same GSTIN — no tax implication.",
+ accounting:"Inter-unit transfer at std cost ₹72,000; no P&L impact",integrity:"Inter-unit stock move"},
+
+{id:"T064",date:"08-Mar-26",module:"Stock",type:"Stock Adjustment – Positive",priority:"Normal",
+ prompt:"Physical count of Polyol reveals 85 KG extra (unrecorded spillage recovery from last month). Post positive stock adjustment: RM-POL 85 KG × ₹145 = ₹12,325. Reason: Recovery from Feb batch residue. Approved by: Arpit Shah.",
+ accounting:"Dr RM Inventory ₹12,325 | Cr Inventory Adjustment / Other Income ₹12,325",integrity:"Positive adjustment – P&L effect"},
+
+{id:"T065",date:"10-Mar-26",module:"Stock",type:"Stock Adjustment – Negative",priority:"Normal",
+ prompt:"Damage discovered: 3 HDPE drums (Batch PKG-MAR26-01) cracked during forklift incident. Write off 3 PCS × ₹850 = ₹2,550. Reason: Forklift accident (internal damage). Incident report logged. Post negative stock adjustment.",
+ accounting:"Dr Inventory Loss / Damage ₹2,550 | Cr RM Inventory ₹2,550",integrity:"Loss accounting – incident"},
+
+{id:"T066",date:"12-Mar-26",module:"Stock",type:"RM Transfer – WO-PU",priority:"Normal",
+ prompt:"Issue materials to Work Order WO-PU-001 (PU-C450): RM-MDI 1,500 KG + RM-POL 3,000 KG + RM-TiO2 1,200 KG. Transfer from bonded store (MDI, TDI) and general store (Polyol, TiO2) to Unit-2 reactor floor. MFG-ISS-003.",
+ accounting:"Dr WIP ₹11,46,600 | Cr RM Inventory",integrity:"Multi-RM issue"},
+
+{id:"T067",date:"14-Mar-26",module:"Stock",type:"Batch Expiry Review",priority:"Normal",
+ prompt:"QC review: BPA Batch BPA-MAR26-01 — shelf life 6 months, no issue. ECH Batch ECH-MAR26-01 — shelf life 3 months (expires Jun 26), flag for priority use. TDI Batch TDI-MAR26-01 — shelf life 12 months, OK. Update batch expiry records and generate 'Expiry Alert' report.",
+ accounting:"No entry — batch management",integrity:"Expiry-driven FEFO compliance"},
+
+{id:"T068",date:"16-Mar-26",module:"Stock",type:"Quality Hold – Release",priority:"Normal",
+ prompt:"200 KG of WIP EP-1000 (Batch WIP-EP-001) placed on Quality Hold after in-process epoxy equivalent weight (EEW) deviation detected. QC re-test after process correction: EEW within spec. Release hold. Document deviation form QD-2026-014.",
+ accounting:"No inventory movement — hold/release status",integrity:"In-process QC control"},
+
+{id:"T069",date:"17-Mar-26",module:"Stock",type:"FG Transfer – EP-1000",priority:"Normal",
+ prompt:"Transfer 2,800 KG EP-1000 (Batch FG-EP1000-MAR26-01, WO-EP-001 output) from Production to Finished Goods warehouse. Std cost ₹320/KG = ₹8,96,000. Store: FG Warehouse, Unit-1.",
+ accounting:"Dr FG Inventory ₹8,96,000 | Cr WIP ₹8,96,000",integrity:"FG receipt"},
+
+{id:"T070",date:"18-Mar-26",module:"Stock",type:"FG Transfer – PU-C450",priority:"Normal",
+ prompt:"Transfer 3,400 KG PU-C450 (Batch FG-PUC-MAR26-01) from Unit-2 to FG store. Std cost ₹390/KG = ₹13,26,000.",
+ accounting:"Dr FG Inventory ₹13,26,000 | Cr WIP ₹13,26,000",integrity:"FG receipt"},
+
+{id:"T071",date:"19-Mar-26",module:"Stock",type:"Physical Stock Count",priority:"High",
+ prompt:"Conduct physical stock count for RM store, Unit-1: BPA book: 2,985 KG actual: 2,970 KG (variance -15 KG). ECH book: 1,800 KG actual: 1,800 KG. ACE book: 2,500 KG actual: 2,515 KG (+15 KG). Adjust variances post approval. Note BPA loss may be evaporation.",
+ accounting:"BPA loss: Dr Inventory Variance ₹2,775 | Cr RM; ACE gain: Dr RM ₹1,080 | Cr Inventory Adj",integrity:"Physical count variance"},
+
+{id:"T072",date:"20-Mar-26",module:"Stock",type:"Sub-contract Goods Out",priority:"Normal",
+ prompt:"Send 500 KG SA-700 base compound to sub-contractor (PCB Blending Ltd, Ankleshwar) for final mixing/filling. Send under challan SC-OUT-2026-001. No GST (job work under 68/2018). Track as goods sent for processing. Expected return: 28-Mar.",
+ accounting:"Reduce FG / WIP stock (move to 'Goods with Sub-contractor' ledger)",integrity:"Sub-contracting stock movement"},
+
+{id:"T073",date:"22-Mar-26",module:"Stock",type:"FG Transfer – SA-700",priority:"Normal",
+ prompt:"Transfer SA-700 3,200 KG (Batch FG-SA7-MAR26-01) from Unit-1 to FG store. Std cost ₹520/KG = ₹16,64,000.",
+ accounting:"Dr FG Inventory ₹16,64,000 | Cr WIP ₹16,64,000",integrity:"FG receipt"},
+
+{id:"T074",date:"24-Mar-26",module:"Stock",type:"Stock Reservation",priority:"Normal",
+ prompt:"Reserve stock for confirmed sales orders: SO-DOM-2026-011 (Asian Paints EP-2500 2,000 KG) — reserve from FG. SO-EXP-2026-001 (Gulf Chem EP-1000 45,000 KG) — partially from FG 2,800 KG, balance to come from WO-EP-002. Mark reservations in system.",
+ accounting:"No accounting — reservation flag",integrity:"Available-to-promise (ATP) check"},
+
+{id:"T075",date:"25-Mar-26",module:"Stock",type:"Sub-contract Return",priority:"Normal",
+ prompt:"Receive back 498 KG SA-700 (2 KG process loss) from PCB Blending Ltd after mixing/filling. Job work invoice: ₹18,500 + GST 18% = ₹21,830. Transfer back to FG store (finished filled SA-700). Update sub-contract stock ledger.",
+ accounting:"Dr FG ₹18,500 job work cost | Cr AP ₹21,830; job work GST input ₹3,330",integrity:"Sub-contract job work accounting"},
+
+{id:"T076",date:"25-Mar-26",module:"Stock",type:"FG Transfer – SV-200",priority:"Normal",
+ prompt:"Transfer SV-200 Acetone Blend 10,000 LTR (Batch FG-SV200-MAR26-01) to FG store. Std cost ₹68/LTR = ₹6,80,000.",
+ accounting:"Dr FG Inventory ₹6,80,000 | Cr WIP ₹6,80,000",integrity:"FG receipt"},
+
+{id:"T077",date:"26-Mar-26",module:"Stock",type:"Inventory Aging Report",priority:"Normal",
+ prompt:"Run Inventory Aging Report as at 26-Mar: FG items > 60 days old: EP-1000 (Feb batch) 450 KG — flag for management review (slow moving). RM-TiO2 remaining after return 1,300 KG — adequate for 2 production runs. Report to Deepak Verma (Supply Chain).",
+ accounting:"No entry — management report",integrity:"Slow-moving inventory"},
+
+{id:"T078",date:"27-Mar-26",module:"Stock",type:"FG Dispatch – EP-1000 Export",priority:"Critical",
+ prompt:"Dispatch 2,800 KG EP-1000 (Batch FG-EP1000-MAR26-01) to Gulf Chemical Industries against SO-EXP-2026-001. Delivery Note DN-EXP-001. Freight forwarder: TransTech. Container: 1×20ft FCL. E-way bill: EWB2026031501. Customs clearance: Mundra port, Shipping Bill SB/2026/MUN/04421.",
+ accounting:"Dr COGS ₹8,96,000 (2800×₹320) | Cr FG ₹8,96,000",integrity:"Export dispatch – shipping bill"},
+
+{id:"T079",date:"28-Mar-26",module:"Stock",type:"FG Dispatch – Asian Paints",priority:"High",
+ prompt:"Dispatch EP-2500 2,000 KG to Asian Paints Mumbai (SO-DOM-2026-011). DN-DOM-006. Lorry: GJ-06-T-4521. E-way bill: EWB2026031801. FIFO: Batch FG-EP25-MAR26-01.",
+ accounting:"Dr COGS ₹9,60,000 (2000×₹480) | Cr FG ₹9,60,000",integrity:"Domestic dispatch"},
+
+{id:"T080",date:"28-Mar-26",module:"Stock",type:"Goods-in-Transit",priority:"Normal",
+ prompt:"Goods dispatched to L&T Construction (SA-700 5,000 KG, SO-DOM-2026-015) are in-transit as at 31-Mar. E-way bill valid. Revenue recognition depends on Incoterms: Ex-Works — revenue recognized at dispatch (28-Mar). Post sale journal on dispatch date.",
+ accounting:"Dr AR ₹50,15,000 | Cr Sales ₹42,50,000 + GST ₹7,65,000 on 28-Mar",integrity:"Revenue recognition – Incoterms"},
+
+{id:"T081",date:"29-Mar-26",module:"Stock",type:"FG – SV-200 Partial Dispatch",priority:"Normal",
+ prompt:"Dispatch SV-200 4,000 LTR to HUL Industrial Division against spot order SOR-2026-003. DN-DOM-009. Balance 6,000 LTR reserved for April order. E-way bill generated.",
+ accounting:"Dr COGS ₹2,72,000 (4000×₹68) | Cr FG ₹2,72,000",integrity:"Partial dispatch"},
+
+{id:"T082",date:"30-Mar-26",module:"Stock",type:"Inventory Valuation Report",priority:"High",
+ prompt:"Generate Inventory Valuation Report (FIFO/WAVG) as at 30-Mar: RM total, WIP total, FG total. Reconcile total inventory value on report with Trial Balance inventory accounts. Any variance to be investigated.",
+ accounting:"Verification step — Inventory TB reconciliation",integrity:"Inventory-to-TB match"},
+
+{id:"T083",date:"31-Mar-26",module:"Stock",type:"Slow-Moving Write-down",priority:"Normal",
+ prompt:"Write down EP-1000 Feb batch (450 KG, Batch FG-EP1000-FEB26-01) by 10% NRV adjustment: 450 × ₹320 × 10% = ₹14,400. Reason: Market price softening for standard grade. CFO (Sunita Gupta) approval obtained.",
+ accounting:"Dr Inventory Write-down ₹14,400 | Cr FG Inventory ₹14,400",integrity:"NRV write-down – IND AS 2"},
+
+{id:"T084",date:"31-Mar-26",module:"Stock",type:"Consignment Stock Review",priority:"Normal",
+ prompt:"Review goods sent on consignment to RoboArm Industries (SA-350, 200 KG sent Feb) — no sale yet. Confirm goods are in consignee's store. Verify no revenue recognized. Goods should still be in PolyMerx books as Consignment Stock.",
+ accounting:"Consignment stock in books — no COGS until sold",integrity:"Consignment revenue cut-off"},
+
+{id:"T085",date:"31-Mar-26",module:"Stock",type:"Year-end Stocktake Prep",priority:"Normal",
+ prompt:"Since March is FY-end, prepare stocktake instructions for 1-Apr count: freeze all stock movements from 6 PM 31-Mar. Print count sheets for all 3 store locations (RM-U1, RM-U2, FG Warehouse). Assign count teams. Notify logistics to halt dispatches.",
+ accounting:"No entry — procedural",integrity:"FY-end control"},
+
+// ══ MANUFACTURING (T086–T120) ═════════════════════════════════════════════════
+{id:"T086",date:"02-Mar-26",module:"Manufacturing",type:"Work Order – EP-1000 Batch",priority:"Critical",
+ prompt:"Open Work Order WO-EP-001: Product EP-1000, Batch: 3,000 KG planned. BOM: BPA 2,000 KG + ECH 1,200 KG + NaOH 50 KG (from stores). Routing: Step 1 – Reaction (Reactor R-101, 8 hrs); Step 2 – Washing (Tank T-201, 3 hrs); Step 3 – Distillation (Dist-301, 4 hrs); Step 4 – Filling (F-401). Planned start: 02-Mar, End: 04-Mar. Machine cost rate: ₹850/hr.",
+ accounting:"WO opened; material issue posts separately",integrity:"BOM-based work order"},
+
+{id:"T087",date:"04-Mar-26",module:"Manufacturing",type:"WO – In-process QC",priority:"High",
+ prompt:"In-process QC check for WO-EP-001 after reaction step: Epoxy Equivalent Weight (EEW): Target 182-192 g/eq, Actual: 188 g/eq (Pass). Viscosity @ 25°C: Target 10,000-15,000 cP, Actual: 12,500 cP (Pass). Color (Gardner): Target ≤1, Actual: 1 (Pass). Post QC checkpoint and proceed to next step.",
+ accounting:"No entry",integrity:"In-process quality gate"},
+
+{id:"T088",date:"05-Mar-26",module:"Manufacturing",type:"WO – Completion & Yield",priority:"Critical",
+ prompt:"Close Work Order WO-EP-001. Actual output: 2,820 KG EP-1000 (planned 3,000 KG). Yield: 94% (standard 92% — favorable). By-product: 180 KG reaction residue (waste). Actual machine hours: 16.5 hrs (vs 15 planned). Post manufacturing variance: material + labor + overhead.",
+ accounting:"Dr FG ₹9,02,400 (2820×₹320) | Cr WIP; Yield variance favorable ₹57,600; Machine OH variance Dr/Cr",integrity:"WO completion – variance analysis"},
+
+{id:"T089",date:"06-Mar-26",module:"Manufacturing",type:"Waste Disposal Entry",priority:"Normal",
+ prompt:"Post waste disposal for EP-1000 reaction residue (180 KG hazardous waste). Disposal via authorized contractor (Green Earth Env. Services). Cost: ₹4,500 + GST 18% = ₹5,310. Raise PO and post expense. CPCB Form-9 filed.",
+ accounting:"Dr Waste Disposal Expense ₹4,500 + GST Input ₹810 | Cr AP ₹5,310",integrity:"Hazardous waste – regulatory"},
+
+{id:"T090",date:"07-Mar-26",module:"Manufacturing",type:"Work Order – EP-2500",priority:"High",
+ prompt:"Open WO-EP-002: EP-2500 High-Clarity, 2,500 KG planned. BOM: BPA 1,500 KG (high-purity grade) + ECH 900 KG + Glycidyl ether modifier 200 KG. Routing: Reactor R-102 (cleanroom conditions), 12 hrs reaction + 6 hrs purification. Planned: 07-Mar to 10-Mar. Premium grade — tighter process controls.",
+ accounting:"WO opened",integrity:"Premium grade WO"},
+
+{id:"T091",date:"08-Mar-26",module:"Manufacturing",type:"Machine Downtime",priority:"High",
+ prompt:"Reactor R-101 suffered agitator bearing failure at 14:00. Downtime: 6 hours. Maintenance team called (Rajesh Yadav + Thermax engineer). Spare part cost: ₹12,800. Post downtime entry. WO-EP-003 (next batch) delayed by 1 day. Record idle capacity cost: 6 hrs × ₹850 = ₹5,100.",
+ accounting:"Dr Machine Maintenance ₹12,800 | Cr AP; Dr Idle Time Expense ₹5,100 | Cr WIP/OH absorbed",integrity:"Downtime costing"},
+
+{id:"T092",date:"10-Mar-26",module:"Manufacturing",type:"WO – EP-2500 Complete",priority:"High",
+ prompt:"Close WO-EP-002: Actual output 2,380 KG EP-2500 (planned 2,500 KG). Yield: 95.2%. By-product: 120 KG still bottoms (disposed). Actual machine hrs: 19 hrs. Color: Gardner 0 (excellent). EEW: 186 g/eq (pass). Post variance. Transfer to FG.",
+ accounting:"Dr FG ₹11,42,400 (2380×₹480) | Cr WIP; yield/OH variances posted",integrity:"WO completion"},
+
+{id:"T093",date:"10-Mar-26",module:"Manufacturing",type:"Work Order – PU-C450",priority:"Critical",
+ prompt:"Open WO-PU-001: PU-C450 Polyurethane Coating, 4,000 KG planned. BOM: MDI 1,500 KG + Polyol 3,000 KG + TiO2 1,200 KG + Solvent ACE 500 KG + additives. Routing: Unit-2 Mixing Tank M-201 (2 hrs) → Grinding Mill (3 hrs) → Letdown Tank (2 hrs) → Filling. Duration: 10-Mar to 16-Mar.",
+ accounting:"WO opened",integrity:"Multi-component WO"},
+
+{id:"T094",date:"12-Mar-26",module:"Manufacturing",type:"WO – PU In-process QC",priority:"High",
+ prompt:"In-process QC for WO-PU-001: Viscosity: 4,500 cP (Target 4,000-5,000 — Pass). pH: 7.2 (Pass). Fineness of grind (Hegman): 6+ (Pass). VOC content: 380 g/L (Target <400 — Pass). Record all results. Proceed to letdown.",
+ accounting:"No entry",integrity:"Regulatory (VOC) compliance"},
+
+{id:"T095",date:"14-Mar-26",module:"Manufacturing",type:"WO – PU Rework",priority:"High",
+ prompt:"400 KG of WO-PU-001 batch failed color consistency (shade DE >2.0 vs standard). Rework required: re-grind and re-tint. Additional materials: TiO2 40 KG, colorant paste 15 KG @ ₹1,200/KG = ₹18,000. Post rework order linked to WO-PU-001. Additional 2 machine hours.",
+ accounting:"Dr Rework Cost ₹28,600 (materials + machine hrs) | Cr Various — absorbed into WIP",integrity:"Rework – additional cost"},
+
+{id:"T096",date:"16-Mar-26",module:"Manufacturing",type:"WO – PU-C450 Complete",priority:"High",
+ prompt:"Close WO-PU-001: Output 3,820 KG (planned 4,000 KG). Yield: 95.5% (standard 94%). Rework successful — all 3,820 KG passed final QC. Post variance. Transfer to FG.",
+ accounting:"Dr FG ₹14,89,800 (3820×₹390) | Cr WIP",integrity:"WO close with rework"},
+
+{id:"T097",date:"15-Mar-26",module:"Manufacturing",type:"Work Order – SA-700",priority:"Critical",
+ prompt:"Open WO-SA-001: SA-700 Structural Adhesive (2-part), 3,500 KG planned. Part A: ECH-based resin 1,800 KG. Part B: Hardener base 1,200 KG. Filler: Talc 500 KG. Process: Mixing (M-301) + Packaging (twin cartridges). Duration: 15-Mar to 21-Mar. This batch is against confirmed order for L&T.",
+ accounting:"WO opened — linked to SO-DOM-2026-015",integrity:"Make-to-order WO"},
+
+{id:"T098",date:"18-Mar-26",module:"Manufacturing",type:"Work Order – SV-200",priority:"Normal",
+ prompt:"Open WO-SV-001: SV-200 Acetone Blend, 12,000 LTR planned. BOM: Acetone 9,600 LTR + Toluene 2,400 LTR (from Reliance, existing stock). Process: simple blending — Blending Tank BT-101, 4 hrs. Duration: 18-Mar to 19-Mar.",
+ accounting:"WO opened",integrity:"Simple blending WO"},
+
+{id:"T099",date:"19-Mar-26",module:"Manufacturing",type:"WO – SV-200 Complete",priority:"Normal",
+ prompt:"Close WO-SV-001: Output 11,880 LTR (99% yield — evaporation loss 1%). Post to FG. Std cost ₹68/LTR = ₹8,07,840. Post variance: 120 LTR evaporation loss expensed.",
+ accounting:"Dr FG ₹8,07,840 | Cr WIP; Dr Evaporation Loss ₹8,160 | Cr WIP",integrity:"Yield/evaporation accounting"},
+
+{id:"T100",date:"20-Mar-26",module:"Manufacturing",type:"By-product Accounting",priority:"Normal",
+ prompt:"PU-C450 production (WO-PU-001) generated 180 KG still bottoms (hazardous by-product) which was sold to a recycler at ₹18/KG = ₹3,240 + GST 18% = ₹3,823. Post by-product sale. Credit goes to COGS or Production OH.",
+ accounting:"Dr AR ₹3,823 | Cr By-product Revenue ₹3,240 + GST ₹583 (or Cr COGS)",integrity:"By-product revenue recognition"},
+
+{id:"T101",date:"21-Mar-26",module:"Manufacturing",type:"WO – SA-700 QC Release",priority:"Critical",
+ prompt:"Close WO-SA-001: Output 3,480 KG SA-700 (99.4% yield — minimal waste). Final QC: Tensile strength 35 MPa (Pass ≥30 MPa), Overlap shear 22 MPa (Pass), Pot life 45 min (Pass). COA (Certificate of Analysis) issued. Transfer 3,480 KG to FG.",
+ accounting:"Dr FG ₹18,09,600 (3480×₹520) | Cr WIP",integrity:"Critical quality spec"},
+
+{id:"T102",date:"22-Mar-26",module:"Manufacturing",type:"Machine – Preventive Maint.",priority:"Normal",
+ prompt:"Schedule and execute Preventive Maintenance for Reactor R-102: seal replacement ₹8,500 + gaskets ₹3,200 + labour (internal Rajesh Yadav 4 hrs). Total maintenance cost ₹11,700 + GST on spares ₹2,106. Post as maintenance expense (revenue, not capex). Machine available by 6 PM.",
+ accounting:"Dr Maintenance Expense ₹11,700 + GST Input ₹2,106 | Cr Stores/AP ₹13,806",integrity:"Preventive vs breakdown maintenance"},
+
+{id:"T103",date:"23-Mar-26",module:"Manufacturing",type:"Work Order – PU-F200",priority:"Normal",
+ prompt:"Open WO-PUF-001: PU-F200 Flexible Foam System, 2,000 KG planned. BOM: TDI 600 KG + Polyol 1,200 KG + Blowing agent 180 KG + Catalysts 20 KG. Process: Foam line FL-101, Unit-2. Duration: 23-Mar to 26-Mar. Note: TDI controlled substance — CPCB compliance required.",
+ accounting:"WO opened — TDI usage tagged",integrity:"Controlled substance usage tracking"},
+
+{id:"T104",date:"26-Mar-26",module:"Manufacturing",type:"WO – PU-F200 Complete",priority:"Normal",
+ prompt:"Close WO-PUF-001: Output 1,920 KG PU-F200 (96% yield — within standard 94-96%). Foam density: 28 kg/m³ (target 25-30 — Pass). Transfer to FG. Post variance.",
+ accounting:"Dr FG ₹5,37,600 (1920×₹280) | Cr WIP",integrity:"WO completion"},
+
+{id:"T105",date:"27-Mar-26",module:"Manufacturing",type:"Production Cost Report",priority:"High",
+ prompt:"Generate Production Cost Report for March 2026: WO-EP-001, WO-EP-002, WO-PU-001, WO-SA-001, WO-SV-001, WO-PUF-001. For each: standard cost vs actual cost, material variance, labor/OH variance. Total manufacturing variances to be booked to P&L.",
+ accounting:"Post net manufacturing variances to P&L — favorable/unfavorable",integrity:"Variance analysis – management report"},
+
+{id:"T106",date:"28-Mar-26",module:"Manufacturing",type:"Capacity Utilization Report",priority:"Normal",
+ prompt:"Generate Capacity Utilization Report for Unit-1 and Unit-2 for March 2026. Installed capacity: Unit-1 = 12,000 KG/month FG; Unit-2 = 10,000 KG/month FG. Actual utilization: U1 = 8,800 KG (73%), U2 = 7,740 KG (77.4%). Under-absorbed OH: calculate and post.",
+ accounting:"Dr Under-absorbed OH ₹1,42,000 (estimate) | Cr Factory OH Applied",integrity:"Overhead absorption"},
+
+{id:"T107",date:"29-Mar-26",module:"Manufacturing",type:"Work Order – EP-1000 Batch 2",priority:"Critical",
+ prompt:"Open WO-EP-003 for April delivery: EP-1000 8,000 KG (Gulf Chem balance order 42,200 KG to be shipped over April-June). First April-batch initiated in March for 2,000 KG. Mark as 'in-progress' at month end. WIP balance to appear on 31-Mar Balance Sheet.",
+ accounting:"Materials issued: Dr WIP ₹X | Cr RM; WIP on balance sheet",integrity:"Month-end WIP cut-off"},
+
+{id:"T108",date:"30-Mar-26",module:"Manufacturing",type:"WO – HB-50 Hardener",priority:"Normal",
+ prompt:"Open and close WO-HB-001: Hardener Base HB-50, 1,000 KG. Simple blending: Aliphatic amine base 700 KG + modifier 300 KG. Output: 985 KG (1.5% evaporation). Transfer to FG.",
+ accounting:"Dr FG ₹4,04,050 (985×₹410) | Cr WIP; evaporation loss ₹6,150",integrity:"Small batch WO"},
+
+{id:"T109",date:"31-Mar-26",module:"Manufacturing",type:"WIP Valuation – Month End",priority:"Critical",
+ prompt:"Calculate WIP balance for all open work orders at 31-Mar: WO-EP-003 (in progress, 60% complete): materials issued ₹X, OH absorbed ₹Y. Post month-end WIP valuation entry. Verify WIP balance appears correctly on Balance Sheet.",
+ accounting:"Dr WIP (carried forward) | Cr Manufacturing control",integrity:"WIP cut-off – month end"},
+
+{id:"T110",date:"31-Mar-26",module:"Manufacturing",type:"Annual Production Summary",priority:"Normal",
+ prompt:"Generate March 2026 Production Summary: Total FG produced = EP-1000 2,820 KG + EP-2500 2,380 KG + PU-C450 3,820 KG + SA-700 3,480 KG + SV-200 11,880 LTR + PU-F200 1,920 KG + HB-50 985 KG. Total manufacturing cost vs standard — complete variance report for MD review.",
+ accounting:"Management reporting — variances already posted",integrity:"Production MIS"},
+
+// ══ SELLING (T111–T155) ═══════════════════════════════════════════════════════
+{id:"T111",date:"03-Mar-26",module:"Selling",type:"Spot Order – SV-200",priority:"Normal",
+ prompt:"Spot order from HUL Industrial Division: SV-200 Acetone Blend 4,000 LTR @ ₹130/LTR = ₹5,20,000 + GST 18% = ₹6,13,600. Payment: advance NEFT. Raise proforma invoice PI-2026-021. Confirm stock availability from WO-SV-001 (in production).",
+ accounting:"Proforma — no accounting entry",integrity:"Proforma invoice"},
+
+{id:"T112",date:"04-Mar-26",module:"Selling",type:"Advance Receipt – HUL",priority:"Normal",
+ prompt:"Receive advance from HUL Industrial for SV-200 spot order: ₹6,13,600 via NEFT (full advance). Post receipt. GST advance rule: collect GST on advance received even before supply.",
+ accounting:"Dr Bank ₹6,13,600 | Cr Advance from Customer ₹5,20,000 + GST (Advance) ₹93,600",integrity:"GST on advance receipt – Rule 84"},
+
+{id:"T113",date:"10-Mar-26",module:"Selling",type:"Sales Order – Pidilite",priority:"Normal",
+ prompt:"Sales Order SO-DOM-2026-008: Pidilite Industries — SA-350 Industrial Adhesive 5,000 KG @ ₹510/KG = ₹25,50,000 + GST 18% = ₹30,09,000. Payment: Net 30. Delivery: 25-Mar. Approved by Kavita Nair.",
+ accounting:"Commitment",integrity:"Standard domestic SO"},
+
+{id:"T114",date:"11-Mar-26",module:"Selling",type:"Sales Order – Berger Paints",priority:"Normal",
+ prompt:"Sales Order SO-DOM-2026-009: Berger Paints — EP-1000 1,500 KG @ ₹520/KG = ₹7,80,000 + GST 18% = ₹9,20,400. Delivery: 22-Mar. Payment: Net 45.",
+ accounting:"Commitment",integrity:"Standard domestic SO"},
+
+{id:"T115",date:"12-Mar-26",module:"Selling",type:"Export SO – Gulf Chem",priority:"Critical",
+ prompt:"Export Sales Order SO-EXP-2026-001 confirmed: EP-1000 45,000 KG phased over 3 shipments (15MT each in Mar, Apr, May). March shipment: 15,000 KG (but only 2,800 KG in FG — partial dispatch from FG + balance from WO-EP-003). USD 6.05/KG × 45,000 = USD 2,72,250. IGST zero-rated (LUT bond no: LUT/2026/GJ/007).",
+ accounting:"Export under LUT — no IGST; use zero-rated supply",integrity:"LUT-based export"},
+
+{id:"T116",date:"14-Mar-26",module:"Selling",type:"Delivery & Invoice – Berger",priority:"Normal",
+ prompt:"Dispatch EP-1000 1,500 KG to Berger Paints. DN-DOM-003. Lorry: MH-04-BZ-9012. E-way bill: EWB2026031401. Invoice SI-DOM-2026-009: ₹7,80,000 + CGST ₹70,200 + SGST ₹70,200 = ₹9,20,400. FIFO Batch: FG-EP1000-FEB26 (450 KG) + FG-EP1000-MAR26-01 (1,050 KG).",
+ accounting:"Dr COGS ₹4,80,000 (1500×₹320) | Cr FG; Dr AR ₹9,20,400 | Cr Revenue ₹7,80,000 + GST ₹1,40,400",integrity:"FIFO dispatch – multi-batch"},
+
+{id:"T117",date:"15-Mar-26",module:"Selling",type:"Credit Note – Price Correction",priority:"Normal",
+ prompt:"Issue Credit Note CN-2026-003 to Berger Paints: pricing error on previous invoice (Feb batch SI-DOM-2026-002) — overcharged ₹5/KG on 800 KG = ₹4,000 + GST ₹720 = ₹4,720. Deduct from current AR or issue refund. Revise GST liability.",
+ accounting:"Dr Revenue ₹4,000 + GST ₹720 | Cr AR ₹4,720",integrity:"Credit note – revenue reduction"},
+
+{id:"T118",date:"16-Mar-26",module:"Selling",type:"Export Invoice – Gulf Chem Shipment 1",priority:"Critical",
+ prompt:"Export Invoice EXP-SI-2026-001: Gulf Chemical Industries, EP-1000 2,800 KG @ USD 6.05/KG = USD 16,940. INR @ ₹84.50 = ₹14,31,430. IGST: Nil (LUT). FIFO: Batch FG-EP1000-MAR26-01. Shipping Bill SB/2026/MUN/04421. BL date: 16-Mar. Adjust advance 30% USD 81,675 (already received T011).",
+ accounting:"Dr AR USD ₹14,31,430 | Cr Export Revenue ₹14,31,430; adjust advance proportionally",integrity:"Export invoice – zero rated"},
+
+{id:"T119",date:"18-Mar-26",module:"Selling",type:"Delivery – L&T SA-700",priority:"Critical",
+ prompt:"Dispatch SA-700 5,000 KG to L&T Construction project site (Pune). DN-DOM-005. Multiple trucks: 3 × 2T + 1 × 1T. E-way bill: EWB2026031801. Invoice SI-DOM-2026-015: ₹42,50,000 + GST 18% = ₹50,15,000. Advance already received ₹20,06,000. Net AR: ₹30,09,000.",
+ accounting:"Dr COGS ₹26,00,000 (5000×₹520) | Cr FG; Dr AR ₹30,09,000 + Advance adj ₹20,06,000 | Cr Revenue ₹42,50,000 + GST ₹7,65,000",integrity:"Large order – advance settlement"},
+
+{id:"T120",date:"20-Mar-26",module:"Selling",type:"Delivery & Invoice – Pidilite SA-350",priority:"Normal",
+ prompt:"Dispatch SA-350 5,000 KG to Pidilite. DN-DOM-007. Invoice SI-DOM-2026-008: ₹25,50,000 + GST ₹4,59,000 = ₹30,09,000. Batch: WO-SA-350-MAR (assume completed per BOM). E-way bill generated.",
+ accounting:"Dr COGS ₹15,50,000 (5000×₹310) | Cr FG; Dr AR ₹30,09,000 | Cr Revenue + GST",integrity:"Standard dispatch"},
+
+{id:"T121",date:"21-Mar-26",module:"Selling",type:"Cash Sale",priority:"Normal",
+ prompt:"Cash sale (walk-in): Local dealer 'Chem Mart Vadodara' purchases SV-200 500 LTR @ ₹130 = ₹65,000 + GST ₹11,700 = ₹76,700. Payment: RTGS on same day. B2B GST invoice required. Post cash/bank sale.",
+ accounting:"Dr Bank ₹76,700 | Cr Revenue ₹65,000 + GST ₹11,700; Dr COGS ₹34,000 | Cr FG",integrity:"B2B cash sale"},
+
+{id:"T122",date:"22-Mar-26",module:"Selling",type:"HUL Dispatch & Invoice",priority:"High",
+ prompt:"Dispatch SV-200 4,000 LTR to HUL (advance already received T112). DN-DOM-008. Invoice SI-DOM-2026-021: ₹5,20,000 + GST ₹93,600 = ₹6,13,600. Adjust advance fully. No net AR (fully prepaid).",
+ accounting:"Dr COGS ₹2,72,000 | Cr FG; Dr Advance from Customer ₹6,13,600 | Cr Revenue ₹5,20,000 + GST ₹93,600",integrity:"Advance adjustment on delivery"},
+
+{id:"T123",date:"22-Mar-26",module:"Selling",type:"Export – PT Chemindo Dispatch",priority:"High",
+ prompt:"Dispatch to PT Chemindo (SO-EXP-2026-002): PU-C450 8,000 KG + SA-700 3,000 KG. Export Invoice EXP-SI-2026-002: PU-C450 8MT × USD 7.45/KG = USD 59,600 + SA-700 3MT × USD 9.85/KG = USD 29,550 = Total USD 89,150. INR @ ₹84.50 = ₹75,33,175. BL: 22-Mar. Shipping Bill: SB/2026/NHA/00887.",
+ accounting:"Dr AR ₹75,33,175 | Cr Export Revenue; Dr COGS (PU ₹31,20,000 + SA ₹15,60,000) | Cr FG; Advance adj USD 44,575",integrity:"Multi-product export invoice"},
+
+{id:"T124",date:"24-Mar-26",module:"Selling",type:"Customer Debit Note",priority:"Normal",
+ prompt:"L&T Construction raises debit note (buyer's claim): 2 drums SA-700 (40 KG) received damaged (packaging issue). Claim ₹34,000 + GST ₹6,120 = ₹40,120. Accept claim after investigation. Raise credit note CN-2026-004. Damaged goods returned (inventory write-off).",
+ accounting:"Dr Revenue ₹34,000 + GST ₹6,120 | Cr AR ₹40,120; Dr Inventory Loss ₹20,800 | Cr FG ₹20,800 (40KG×₹520)",integrity:"Customer claim – returns"},
+
+{id:"T125",date:"25-Mar-26",module:"Selling",type:"Wacker Chemie Order",priority:"Normal",
+ prompt:"New sales order SO-DOM-2026-019: Wacker Chemie India — HB-50 Hardener Base 500 KG @ ₹670 = ₹3,35,000 + CB-10 Catalyst Blend 100 KG @ ₹1,450 = ₹1,45,000. Total ₹4,80,000 + GST 18% = ₹5,66,400. Payment: Net 30. Delivery: 30-Mar.",
+ accounting:"Commitment",integrity:"High-value specialty product"},
+
+{id:"T126",date:"26-Mar-26",module:"Selling",type:"Dispatch – Wacker Chemie",priority:"Normal",
+ prompt:"Dispatch HB-50 500 KG + CB-10 100 KG to Wacker Chemie. Invoice SI-DOM-2026-019: ₹4,80,000 + GST ₹86,400 = ₹5,66,400. E-way bill generated. COA attached.",
+ accounting:"Dr COGS ₹3,50,000 (HB50 500×₹410 + CB10 100×₹890) | Cr FG; Dr AR ₹5,66,400 | Cr Revenue + GST",integrity:"Specialty chemical dispatch"},
+
+{id:"T127",date:"27-Mar-26",module:"Selling",type:"Export – Gulf Chem BL Receipt",priority:"Critical",
+ prompt:"BL (Bill of Lading) received for Gulf Chem Shipment 1 (EXP-SI-2026-001). Share BL copy with buyer for payment trigger. Balance 70% payment due: USD 11,858 (= USD 16,940 × 70%). Mark BL date: 16-Mar. Follow up for swift payment.",
+ accounting:"Balance AR confirmed; forex exposure USD 11,858",integrity:"Export payment follow-up"},
+
+{id:"T128",date:"27-Mar-26",module:"Selling",type:"Bad Debt Risk Flag",priority:"Normal",
+ prompt:"Flag Wacker Chemie payment risk: previous invoice SI-DOM-2026-010 (Feb, ₹2,85,000) overdue by 15 days. Escalate to Sunita Gupta. Create provision for doubtful debt: 50% of ₹2,85,000 = ₹1,42,500 (per credit policy). Post provision.",
+ accounting:"Dr Bad Debt Provision ₹1,42,500 | Cr Provision for Doubtful Debts ₹1,42,500",integrity:"Credit risk provision"},
+
+{id:"T129",date:"28-Mar-26",module:"Selling",type:"L&T Balance Receipt",priority:"High",
+ prompt:"Receive balance payment from L&T Construction: ₹30,09,000 net of credit note ₹40,120 = ₹29,68,880. RTGS received. Close invoice SI-DOM-2026-015.",
+ accounting:"Dr Bank ₹29,68,880 | Cr AR ₹29,68,880",integrity:"Payment receipt – net settlement"},
+
+{id:"T130",date:"28-Mar-26",module:"Selling",type:"Pidilite Payment",priority:"Normal",
+ prompt:"Receive payment from Pidilite Industries for SI-DOM-2026-008: ₹30,09,000 via RTGS. Close AR.",
+ accounting:"Dr Bank ₹30,09,000 | Cr AR ₹30,09,000",integrity:"AR closure"},
+
+{id:"T131",date:"29-Mar-26",module:"Selling",type:"Export Payment – PT Chemindo",priority:"Critical",
+ prompt:"Receive balance 50% payment from PT Chemindo (TT): USD 44,575. Rate on receipt: ₹84.80/USD = ₹37,80,060. Book forex gain: USD advance booked at ₹84.50, received at ₹84.80 — gain ₹13,373. Close AR.",
+ accounting:"Dr Bank ₹37,80,060 | Cr AR ₹37,66,588 + Forex Gain ₹13,372",integrity:"Forex gain on receipt"},
+
+{id:"T132",date:"29-Mar-26",module:"Selling",type:"Blanket Order – HUL Framework",priority:"Normal",
+ prompt:"Create blanket/framework order for HUL Industrial Division: SV-200 20,000 LTR/month for Apr–Sep 2026 @ ₹130/LTR. Total framework: ₹1,56,00,000 + GST. Release individual delivery orders monthly. Post blanket order in system — do not recognize revenue yet.",
+ accounting:"No accounting — blanket order management",integrity:"Blanket order vs revenue recognition"},
+
+{id:"T133",date:"30-Mar-26",module:"Selling",type:"Performa – Motherson Sumi",priority:"Normal",
+ prompt:"Proforma Invoice PI-2026-031 for Motherson Sumi: SA-700 2,000 KG @ ₹850 = ₹17,00,000 + GST ₹3,06,000 (pending IATF approval; expected order in April). Log proforma in system. No SO yet.",
+ accounting:"No entry",integrity:"Pipeline proforma"},
+
+{id:"T134",date:"30-Mar-26",module:"Selling",type:"Sales Return – Berger",priority:"Normal",
+ prompt:"Berger Paints returns 100 KG EP-1000 (Batch FG-EP1000-FEB26) citing off-spec color. Accept return (QC confirms Gardner color 2 vs spec ≤1). Raise Return Memo RM-2026-002. Issue credit note CN-2026-005: 100 KG × ₹520 = ₹52,000 + GST ₹9,360. Goods returned to quarantine store.",
+ accounting:"Dr Revenue ₹52,000 + GST ₹9,360 | Cr AR ₹61,360; Dr Quarantine Inventory ₹32,000 (std cost) | Cr COGS ₹32,000",integrity:"Sales return – quality reason"},
+
+{id:"T135",date:"31-Mar-26",module:"Selling",type:"Month-end AR Aging",priority:"High",
+ prompt:"Generate AR Aging Report 31-Mar-26: Current (<30 days): ₹X. 31-60 days: Berger Paints ₹9,20,400 (net CR). 61-90 days: Wacker Chemie ₹2,85,000 overdue. >90 days: none. Total AR to reconcile with TB. Provision review.",
+ accounting:"AR sub-ledger vs TB reconciliation",integrity:"Aging control"},
+
+{id:"T136",date:"31-Mar-26",module:"Selling",type:"GSTR-1 Filing Prep",priority:"Critical",
+ prompt:"Prepare GSTR-1 data for March 2026: Domestic B2B invoices, Export invoices (with SB ref), Credit notes, Advance receipt adjustment. Verify HSN summary: 3907 (Epoxy), 3909 (PU), 3506 (Adhesives), 2903 (Chlorinated solvents), 2914 (Ketones), 3815 (Catalysts). Total taxable supply + export. File by 11-Apr deadline.",
+ accounting:"GST reconciliation — output tax verification",integrity:"GSTR-1 compliance"},
+
+{id:"T137",date:"31-Mar-26",module:"Selling",type:"Revenue by Segment Report",priority:"Normal",
+ prompt:"Generate Revenue Report for March 2026 by segment: (1) Paints & Coatings. (2) Construction/Infra. (3) Export. (4) Automotive. (5) FMCG Industrial. Report in INR (translate USD). Gross margin % by product line. Share with MD.",
+ accounting:"Management reporting",integrity:"Segment reporting"},
+
+// ══ HR & PAYROLL (T138–T165) ══════════════════════════════════════════════════
+{id:"T138",date:"01-Mar-26",module:"HR",type:"Attendance – Mark All",priority:"Normal",
+ prompt:"Mark attendance for all 15 employees: 01-Mar-26 (working day). Vikram Rao: Present. Meera Joshi: WFH. Arpit Shah: Present. Kavita Nair: Client visit (mark as On-duty). Rajan Pillai: Present. Sunita Gupta: WFH. Deepak Verma: Present. Others: all Present. Note shift workers (Sanjay Patil, Laleh Hussain): Shift-A.",
+ accounting:"No entry",integrity:"Attendance marking"},
+
+{id:"T139",date:"02-Mar-26",module:"HR",type:"Leave Application – CL",priority:"Normal",
+ prompt:"Laleh Hussain (EMP010) applies for 1 day Casual Leave: 04-Mar-26. Reason: personal. Approved by Sanjay Patil (supervisor). Update leave balance: CL availed 1/12 remaining. Mark attendance 04-Mar: CL.",
+ accounting:"No entry — leave balance update",integrity:"Leave management"},
+
+{id:"T140",date:"03-Mar-26",module:"HR",type:"Overtime Entry",priority:"Normal",
+ prompt:"Reactor operators worked overtime on 02-Mar (production emergency — R-101 batch): Laleh Hussain 3 hrs OT, Rajesh Yadav 2 hrs OT. OT rate: 2× basic hourly. Laleh: basic ₹38,000/26 days/8 hrs = ₹182.69/hr × 2 × 3 = ₹1,096. Rajesh: ₹35,000/26/8 = ₹168.27 × 2 × 2 = ₹673. Post OT accrual.",
+ accounting:"Dr OT Expense ₹1,769 | Cr OT Payable ₹1,769",integrity:"Overtime calculation"},
+
+{id:"T141",date:"05-Mar-26",module:"HR",type:"Travel Expense – Kavita Nair",priority:"Normal",
+ prompt:"Process travel reimbursement claim for Kavita Nair (client visit Mumbai 3-Mar – 4-Mar): Air ticket ₹8,400, Hotel ₹5,800, Local transport ₹1,200, Meals ₹1,500. Total ₹16,900. Approved by Harsh Trivedi. Cost center: Sales & Marketing. Post expense and pay via bank.",
+ accounting:"Dr Selling & Marketing Expense ₹16,900 | Cr Bank ₹16,900",integrity:"Travel reimbursement"},
+
+{id:"T142",date:"07-Mar-26",module:"HR",type:"New Hire – Onboarding",priority:"Normal",
+ prompt:"Onboard EMP016: Geeta Sharma, QC Analyst, Dept: QC & R&D. DOJ: 07-Mar-26. CTC: ₹48,000/month. PF applicable (12% basic). ESI not applicable (salary > ₹21,000). PAN: AABPG5678K. Bank account: ICICI 1234567890. Issue offer letter, appointment letter, POSH training scheduled.",
+ accounting:"No payroll entry until month-end",integrity:"Onboarding compliance"},
+
+{id:"T143",date:"10-Mar-26",module:"HR",type:"Sick Leave + Medical Claim",priority:"Normal",
+ prompt:"Arpit Shah (EMP003) on sick leave 10-11-Mar (2 days). SL availed. Medical expense claim: ₹3,200 (doctor + pharmacy). Company policy: reimburse medical up to ₹5,000/year. Approved. Post medical reimbursement.",
+ accounting:"Dr Employee Medical Expense ₹3,200 | Cr Bank ₹3,200",integrity:"Medical benefit accounting"},
+
+{id:"T144",date:"12-Mar-26",module:"HR",type:"Leave Without Pay – Notice",priority:"High",
+ prompt:"Rajan Pillai (EMP005) took 2 days unauthorized leave (13-14 Mar) without approval. Manager (Kavita Nair) marks as LWP. Salary deduction: 2 days × (₹75,000/26) = ₹5,769. Document disciplinary memo.",
+ accounting:"Salary deduction to be applied in payroll: ₹5,769",integrity:"LWP – payroll deduction"},
+
+{id:"T145",date:"14-Mar-26",module:"HR",type:"Training Expense",priority:"Normal",
+ prompt:"Depute Meera Joshi + Priya Menon for 'ISO 9001:2015 Internal Auditor' training in Ahmedabad (15-Mar, 1 day). Training fees: ₹8,500 × 2 = ₹17,000 + GST 18% = ₹20,060. Cost center: QC & R&D. Post expense.",
+ accounting:"Dr Training Expense ₹17,000 + GST Input ₹3,060 | Cr Bank ₹20,060",integrity:"Training expense – GST input credit"},
+
+{id:"T146",date:"15-Mar-26",module:"HR",type:"Salary Revision",priority:"High",
+ prompt:"Annual increment effective 01-Apr-26 (approval needed in March): Arpit Shah +12% (₹82,000 → ₹91,840), Deepak Verma +10% (₹88,000 → ₹96,800), Meera Joshi +8% (₹98,000 → ₹1,05,840). Revise salary structures in system. New slabs effective April. Letter issue: 15-Mar.",
+ accounting:"No entry in March; effective April payroll",integrity:"Salary revision workflow"},
+
+{id:"T147",date:"18-Mar-26",module:"HR",type:"PF Return Filing",priority:"Critical",
+ prompt:"File PF return (ECR) for February wages on EPFO portal. Total PF Employee: ₹X (12% of basic all eligible employees). PF Employer: ₹X (12% basic + admin 0.5% + EDLI 0.5%). Total remittance: validate against payroll. Challan: PF/FEB/2026/0044221. Due: 15-Mar — mark late (3-day delay), assess penalty applicability.",
+ accounting:"PF remittance Dr PF Payable | Cr Bank; penalty if any",integrity:"PF compliance – late filing"},
+
+{id:"T148",date:"20-Mar-26",module:"HR",type:"ESI Return",priority:"Normal",
+ prompt:"File ESI contribution for February for eligible employees (Sanjay Patil, Laleh Hussain, Rajesh Yadav, Fatima Sheikh, Om Prakash). Employee ESI: 0.75% of gross. Employer ESI: 3.25% of gross. Total ESI: calculate per employee and post challan.",
+ accounting:"Dr ESI Payable | Cr Bank",integrity:"ESI compliance"},
+
+{id:"T149",date:"22-Mar-26",module:"HR",type:"Separation – Exit",priority:"High",
+ prompt:"Fatima Sheikh (EMP014) resigned, LWD: 22-Mar-26. Notice period: 30 days, but management waived 8 days. Process F&F: Salary for 22 days (Mar): ₹42,000/26×22 = ₹35,538. Leave encashment: 8 EL days × ₹1,615/day = ₹12,923. Gratuity: <5 years — not eligible. Bonus: pro-rata Feb (already paid). Issue experience letter + Relieving letter.",
+ accounting:"Dr Salary Expense ₹35,538 + Leave Encash ₹12,923 | Cr Bank ₹48,461 (net of deductions)",integrity:"F&F settlement"},
+
+{id:"T150",date:"24-Mar-26",module:"HR",type:"Bonus Provision",priority:"Normal",
+ prompt:"Provision for annual performance bonus (approved in Board meeting Mar): 10% of annual CTC for Vikram Rao (₹1,45,000), Kavita Nair (₹1,10,000), Sunita Gupta (₹1,20,000). Total provision: ₹37,500 (March share = full year provision ÷ 12 = ₹31,250/month × 12 months — or full provision in March). Post provision for FY-end.",
+ accounting:"Dr Bonus Expense ₹37,500 | Cr Bonus Provision (Liability) ₹37,500",integrity:"Bonus accrual – AS 15"},
+
+{id:"T151",date:"28-Mar-26",module:"HR",type:"Gratuity Actuarial",priority:"Normal",
+ prompt:"Post annual gratuity provision (actuarial estimate): Employees eligible (>5 years service): Vikram Rao, Meera Joshi, Deepak Verma. Actuarial present value increase for March: ₹28,500 (from actuarial report). Post provision.",
+ accounting:"Dr Gratuity Expense ₹28,500 | Cr Gratuity Provision ₹28,500",integrity:"AS 15 / IND AS 19 gratuity"},
+
+{id:"T152",date:"31-Mar-26",module:"HR",type:"Payroll Processing – March",priority:"Critical",
+ prompt:"Process March 2026 payroll for 15 employees (14 active, Fatima F&F separate): Gross salaries per CTC table. Deductions: PF employee 12% basic, income tax TDS as per projections, LWP for Rajan Pillai (₹5,769), OT addition ₹1,769. New hire Geeta Sharma prorated 25 days. Employer PF 12% basic + admin. Post payroll journal.",
+ accounting:"Dr Gross Salary ₹11,82,400 + Employer PF ₹X | Cr Net Pay ₹X + PF Employee ₹X + TDS ₹X + ESI ₹X",integrity:"Payroll – all deductions"},
+
+{id:"T153",date:"31-Mar-26",module:"HR",type:"Salary Disbursement",priority:"Critical",
+ prompt:"Disburse March net salaries to all 14 active employees via bank transfer (ICICI bulk payment). Total net outflow: ~₹9,85,000 (after all deductions). Upload NEFT file. Post disbursement entry.",
+ accounting:"Dr Salary Payable ₹9,85,000 | Cr Bank ₹9,85,000",integrity:"Payroll disbursement"},
+
+{id:"T154",date:"31-Mar-26",module:"HR",type:"TDS on Salary",priority:"High",
+ prompt:"Verify income tax TDS on salaries for March: Vikram Rao (₹1,45,000 CTC) — TDS ₹12,500/month. Harsh Trivedi director salary ₹3,50,000 — TDS ₹68,000/month. Others below taxable threshold or lower slab. Total TDS deducted: ₹84,200. Post in TDS payable account.",
+ accounting:"TDS Payable confirmed; to be paid by 7-Apr",integrity:"TDS on salary – 192B"},
+
+{id:"T155",date:"31-Mar-26",module:"HR",type:"Headcount Report",priority:"Normal",
+ prompt:"Generate HR Headcount Report March 2026: Opening headcount: 15. Additions: 1 (Geeta Sharma). Attrition: 1 (Fatima Sheikh). Closing: 15. Dept-wise: Production 4, QC/R&D 3, Sales 3, Finance 2, Logistics 2, Corporate 1. Attrition rate: 6.7% annualized.",
+ accounting:"No entry — HR analytics",integrity:"Headcount control"},
+
+// ══ ACCOUNTING / FINANCE (T156–T200) ══════════════════════════════════════════
+{id:"T156",date:"01-Mar-26",module:"Accounting",type:"Opening Balances",priority:"Critical",
+ prompt:"Post opening trial balance as at 01-Mar-26: Bank HDFC ₹42,80,000 Dr; Bank Axis ₹18,50,000 Dr; EEFC A/c USD 12,000 (₹10,14,000) Dr; AR ₹38,60,000 Dr; Advances to Vendors ₹8,20,000 Dr; RM Inventory ₹52,40,000 Dr; WIP ₹6,80,000 Dr; FG Inventory ₹31,50,000 Dr; Capital WIP ₹7,40,000 Dr; Fixed Assets (Net) ₹1,24,60,000 Dr; AP ₹28,40,000 Cr; Advance from Customers ₹12,00,000 Cr; GST Payable ₹4,80,000 Cr; TDS Payable ₹1,90,000 Cr; PF Payable ₹2,40,000 Cr; Term Loan ₹65,00,000 Cr; Share Capital ₹80,00,000 Cr; Retained Earnings ₹1,47,84,000 Cr. Verify TB balance.",
+ accounting:"Opening TB must balance — Debits = Credits",integrity:"Opening balance validation"},
+
+{id:"T157",date:"02-Mar-26",module:"Accounting",type:"GST Payment – Feb",priority:"Critical",
+ prompt:"Pay February GST liability: CGST ₹2,40,000 + SGST ₹2,40,000 + IGST ₹0 (export zero-rated credit set-off used) = ₹4,80,000. Challan PMT-06: ₹4,80,000. Verify ITC credit utilization before cash payment. Post journal.",
+ accounting:"Dr GST Payable ₹4,80,000 | Cr Bank ₹4,80,000",integrity:"GST payment – ITC utilization"},
+
+{id:"T158",date:"03-Mar-26",module:"Accounting",type:"TDS Payment – Feb",priority:"High",
+ prompt:"Pay February TDS to TRACES: 194J ₹12,600 + 194C ₹6,840 + 192B ₹84,200 (salary TDS) = ₹1,03,640. Challan ref: TDS/FEB/2026/009821. Due: 7-Mar (paid on 3-Mar — on time). Post.",
+ accounting:"Dr TDS Payable ₹1,03,640 | Cr Bank ₹1,03,640",integrity:"TDS compliance"},
+
+{id:"T159",date:"05-Mar-26",module:"Accounting",type:"Loan EMI – Term Loan",priority:"High",
+ prompt:"Pay March EMI for HDFC Term Loan (₹65,00,000 balance, 9.5% p.a., 5-yr). EMI: ₹1,36,400/month. Principal: ₹84,900. Interest: ₹51,500. Post principal repayment and interest expense.",
+ accounting:"Dr Term Loan ₹84,900 + Dr Interest Expense ₹51,500 | Cr Bank ₹1,36,400",integrity:"Loan amortization"},
+
+{id:"T160",date:"07-Mar-26",module:"Accounting",type:"Bank Reconciliation – HDFC",priority:"High",
+ prompt:"Bank reconciliation for HDFC Current account as at 07-Mar: Book balance ₹35,22,600. Bank statement balance ₹35,48,100. Reconciling items: (1) Cheque issued to INEOS not cleared: ₹10,84,952. (2) Bank credit (interest) not in books: ₹850. (3) Bank charges not in books: ₹1,200. Prepare BRS and post unrecorded items.",
+ accounting:"Dr Bank ₹850 (interest) | Cr Interest Income; Dr Bank Charges ₹1,200 | Cr Bank",integrity:"Bank reconciliation"},
+
+{id:"T161",date:"10-Mar-26",module:"Accounting",type:"EEFC Account – USD Receipt",priority:"Normal",
+ prompt:"Gulf Chem advance USD 81,675 received in EEFC account (HDFC EEFC). Convert 50% = USD 40,837 to INR @ ₹84.55 (bank buying rate): ₹34,52,739. Balance USD 40,838 retained in EEFC for future payments. Post EEFC entries.",
+ accounting:"Dr Bank INR ₹34,52,739 + Dr EEFC USD retained ₹34,51,872 | Cr EEFC account (original ₹69,01,538); Forex gain/loss on conversion",integrity:"EEFC account management"},
+
+{id:"T162",date:"12-Mar-26",module:"Accounting",type:"Prepaid Expense",priority:"Normal",
+ prompt:"Annual insurance premium paid for factory all-risk policy: ₹3,60,000 (12 months, Apr 26 – Mar 27). Paid to National Insurance. Post prepaid: March portion ₹0 (policy starts Apr). Record full ₹3,60,000 as prepaid.",
+ accounting:"Dr Prepaid Insurance ₹3,60,000 | Cr Bank ₹3,60,000",integrity:"Prepaid expense cut-off"},
+
+{id:"T163",date:"15-Mar-26",module:"Accounting",type:"Journal – Interest Accrual",priority:"Normal",
+ prompt:"Accrue bank interest on EEFC USD balance at 31-Mar: USD 40,838 × 2% p.a. ÷ 12 = USD 68. INR ₹5,746. Also accrue FD interest: ₹25,00,000 FD @ 6.8% p.a. ÷ 12 = ₹14,167. Total interest income accrual: ₹19,913.",
+ accounting:"Dr Accrued Interest ₹19,913 | Cr Interest Income ₹19,913",integrity:"Interest income accrual"},
+
+{id:"T164",date:"16-Mar-26",module:"Accounting",type:"Advance Tax Payment",priority:"Critical",
+ prompt:"Pay Q4 advance tax (Jan-Mar instalment): Estimated tax liability for FY ₹22,00,000. Paid till date (Q1+Q2+Q3): ₹15,00,000. Q4 balance: ₹7,00,000. Due: 15-Mar (pay today — 1-day delay — 234C interest: 1% × ₹7,00,000 × 1/12 = ₹583). Post advance tax + interest.",
+ accounting:"Dr Advance Tax ₹7,00,000 + Dr Interest 234C ₹583 | Cr Bank ₹7,00,583",integrity:"Advance tax – 234C interest"},
+
+{id:"T165",date:"18-Mar-26",module:"Accounting",type:"Journal – Provision Reversal",priority:"Normal",
+ prompt:"Reverse previous month accrual for audit fees (Feb provision ₹25,000) — actual invoice received from auditor: ₹28,000 + GST ₹5,040. Post reversal of provision and record actual invoice. Difference ₹3,000 to expense in March.",
+ accounting:"Dr Accrued Expense ₹25,000 (reversal) | Cr Professional Fees; then Dr Professional Fees ₹28,000 + GST ₹5,040 | Cr AP ₹33,040",integrity:"Accrual reversal + actual booking"},
+
+{id:"T166",date:"20-Mar-26",module:"Accounting",type:"Depreciation – Monthly",priority:"Critical",
+ prompt:"Post March depreciation for all fixed assets: Plant & Machinery (existing ₹1,08,00,000 WDV) @ 15% WDV p.a. = ₹1,35,000/month. New reactor ₹18,50,000 capitalized 22-Mar @ 6.67% SLM = ₹10,280 (prorated 10 days). Office equipment ₹8,50,000 @ 33.33% = ₹23,611. Vehicles @ 20%. Total: ₹2,05,000 (approx).",
+ accounting:"Dr Depreciation ₹2,05,000 | Cr Accumulated Depreciation ₹2,05,000",integrity:"Multi-asset depreciation"},
+
+{id:"T167",date:"22-Mar-26",module:"Accounting",type:"Bank Recon – Axis Bank",priority:"Normal",
+ prompt:"Axis Bank reconciliation: Book ₹12,34,000. Bank ₹12,45,800. Difference: Bank ECS collection ₹11,800 not in books (customer payment directly credited). Post unrecorded AR receipt.",
+ accounting:"Dr Bank ₹11,800 | Cr AR ₹11,800",integrity:"Bank recon – unrecorded receipt"},
+
+{id:"T168",date:"22-Mar-26",module:"Accounting",type:"Forex Gain – Sales Receipt",priority:"Normal",
+ prompt:"PT Chemindo balance USD 44,575 received 29-Mar (T131). Booking rate ₹84.50, receipt rate ₹84.80. Forex gain: USD 44,575 × ₹0.30 = ₹13,373. Post realized forex gain.",
+ accounting:"Dr Bank ₹37,80,060 | Cr AR ₹37,66,688 + Forex Gain ₹13,372",integrity:"Realized forex gain"},
+
+{id:"T169",date:"24-Mar-26",module:"Accounting",type:"Intercompany – Related Party",priority:"Normal",
+ prompt:"PolyMerx paid corporate expense on behalf of sister concern 'PolyMerx Trading LLP' (same promoter group): ₹45,000 software license. Recover from LLP. Post as: Dr Receivable from LLP ₹45,000 | Cr Bank ₹45,000. Note: Related Party Transaction — disclosure required in notes.",
+ accounting:"Dr Related Party Receivable ₹45,000 | Cr Bank ₹45,000; RPT disclosure note",integrity:"Related party transaction"},
+
+{id:"T170",date:"25-Mar-26",module:"Accounting",type:"Working Capital Loan",priority:"High",
+ prompt:"Draw down WC loan (CC limit with HDFC): ₹50,00,000 drawdown against ₹1,20,00,000 CC limit. Purpose: fund raw material imports. Post loan receipt. Interest rate: 10.25% p.a. on daily basis.",
+ accounting:"Dr Bank ₹50,00,000 | Cr CC Loan (Bank OD) ₹50,00,000",integrity:"Working capital drawdown"},
+
+{id:"T171",date:"26-Mar-26",module:"Accounting",type:"GSTR-3B Filing – Feb",priority:"Critical",
+ prompt:"File GSTR-3B for February 2026: Output GST (CGST ₹2,40,000 + SGST ₹2,40,000 + IGST ₹X on imports) — ITC claimed: CGST ₹X + SGST ₹X + IGST ₹X. Net liability paid. Verify figures match books. File on portal by 20-Mar (filing late — penalty ₹100/day × 6 days = ₹600).",
+ accounting:"GST portal filing; penalty ₹600 Dr Penalty Expense | Cr Bank",integrity:"GST late filing penalty"},
+
+{id:"T172",date:"27-Mar-26",module:"Accounting",type:"Audit Observation – Response",priority:"Normal",
+ prompt:"Statutory auditor observation: 3 purchase invoices booked without PO approval (T028, T038, T043). Management response: exceptions noted, will tighten controls. Create manual journal to ensure 3-way match is documented retroactively. Update approval workflow.",
+ accounting:"No financial entry — control documentation",integrity:"Audit compliance"},
+
+{id:"T173",date:"28-Mar-26",module:"Accounting",type:"Expense Capitalization Review",priority:"Normal",
+ prompt:"Review R&D expenses for potential capitalization under Ind AS 38: Karan Singh (not here — this is PolyMerx) — Priya Menon's work on EP-X prototype (new product formulation). March expenses: ₹38,000 materials + ₹8,000 lab. Total ₹46,000. Assessment: still in research phase (not development) — expense, do not capitalize.",
+ accounting:"Expenses confirmed as revenue (not capitalized)",integrity:"Ind AS 38 – R&D treatment"},
+
+{id:"T174",date:"29-Mar-26",module:"Accounting",type:"Lease Accounting",priority:"Normal",
+ prompt:"Company leases office space (Corporate HQ Vadodara): Monthly rent ₹85,000. Under Ind AS 116 (if lease >12 months): Right-of-Use Asset and Lease Liability on B/S. Assuming 3-year lease. Post March ROU amortization ₹24,028 + interest on lease liability ₹12,500. Separate from rent expense.",
+ accounting:"Dr ROU Amortization ₹24,028 + Dr Lease Interest ₹12,500 | Cr ROU Asset + Lease Liability",integrity:"Ind AS 116 – lease accounting"},
+
+{id:"T175",date:"30-Mar-26",module:"Accounting",type:"CC Interest Accrual",priority:"Normal",
+ prompt:"Accrue CC loan interest for March: ₹50,00,000 drawn for 6 days @ 10.25% p.a. = ₹50,00,000 × 10.25% × 6/365 = ₹8,425. Post accrual.",
+ accounting:"Dr Interest Expense ₹8,425 | Cr Accrued Interest (CC) ₹8,425",integrity:"Working capital interest"},
+
+{id:"T176",date:"30-Mar-26",module:"Accounting",type:"Provision – Warranty",priority:"Normal",
+ prompt:"Post warranty provision for March sales: Company offers 6-month product quality guarantee on SA-700 and EP-2500. Historical claim rate: 0.5% of sales. March SA-700 sales ₹42,50,000 × 0.5% = ₹21,250. EP-2500 sales ₹15,60,000 × 0.5% = ₹7,800. Total warranty provision: ₹29,050.",
+ accounting:"Dr Warranty Expense ₹29,050 | Cr Warranty Provision ₹29,050",integrity:"Warranty provision – matching principle"},
+
+{id:"T177",date:"31-Mar-26",module:"Accounting",type:"Deferred Revenue",priority:"Normal",
+ prompt:"Identify deferred revenue in Advance from Customers: PT Chemindo advance ₹37,66,588 — fully delivered, revenue recognized. HUL advance ₹6,13,600 — delivered, settled. L&T advance ₹20,06,000 — delivered, settled. Gulf Chem advance USD 81,675: March shipment USD 16,940 invoiced. Remaining advance for Apr-May shipments: USD 64,735 (₹54,74,108) — deferred. Confirm correct balance in Advance from Customer A/c.",
+ accounting:"Deferred revenue (advance) balance verification",integrity:"Revenue deferred correctly"},
+
+{id:"T178",date:"31-Mar-26",module:"Accounting",type:"Depreciation – Annual Review",priority:"Normal",
+ prompt:"Annual review of useful lives and residual values of fixed assets (FY-end): Reactor R-101 (age: 8 years, original life: 15) — useful life adequate. Forklift (age 3 years) — useful life revised to 8 years (from 10). Recalculate depreciation prospectively. Post revised depreciation for March.",
+ accounting:"Revised depreciation posted prospectively — Ind AS 8",integrity:"Depreciation rate revision"},
+
+{id:"T179",date:"31-Mar-26",module:"Accounting",type:"FX Revaluation – All Balances",priority:"Critical",
+ prompt:"Revalue all foreign currency balances at 31-Mar-26 closing rate (₹84.80/USD, ₹91.55/EUR): (1) EEFC USD balance USD 40,838 → ₹34,63,064 (book ₹34,51,872) — gain ₹11,192. (2) AR Gulf Chem USD 11,858 → ₹10,05,358 (book ₹10,01,603) — gain ₹3,755. (3) Henkel advance EUR 8,500 revalued — loss ₹2,975 (T060). Net MTM: gain ₹11,972.",
+ accounting:"Dr Various Forex assets | Cr Forex Gain ₹14,947; Dr Forex Loss ₹2,975 | Cr Advance to Vendor",integrity:"Ind AS 21 – MTM revaluation"},
+
+{id:"T180",date:"31-Mar-26",module:"Accounting",type:"Provision – Doubtful Debts",priority:"Normal",
+ prompt:"Review AR and create provision: Wacker Chemie overdue ₹2,85,000 (>30 days) — maintain 50% provision ₹1,42,500. Berger Paints ₹9,20,400 (current) — 0%. All others current — 0%. Total provision: ₹1,42,500 (already created T128). Confirm balance.",
+ accounting:"Provision confirmed — no additional entry if already posted",integrity:"Credit loss provisioning"},
+
+{id:"T181",date:"31-Mar-26",module:"Accounting",type:"Trial Balance – Pre-close",priority:"Critical",
+ prompt:"Generate Trial Balance pre-close (before closing entries) for March 2026. Verify: (1) Every P&L account has a balance. (2) Balance Sheet accounts carry forward. (3) Debits = Credits. (4) GST Input vs Output net. (5) TDS payable balance = deductions – payments. (6) PF/ESI payables correct. Share with Sunita Gupta for review.",
+ accounting:"TB verification — any OOB to be investigated",integrity:"Pre-close TB control"},
+
+{id:"T182",date:"31-Mar-26",module:"Accounting",type:"Closing Entry – P&L",priority:"Critical",
+ prompt:"Post closing entries to transfer all P&L accounts to Retained Earnings: Dr all income accounts, Cr all expense accounts; net to Retained Earnings. March P&L: Revenue ₹X, COGS ₹X, Gross Profit ₹X, Operating Expenses ₹X, EBITDA ₹X, Depreciation ₹2,05,000, Interest ₹60,425, PBT ₹X, Tax Provision ₹X, PAT ₹X.",
+ accounting:"Closing entries transfer P&L to BS; Retained Earnings updated",integrity:"Month/year-end closing"},
+
+{id:"T183",date:"31-Mar-26",module:"Accounting",type:"Tax Provision – FY End",priority:"Critical",
+ prompt:"Calculate income tax provision for FY 2025-26: PBT (estimated) ₹48,00,000. Add back: Depreciation as per Companies Act, Provision for doubtful debts (non-deductible). Deduct: Depreciation as per Income Tax Act. Taxable income: ₹52,00,000. Tax @ 25.17% (Sec 115BAA) = ₹13,08,840. Less advance tax paid ₹22,00,000. MAT check: if regular tax > MAT — regular tax applies. Post tax provision.",
+ accounting:"Dr Income Tax Expense ₹13,08,840 | Cr Provision for Tax ₹13,08,840; excess advance tax = ₹8,91,160 refundable",integrity:"Corporate tax computation"},
+
+{id:"T184",date:"31-Mar-26",module:"Accounting",type:"Deferred Tax",priority:"High",
+ prompt:"Calculate deferred tax for March FY-end: Timing difference: depreciation (books vs IT) creates deferred tax liability. Books dep ₹2,05,000, IT dep ₹3,80,000 (accelerated) → temporary difference ₹1,75,000 → DTA ₹44,047 (25.17%). Provision for doubtful debts ₹1,42,500 not deductible → DTL reversed. Net DTA movement: post.",
+ accounting:"Dr DTA ₹44,047 | Cr Deferred Tax Expense ₹44,047 (or vice versa)",integrity:"Ind AS 12 – deferred tax"},
+
+{id:"T185",date:"31-Mar-26",module:"Accounting",type:"Capitalization – Software",priority:"Normal",
+ prompt:"Annual ERP subscription (Kairos system license) ₹2,40,000 paid 01-Apr-25. Under Ind AS 38: SaaS subscription expensed (not capitalized). March amortization of prepaid: ₹2,40,000/12 = ₹20,000. Confirm correct accounting treatment.",
+ accounting:"Dr Software Subscription Expense ₹20,000 | Cr Prepaid ₹20,000",integrity:"Ind AS 38 – SaaS accounting"},
+
+{id:"T186",date:"31-Mar-26",module:"Accounting",type:"Balance Sheet – Final",priority:"Critical",
+ prompt:"Generate Final Balance Sheet as at 31-Mar-26. Verify: (1) Total Assets = Total Liabilities + Equity. (2) Cash + Bank = TB balance. (3) FG Inventory = Inventory valuation report total. (4) Fixed Assets net = Register total. (5) Term Loan outstanding = bank statement. (6) Retained Earnings = Opening + PAT. Any discrepancy to be resolved before sign-off.",
+ accounting:"Balance Sheet validation",integrity:"BS proof — Ind AS presentation"},
+
+{id:"T187",date:"31-Mar-26",module:"Reports",type:"P&L Statement",priority:"Critical",
+ prompt:"Generate P&L Statement for March 2026 and Full FY 2025-26. Format: Revenue from Operations, Other Income, Total Revenue, COGS, Gross Profit, Gross Margin%, Employee Costs, Manufacturing OH, Selling Expenses, Admin Expenses, EBITDA, Depreciation, EBIT, Finance Costs, PBT, Tax, PAT. Compare vs Feb 2026 and vs March 2025 (if available). Highlight export revenue separately.",
+ accounting:"Management reporting",integrity:"P&L accuracy"},
+
+{id:"T188",date:"31-Mar-26",module:"Reports",type:"Cash Flow Statement",priority:"High",
+ prompt:"Generate Cash Flow Statement (Indirect Method) for March 2026: Operating: PAT + Depreciation + WC changes. Investing: CapEx (reactor ₹18,50,000). Financing: Loan repayment ₹84,900 + CC drawdown ₹50,00,000. Verify net cash movement = closing bank – opening bank.",
+ accounting:"Cash flow validation",integrity:"IND AS 7 – cash flow"},
+
+{id:"T189",date:"31-Mar-26",module:"Reports",type:"Cost of Goods Report",priority:"High",
+ prompt:"Generate Cost of Goods Manufactured & Sold Report for March: Opening RM + Purchases – Closing RM = RM consumed. + Labor + OH = Manufacturing cost. + Opening WIP – Closing WIP = Cost of production. + Opening FG – Closing FG = COGS. Verify COGS agrees with P&L.",
+ accounting:"COGS bridge validation",integrity:"COGM reconciliation"},
+
+{id:"T190",date:"31-Mar-26",module:"Reports",type:"GST Reconciliation",priority:"Critical",
+ prompt:"Reconcile GSTR-2A (auto-populated ITC from vendors) vs books: Check if all vendor invoices are reflected in GSTR-2A. Flag missing invoices (GSTINs of vendors who haven't filed). Reclaim input credit only for matched invoices. Compute net GST position for March filing.",
+ accounting:"GSTR-2A vs books — ITC matched",integrity:"GST ITC reconciliation"},
+
+{id:"T191",date:"31-Mar-26",module:"Reports",type:"Export Incentive – MEIS/RoDTEP",priority:"Normal",
+ prompt:"Calculate RoDTEP (Remission of Duties and Taxes on Exported Products) entitlement for March exports: EP-1000 (HS 3907) @ 1.5% FOB = USD 16,940 × 1.5% = USD 254. PU-C450 (HS 3909) @ 1.2% FOB = USD 59,600 × 1.2% = USD 715. SA-700 (HS 3506) @ 0.8% = USD 29,550 × 0.8% = USD 236. Total RoDTEP scrip receivable: USD 1,205 = ₹1,02,024. Post receivable.",
+ accounting:"Dr RoDTEP Receivable ₹1,02,024 | Cr Other Income ₹1,02,024",integrity:"Export incentive accounting"},
+
+{id:"T192",date:"31-Mar-26",module:"Reports",type:"Segment Report",priority:"Normal",
+ prompt:"Generate Segment-wise P&L for March 2026: (1) Epoxy Resins segment (EP-1000 + EP-2500). (2) Polyurethane segment (PU-C450 + PU-F200). (3) Adhesives segment (SA-700 + SA-350). (4) Solvents segment (SV-200 + SV-120). (5) Specialty (HB-50 + CB-10). Revenue, direct costs, contribution margin per segment. Allocate common costs.",
+ accounting:"Management accounting — segment profitability",integrity:"Segment reporting"},
+
+{id:"T193",date:"31-Mar-26",module:"Reports",type:"Key Ratios",priority:"Normal",
+ prompt:"Calculate key financial ratios for March 2026 (trailing 12 months where applicable): (1) Gross Margin %. (2) EBITDA Margin %. (3) PAT Margin %. (4) Current Ratio. (5) Quick Ratio. (6) Debt-Equity Ratio. (7) Inventory Turnover. (8) Debtor Days (DSO). (9) Creditor Days (DPO). (10) Return on Capital Employed (ROCE). Generate dashboard.",
+ accounting:"Financial ratios — computed from financial statements",integrity:"KPI monitoring"},
+
+{id:"T194",date:"31-Mar-26",module:"Reports",type:"Data Tables – Export Register",priority:"Normal",
+ prompt:"Generate Export Register (mandatory for EXIM compliance) for March 2026: All export invoices with Shipping Bill number, BL date, FOB value, Buyer name, country, HS code, IGST exemption ref (LUT), BRC (Bank Realization Certificate) status. Verify all March exports' BRCs to be received within 9 months (RBI requirement).",
+ accounting:"Export documentation compliance",integrity:"FEMA – BRC tracking"},
+
+{id:"T195",date:"31-Mar-26",module:"Reports",type:"Accounts Payable Reconciliation",priority:"High",
+ prompt:"Reconcile AP ledger with vendor statements: (1) INEOS India — their ledger vs our ledger: match including debit note. (2) Jubilant Chem — match. (3) Reliance Petro — match. (4) Huntsman — LC settled, match. (5) Any unresolved differences → escalate to Sunita Gupta. Prepare reconciliation statements for all key vendors.",
+ accounting:"AP sub-ledger reconciliation",integrity:"Vendor statement match"},
+
+{id:"T196",date:"31-Mar-26",module:"Reports",type:"Fixed Asset Register",priority:"Normal",
+ prompt:"Update Fixed Asset Register for March 2026: (1) Add new asset: 5KL Reactor (PP-REACT-005) ₹18,50,000, capitalized 22-Mar. (2) Post March depreciation for all assets. (3) Generate schedule: Gross Block, Accumulated Dep, Net Block per asset. Total Gross Block, Total Net Block to agree with TB.",
+ accounting:"FA Register vs TB — depreciation schedule",integrity:"FA register accuracy"},
+
+{id:"T197",date:"31-Mar-26",module:"Reports",type:"MIS Report – MD Review",priority:"Critical",
+ prompt:"Prepare Monthly MIS for MD (Harsh Trivedi): (1) Revenue vs Budget vs LY. (2) EBITDA vs Budget. (3) Cash position (Bank + EEFC). (4) AR outstanding + overdue. (5) Inventory days. (6) Export shipments vs plan. (7) Production output vs plan. (8) Headcount + attrition. (9) Key risks. One-page executive summary + detailed appendix.",
+ accounting:"Management reporting — summarizes all modules",integrity:"MIS completeness"},
+
+{id:"T198",date:"31-Mar-26",module:"Reports",type:"Audit Trail Report",priority:"High",
+ prompt:"Generate Audit Trail Report for March 2026: (1) All journal entries by user. (2) Any deleted/modified entries. (3) Backdated entries (posted in March but dated before March). (4) Manual journals above ₹5,00,000 threshold (requires MD approval). (5) Any system overrides. Share with Statutory Auditor.",
+ accounting:"Internal control — audit trail",integrity:"System audit log"},
+
+{id:"T199",date:"31-Mar-26",module:"Reports",type:"Budget vs Actual",priority:"High",
+ prompt:"Generate Budget vs Actual report for March 2026 and YTD FY2026: Revenue: Budget ₹1,80,00,000/month, Actual ₹X. COGS: Budget 58% of revenue, Actual %. Employee cost: Budget ₹11,00,000, Actual ₹11,82,400 (over by ₹82,400 — Geeta Sharma new hire). CapEx: Budget ₹20,00,000 (reactor), Actual ₹18,50,000. Variance analysis with commentary.",
+ accounting:"Budgetary control",integrity:"Budget vs actual variance"},
+
+{id:"T200",date:"31-Mar-26",module:"Reports",type:"FY-End Checklist",priority:"Critical",
+ prompt:"Execute FY 2025-26 Year-End Close Checklist: ✓ All bank reconciliations done. ✓ Advance tax paid. ✓ TDS returns filed. ✓ GST GSTR-1 and 3B for all months. ✓ All vendor invoices received or accrued. ✓ Customer advances cleared or deferred correctly. ✓ Fixed asset register updated. ✓ Depreciation posted. ✓ Provisions: gratuity, bonus, warranty, doubtful debts. ✓ Forex MTM done. ✓ Trial Balance balanced. ✓ P&L and Balance Sheet signed off. ✓ Data Tables locked. Generate Year-End Certificate.",
+ accounting:"FY close completion",integrity:"Complete close checklist"},
+];
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+const MOD_META = {
+  "CRM":        { color:"#a78bfa", dim:"#3b2a5c", icon:"👥" },
+  "Buying":     { color:"#fbbf24", dim:"#4a3400", icon:"🛒" },
+  "Stock":      { color:"#34d399", dim:"#003d2a", icon:"📦" },
+  "Manufacturing":{ color:"#f97316", dim:"#4a1500", icon:"⚙️" },
+  "Selling":    { color:"#4ade80", dim:"#003d00", icon:"📈" },
+  "HR":         { color:"#f472b6", dim:"#4a003d", icon:"👤" },
+  "Accounting": { color:"#60a5fa", dim:"#00204a", icon:"📒" },
+  "Reports":    { color:"#94a3b8", dim:"#1a2030", icon:"📊" },
+};
+const MODS = ["All","CRM","Buying","Stock","Manufacturing","Selling","HR","Accounting","Reports"];
+const TABS = ["transactions","setup","balances"];
+
+const fmtINR = n => `₹${Number(n).toLocaleString("en-IN")}`;
+
+export default function App() {
+  const [tab, setTab] = useState("transactions");
+  const [mod, setMod] = useState("All");
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState(null);
+  const [copied, setCopied] = useState(null);
+  const [priority, setPriority] = useState("All");
+
+  const copy = (id, text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const filtered = useMemo(() => TRANSACTIONS.filter(t => {
+    if (mod !== "All" && t.module !== mod) return false;
+    if (priority !== "All" && t.priority !== priority) return false;
+    if (search && !t.prompt.toLowerCase().includes(search.toLowerCase()) && !t.type.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  }), [mod, search, priority]);
+
+  const stats = useMemo(() => {
+    const byMod = {};
+    MODS.slice(1).forEach(m => { byMod[m] = TRANSACTIONS.filter(t => t.module === m).length; });
+    return byMod;
+  }, []);
+
+  const pBadge = (p) => {
+    const map = { Critical:"#ef4444", High:"#f97316", Normal:"#64748b", Low:"#94a3b8" };
+    return map[p] || "#64748b";
+  };
+
+  return (
+    <div style={{ fontFamily: "'IBM Plex Mono', monospace", background: "#070d14", minHeight:"100vh", color:"#e2e8f0" }}>
+
+      {/* ── HEADER ── */}
+      <div style={{ background:"linear-gradient(135deg, #0a0f1a 0%, #0d1f3c 100%)", padding:"20px 16px 16px", borderBottom:"1px solid #1e3a5f" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"4px" }}>
+          <span style={{ fontSize:"20px" }}>⚗️</span>
+          <span style={{ fontSize:"10px", letterSpacing:"4px", color:"#38bdf8", fontWeight:800 }}>SPECIALTY CHEMICALS ERP</span>
+        </div>
+        <h1 style={{ margin:0, fontSize:"20px", fontWeight:900, letterSpacing:"-0.5px", color:"#f0f9ff" }}>
+          PolyMerx Deep Test Playbook
+        </h1>
+        <p style={{ margin:"4px 0 0", fontSize:"11px", color:"#475569" }}>
+          Vadodara, Gujarat · March 2026 · FY-end · <span style={{ color:"#34d399", fontWeight:700 }}>200 transactions</span> across all modules
+        </p>
+        {/* Stats bar */}
+        <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", marginTop:"14px" }}>
+          {Object.entries(stats).map(([m,c]) => {
+            const mc = MOD_META[m] || {};
+            return (
+              <div key={m} onClick={() => { setMod(m); setTab("transactions"); }}
+                style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${mc.color}33`, borderRadius:"8px", padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:"5px" }}>
+                <span style={{ fontSize:"12px" }}>{mc.icon}</span>
+                <span style={{ fontSize:"10px", color: mc.color, fontWeight:700 }}>{c}</span>
+                <span style={{ fontSize:"9px", color:"#475569" }}>{m.slice(0,5)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── TABS ── */}
+      <div style={{ background:"#0d1520", borderBottom:"1px solid #1e3a5f", display:"flex", padding:"0 12px" }}>
+        {[["transactions","📋 200 Txns"],["setup","🏗️ Master Data"],["balances","⚖️ Opening TB"]].map(([id,label]) => (
+          <button key={id} onClick={() => setTab(id)}
+            style={{ padding:"11px 14px", fontSize:"11px", fontWeight:800, border:"none", background:"none", cursor:"pointer", fontFamily:"inherit", borderBottom: tab === id ? "2px solid #38bdf8" : "2px solid transparent", color: tab === id ? "#38bdf8" : "#475569", marginBottom:"-1px", letterSpacing:"0.5px" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ padding:"14px", maxWidth:"960px", margin:"0 auto" }}>
+
+        {/* ══ TRANSACTIONS TAB ══ */}
+        {tab === "transactions" && (<>
+          {/* Filters */}
+          <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"10px" }}>
+            {MODS.map(m => {
+              const mc = MOD_META[m] || {};
+              const active = mod === m;
+              return (
+                <button key={m} onClick={() => setMod(m)}
+                  style={{ padding:"4px 10px", fontSize:"10px", fontWeight:800, border:`1px solid ${active ? (mc.color||"#38bdf8") : "#1e3a5f"}`, borderRadius:"20px", cursor:"pointer", fontFamily:"inherit", background: active ? (mc.dim||"#0d2040") : "transparent", color: active ? (mc.color||"#38bdf8") : "#475569", letterSpacing:"0.5px" }}>
+                  {MOD_META[m]?.icon || ""} {m}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Priority + Search */}
+          <div style={{ display:"flex", gap:"8px", marginBottom:"12px", flexWrap:"wrap" }}>
+            {["All","Critical","High","Normal"].map(p => (
+              <button key={p} onClick={() => setPriority(p)}
+                style={{ padding:"4px 10px", fontSize:"10px", fontWeight:700, border:`1px solid ${priority===p ? pBadge(p) : "#1e3a5f"}`, borderRadius:"20px", cursor:"pointer", fontFamily:"inherit", background: priority===p ? `${pBadge(p)}20` : "transparent", color: priority===p ? pBadge(p) : "#475569" }}>
+                {p === "Critical" ? "🔴" : p === "High" ? "🟠" : p === "Normal" ? "⚪" : ""} {p}
+              </button>
+            ))}
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search prompts..."
+              style={{ flex:1, minWidth:"160px", background:"#0d1520", border:"1px solid #1e3a5f", borderRadius:"8px", padding:"6px 12px", fontSize:"11px", color:"#e2e8f0", fontFamily:"inherit", outline:"none" }} />
+          </div>
+
+          <p style={{ fontSize:"10px", color:"#334155", marginBottom:"10px" }}>
+            {filtered.length} of {TRANSACTIONS.length} transactions · Tap to expand · 📋 copies to clipboard
+          </p>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
+            {filtered.map(txn => {
+              const mc = MOD_META[txn.module] || { color:"#94a3b8", dim:"#1a2030", icon:"📄" };
+              const isOpen = expanded === txn.id;
+              return (
+                <div key={txn.id} style={{ background:"#0d1520", border:`1px solid ${isOpen ? mc.color+"44" : "#1e3a5f"}`, borderRadius:"10px", overflow:"hidden", borderLeft:`3px solid ${mc.color}` }}>
+                  <div onClick={() => setExpanded(isOpen ? null : txn.id)}
+                    style={{ padding:"10px 12px", cursor:"pointer", display:"flex", gap:"10px", alignItems:"flex-start" }}>
+                    <span style={{ fontSize:"16px", flexShrink:0 }}>{mc.icon}</span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:"flex", gap:"5px", alignItems:"center", flexWrap:"wrap" }}>
+                        <span style={{ fontSize:"9px", fontWeight:900, color:"#334155", letterSpacing:"1px" }}>{txn.id}</span>
+                        <span style={{ fontSize:"9px", color:"#1e3a5f" }}>·</span>
+                        <span style={{ fontSize:"9px", color:"#475569" }}>{txn.date}</span>
+                        <span style={{ fontSize:"9px", padding:"1px 5px", borderRadius:"3px", background: mc.dim, color: mc.color, fontWeight:700 }}>{txn.module}</span>
+                        <span style={{ fontSize:"8px", padding:"1px 5px", borderRadius:"3px", background:`${pBadge(txn.priority)}20`, color:pBadge(txn.priority), fontWeight:700 }}>
+                          {txn.priority === "Critical" ? "🔴" : txn.priority === "High" ? "🟠" : "⚪"} {txn.priority}
+                        </span>
+                      </div>
+                      <p style={{ margin:"2px 0 0", fontSize:"12px", fontWeight:800, color:"#f0f9ff" }}>{txn.type}</p>
+                      {!isOpen && <p style={{ margin:"1px 0 0", fontSize:"10px", color:"#334155", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{txn.prompt.slice(0,90)}…</p>}
+                    </div>
+                    <span style={{ fontSize:"10px", color:"#1e3a5f", flexShrink:0 }}>{isOpen ? "▲" : "▼"}</span>
+                  </div>
+
+                  {isOpen && (
+                    <div style={{ padding:"0 12px 12px", borderTop:`1px solid #1e3a5f30` }}>
+                      <p style={{ fontSize:"9px", color:"#334155", letterSpacing:"2px", fontWeight:800, marginTop:"10px", marginBottom:"5px" }}>PASTE IN KAIROS AI BOT ↓</p>
+                      <div style={{ background:"#070d14", border:"1px solid #1e3a5f", borderRadius:"8px", padding:"10px", fontSize:"11px", color:"#e2e8f0", lineHeight:"1.7", whiteSpace:"pre-wrap" }}>
+                        {txn.prompt}
+                      </div>
+                      <button onClick={() => copy(txn.id, txn.prompt)}
+                        style={{ marginTop:"8px", padding:"6px 14px", fontSize:"10px", fontWeight:800, background: copied === txn.id ? "#15803d" : mc.dim, color: copied === txn.id ? "#4ade80" : mc.color, border:`1px solid ${mc.color}`, borderRadius:"6px", cursor:"pointer", fontFamily:"inherit", letterSpacing:"0.5px" }}>
+                        {copied === txn.id ? "✓ COPIED" : "📋 COPY PROMPT"}
+                      </button>
+
+                      <div style={{ marginTop:"8px", display:"flex", gap:"8px", flexWrap:"wrap" }}>
+                        <div style={{ flex:1, minWidth:"200px", background:`${mc.dim}80`, border:`1px solid ${mc.color}22`, borderRadius:"6px", padding:"8px 10px" }}>
+                          <p style={{ margin:0, fontSize:"9px", color:"#334155", letterSpacing:"1px", fontWeight:800 }}>ACCOUNTING IMPACT</p>
+                          <p style={{ margin:"4px 0 0", fontSize:"10px", color:"#94a3b8", lineHeight:"1.5" }}>{txn.accounting}</p>
+                        </div>
+                        <div style={{ flex:1, minWidth:"150px", background:"#1a0a0a", border:"1px solid #ef444422", borderRadius:"6px", padding:"8px 10px" }}>
+                          <p style={{ margin:0, fontSize:"9px", color:"#334155", letterSpacing:"1px", fontWeight:800 }}>INTEGRITY CHECK</p>
+                          <p style={{ margin:"4px 0 0", fontSize:"10px", color:"#ef4444", lineHeight:"1.5" }}>{txn.integrity}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {filtered.length === 0 && (
+            <div style={{ textAlign:"center", padding:"40px", color:"#334155" }}>
+              <p style={{ fontSize:"24px" }}>🔍</p>
+              <p style={{ fontSize:"12px" }}>No transactions match your filters</p>
+            </div>
+          )}
+        </>)}
+
+        {/* ══ SETUP TAB ══ */}
+        {tab === "setup" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
+            {/* Company */}
+            <div style={{ background:"#0d1520", border:"1px solid #1e3a5f", borderRadius:"12px", overflow:"hidden" }}>
+              <div style={{ background:"linear-gradient(90deg,#0d2040,#1e3a5f)", padding:"10px 14px", fontSize:"11px", fontWeight:900, color:"#38bdf8", letterSpacing:"2px" }}>⚗️ COMPANY PROFILE</div>
+              <div style={{ padding:"12px 14px" }}>
+                {Object.entries(CO).filter(([k]) => !["products_fg","raw_materials","gst_rates"].includes(k)).map(([k,v]) => (
+                  <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:"1px solid #1e3a5f", fontSize:"11px" }}>
+                    <span style={{ color:"#475569", fontSize:"9px", fontWeight:800, letterSpacing:"1px", textTransform:"uppercase" }}>{k.replace(/_/g," ")}</span>
+                    <span style={{ color:"#e2e8f0", fontWeight:700, textAlign:"right", maxWidth:"60%" }}>{Array.isArray(v) ? v.join(", ") : String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Employees */}
+            <div style={{ background:"#0d1520", border:"1px solid #f472b633", borderRadius:"12px", overflow:"hidden" }}>
+              <div style={{ background:"linear-gradient(90deg,#2a0030,#4a003d)", padding:"10px 14px", fontSize:"11px", fontWeight:900, color:"#f472b6", letterSpacing:"2px" }}>👤 EMPLOYEES (15 + 1 new hire)</div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"10px" }}>
+                  <thead><tr style={{ background:"#1a0020" }}>
+                    {["ID","Name","Dept","Role","CTC/mo","PF","ESI"].map(h => <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:"#f472b6", fontWeight:900, whiteSpace:"nowrap", letterSpacing:"0.5px" }}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {EMPLOYEES.map((e,i) => (
+                      <tr key={e.id} style={{ borderTop:"1px solid #1e3a5f", background: i%2?"#0a0f1a":"#0d1520" }}>
+                        <td style={{ padding:"7px 10px", color:"#334155" }}>{e.id}</td>
+                        <td style={{ padding:"7px 10px", fontWeight:700, color:"#f0f9ff" }}>{e.name}</td>
+                        <td style={{ padding:"7px 10px", color:"#94a3b8" }}>{e.dept}</td>
+                        <td style={{ padding:"7px 10px", color:"#64748b" }}>{e.role}</td>
+                        <td style={{ padding:"7px 10px", fontWeight:800, color:"#f472b6" }}>₹{e.ctc.toLocaleString()}</td>
+                        <td style={{ padding:"7px 10px", color: e.pf?"#4ade80":"#334155" }}>{e.pf?"✓":"—"}</td>
+                        <td style={{ padding:"7px 10px", color: e.esi?"#fbbf24":"#334155" }}>{e.esi?"✓":"—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Vendors */}
+            <div style={{ background:"#0d1520", border:"1px solid #fbbf2433", borderRadius:"12px", overflow:"hidden" }}>
+              <div style={{ background:"linear-gradient(90deg,#2a1a00,#4a3400)", padding:"10px 14px", fontSize:"11px", fontWeight:900, color:"#fbbf24", letterSpacing:"2px" }}>🛒 VENDORS (12)</div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"10px" }}>
+                  <thead><tr style={{ background:"#1a1000" }}>
+                    {["ID","Vendor","Category","City","Terms","Currency"].map(h => <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:"#fbbf24", fontWeight:900 }}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {VENDORS.map((v,i) => (
+                      <tr key={v.id} style={{ borderTop:"1px solid #1e3a5f", background: i%2?"#0a0f1a":"#0d1520" }}>
+                        <td style={{ padding:"7px 10px", color:"#334155" }}>{v.id}</td>
+                        <td style={{ padding:"7px 10px", fontWeight:700, color:"#f0f9ff" }}>{v.name}</td>
+                        <td style={{ padding:"7px 10px", color:"#94a3b8" }}>{v.cat}</td>
+                        <td style={{ padding:"7px 10px", color:"#64748b" }}>{v.city}</td>
+                        <td style={{ padding:"7px 10px", color:"#fbbf24", fontWeight:700 }}>{v.terms}</td>
+                        <td style={{ padding:"7px 10px" }}><span style={{ padding:"2px 6px", borderRadius:"4px", background: v.curr==="INR"?"#1a3a1a":"#3a1a00", color: v.curr==="INR"?"#4ade80":"#f97316", fontWeight:800, fontSize:"9px" }}>{v.curr}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Clients */}
+            <div style={{ background:"#0d1520", border:"1px solid #4ade8033", borderRadius:"12px", overflow:"hidden" }}>
+              <div style={{ background:"linear-gradient(90deg,#001a00,#003400)", padding:"10px 14px", fontSize:"11px", fontWeight:900, color:"#4ade80", letterSpacing:"2px" }}>📈 CLIENTS (10)</div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"10px" }}>
+                  <thead><tr style={{ background:"#001000" }}>
+                    {["ID","Client","Segment","City","Credit Limit","Currency"].map(h => <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:"#4ade80", fontWeight:900 }}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {CLIENTS.map((c,i) => (
+                      <tr key={c.id} style={{ borderTop:"1px solid #1e3a5f", background: i%2?"#0a0f1a":"#0d1520" }}>
+                        <td style={{ padding:"7px 10px", color:"#334155" }}>{c.id}</td>
+                        <td style={{ padding:"7px 10px", fontWeight:700, color:"#f0f9ff" }}>{c.name}</td>
+                        <td style={{ padding:"7px 10px", color:"#94a3b8" }}>{c.seg}</td>
+                        <td style={{ padding:"7px 10px", color:"#64748b" }}>{c.city}</td>
+                        <td style={{ padding:"7px 10px", fontWeight:800, color:"#4ade80" }}>₹{c.credit.toLocaleString()}</td>
+                        <td style={{ padding:"7px 10px" }}><span style={{ padding:"2px 6px", borderRadius:"4px", background: c.curr==="INR"?"#1a3a1a":"#3a1a00", color: c.curr==="INR"?"#4ade80":"#f97316", fontWeight:800, fontSize:"9px" }}>{c.curr}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Products */}
+            <div style={{ background:"#0d1520", border:"1px solid #34d39933", borderRadius:"12px", overflow:"hidden" }}>
+              <div style={{ background:"linear-gradient(90deg,#00201a,#003428)", padding:"10px 14px", fontSize:"11px", fontWeight:900, color:"#34d399", letterSpacing:"2px" }}>📦 PRODUCTS / SKUs (18)</div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"10px" }}>
+                  <thead><tr style={{ background:"#001a10" }}>
+                    {["SKU","Product","UOM","Std Cost","Sale INR","Sale USD","HSN","GST"].map(h => <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:"#34d399", fontWeight:900 }}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {PRODUCTS.map((p,i) => (
+                      <tr key={p.sku} style={{ borderTop:"1px solid #1e3a5f", background: i%2?"#0a0f1a":"#0d1520" }}>
+                        <td style={{ padding:"7px 10px", fontWeight:900, color:"#34d399", fontSize:"9px" }}>{p.sku}</td>
+                        <td style={{ padding:"7px 10px", fontWeight:700, color:"#f0f9ff" }}>{p.name}</td>
+                        <td style={{ padding:"7px 10px", color:"#475569" }}>{p.uom}</td>
+                        <td style={{ padding:"7px 10px", color:"#94a3b8" }}>₹{p.std_cost}</td>
+                        <td style={{ padding:"7px 10px", color:"#4ade80", fontWeight:700 }}>{p.sale_inr ? `₹${p.sale_inr}` : "—"}</td>
+                        <td style={{ padding:"7px 10px", color:"#fbbf24", fontWeight:700 }}>{p.sale_usd ? `$${p.sale_usd}` : "—"}</td>
+                        <td style={{ padding:"7px 10px", color:"#475569" }}>{p.hsn}</td>
+                        <td style={{ padding:"7px 10px", color:"#38bdf8" }}>{p.gst}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ BALANCES TAB ══ */}
+        {tab === "balances" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:"12px" }}>
+            <div style={{ background:"linear-gradient(135deg,#0d2040,#0d1520)", border:"1px solid #38bdf833", borderRadius:"12px", padding:"14px 16px" }}>
+              <p style={{ margin:0, fontSize:"11px", fontWeight:900, color:"#38bdf8", letterSpacing:"2px" }}>⚖️ OPENING TRIAL BALANCE — 01 MARCH 2026</p>
+              <p style={{ margin:"6px 0 0", fontSize:"10px", color:"#475569", lineHeight:"1.6" }}>
+                Go to <span style={{ color:"#34d399" }}>Accounting → Journal Entries → New → Type: Opening Balance → Date: 01-Mar-2026</span>. Enter all rows below. Debit total must equal Credit total.
+              </p>
+            </div>
+
+            {[
+              { section:"ASSETS", color:"#38bdf8", items:[
+                { acct:"HDFC Current Account", sub:"Bank", dr:42_80_000, cr:0, note:"Primary operating account" },
+                { acct:"Axis Bank Current", sub:"Bank", dr:18_50_000, cr:0, note:"Secondary account" },
+                { acct:"EEFC USD Account (HDFC)", sub:"Bank", dr:10_14_000, cr:0, note:"USD 12,000 × ₹84.50" },
+                { acct:"Fixed Deposit – HDFC", sub:"Investment", dr:25_00_000, cr:0, note:"6.8% p.a., 1yr FD" },
+                { acct:"Accounts Receivable", sub:"Debtors", dr:38_60_000, cr:0, note:"Feb outstanding" },
+                { acct:"Advance to Vendors", sub:"Advances", dr:8_20_000, cr:0, note:"Prepaid to suppliers" },
+                { acct:"Raw Material Inventory", sub:"Inventory", dr:52_40_000, cr:0, note:"Opening RM stock at cost" },
+                { acct:"WIP Inventory", sub:"Inventory", dr:6_80_000, cr:0, note:"Feb batch in progress" },
+                { acct:"Finished Goods Inventory", sub:"Inventory", dr:31_50_000, cr:0, note:"FG ready for sale" },
+                { acct:"Capital Work-in-Progress", sub:"CapEx", dr:7_40_000, cr:0, note:"Reactor advance – Thermax" },
+                { acct:"Plant & Machinery (Gross)", sub:"Fixed Asset", dr:1_24_60_000, cr:0, note:"All manufacturing assets" },
+                { acct:"Accumulated Depreciation", sub:"Fixed Asset", dr:0, cr:28_40_000, note:"Cumulative dep till Feb" },
+                { acct:"Right-of-Use Asset", sub:"Lease", dr:24_50_000, cr:0, note:"Office lease Ind AS 116" },
+                { acct:"Prepaid Expenses", sub:"Current Asset", dr:4_20_000, cr:0, note:"Insurance, subscriptions" },
+                { acct:"Advance Tax Paid", sub:"Tax Asset", dr:15_00_000, cr:0, note:"Q1+Q2+Q3 advance tax" },
+              ]},
+              { section:"LIABILITIES", color:"#f87171", items:[
+                { acct:"Accounts Payable", sub:"Creditors", dr:0, cr:28_40_000, note:"Feb vendor outstanding" },
+                { acct:"Advance from Customers", sub:"Customer Adv", dr:0, cr:12_00_000, note:"Feb advances received" },
+                { acct:"GST Payable (Net)", sub:"Tax", dr:0, cr:4_80_000, note:"Feb net GST liability" },
+                { acct:"TDS Payable", sub:"Tax", dr:0, cr:1_90_000, note:"TDS deducted, not remitted" },
+                { acct:"PF Payable", sub:"Statutory", dr:0, cr:2_40_000, note:"Feb PF not remitted" },
+                { acct:"ESI Payable", sub:"Statutory", dr:0, cr:48_000, note:"Feb ESI" },
+                { acct:"Salary Payable", sub:"Payroll", dr:0, cr:3_20_000, note:"Feb net pay pending" },
+                { acct:"Accrued Expenses", sub:"Accruals", dr:0, cr:1_85_000, note:"Electricity, freight accruals" },
+                { acct:"Lease Liability", sub:"Lease", dr:0, cr:22_80_000, note:"Office lease – Ind AS 116" },
+                { acct:"HDFC Term Loan", sub:"Long-term", dr:0, cr:65_00_000, note:"5-yr term loan" },
+                { acct:"Provision for Gratuity", sub:"Provision", dr:0, cr:8_40_000, note:"Actuarial liability till Feb" },
+                { acct:"Provision for Tax", sub:"Tax", dr:0, cr:9_20_000, note:"Prior year tax provision" },
+              ]},
+              { section:"EQUITY", color:"#a78bfa", items:[
+                { acct:"Share Capital", sub:"Equity", dr:0, cr:80_00_000, note:"₹10 par value shares" },
+                { acct:"Securities Premium", sub:"Equity", dr:0, cr:40_00_000, note:"Premium on share issue" },
+                { acct:"General Reserve", sub:"Equity", dr:0, cr:15_00_000, note:"Retained for capex" },
+                { acct:"Retained Earnings (P&L)", sub:"Equity", dr:0, cr:1_47_84_000, note:"Cumulative till Feb 2026" },
+              ]},
+            ].map(sec => (
+              <div key={sec.section} style={{ background:"#0d1520", border:`1px solid ${sec.color}22`, borderRadius:"12px", overflow:"hidden" }}>
+                <div style={{ background:`${sec.color}11`, padding:"10px 14px", fontSize:"10px", fontWeight:900, color:sec.color, letterSpacing:"2px" }}>
+                  {sec.section}
+                </div>
+                <div style={{ overflowX:"auto" }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"10px" }}>
+                    <thead><tr style={{ background:"#070d14" }}>
+                      {["Account","Sub-type","Debit (₹)","Credit (₹)","Note"].map(h => <th key={h} style={{ padding:"6px 10px", textAlign:"left", color:"#334155", fontWeight:800 }}>{h}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {sec.items.map((row,i) => (
+                        <tr key={i} style={{ borderTop:"1px solid #0d1520", background: i%2?"#070d14":"#0d1520" }}>
+                          <td style={{ padding:"7px 10px", fontWeight:700, color:"#f0f9ff" }}>{row.acct}</td>
+                          <td style={{ padding:"7px 10px", color:"#475569", fontSize:"9px" }}>{row.sub}</td>
+                          <td style={{ padding:"7px 10px", color:"#4ade80", fontWeight: row.dr ? 800:400 }}>{row.dr ? `₹${row.dr.toLocaleString()}` : "—"}</td>
+                          <td style={{ padding:"7px 10px", color:"#f87171", fontWeight: row.cr ? 800:400 }}>{row.cr ? `₹${row.cr.toLocaleString()}` : "—"}</td>
+                          <td style={{ padding:"7px 10px", color:"#334155", fontSize:"9px" }}>{row.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+
+            <div style={{ background:"linear-gradient(90deg,#0d2040,#1e3a5f)", border:"1px solid #38bdf8", borderRadius:"10px", padding:"12px 16px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between" }}>
+                <div><span style={{ fontSize:"9px", color:"#38bdf8", fontWeight:900, letterSpacing:"2px" }}>TOTAL DEBITS</span><p style={{ margin:"3px 0 0", fontSize:"16px", fontWeight:900, color:"#4ade80" }}>₹4,09,74,000</p></div>
+                <div style={{ textAlign:"right" }}><span style={{ fontSize:"9px", color:"#38bdf8", fontWeight:900, letterSpacing:"2px" }}>TOTAL CREDITS</span><p style={{ margin:"3px 0 0", fontSize:"16px", fontWeight:900, color:"#f87171" }}>₹4,09,74,000</p></div>
+              </div>
+              <p style={{ margin:"8px 0 0", fontSize:"10px", color:"#334155" }}>✓ Trial Balance balanced — Debits = Credits = ₹4,09,74,000</p>
+            </div>
+          </div>
+        )}
+
+        <div style={{ height:"30px" }} />
+      </div>
+    </div>
+  );
+}
