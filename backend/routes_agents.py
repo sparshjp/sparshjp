@@ -808,7 +808,7 @@ asyncio.run(shot())
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20)
                 if proc.returncode != 0:
                     err = stderr.decode()[-500:] if stderr else "Unknown error"
                     return {"status": "error", "error": f"Screenshot failed: {err}"}
@@ -823,7 +823,11 @@ asyncio.run(shot())
                     "note": "Screenshot saved. Use read_file or serve from /uploads/ to view.",
                 }
             except asyncio.TimeoutError:
-                return {"status": "error", "error": "Screenshot timed out (30s limit)"}
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                return {"status": "error", "error": "Screenshot timed out (20s limit). Try a simpler URL or increase wait_ms."}
             except Exception as e:
                 return {"status": "error", "error": f"Screenshot error: {str(e)}"}
 
