@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API } from '../App';
 import { Package, ArrowUpDown, ClipboardList } from 'lucide-react';
@@ -10,38 +10,38 @@ function Stock() {
   const [stockEntries, setStockEntries] = useState([]);
   const [reorderItems, setReorderItems] = useState([]);
 
-  useEffect(() => {
-    if (activeTab === 'items') fetchItems();
-    else if (activeTab === 'stock-entries') fetchStockEntries();
-    else if (activeTab === 'reorder') checkReorder();
-  }, [activeTab]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/stock/items`);
       setItems(res.data);
     } catch (error) {
       toast.error('Failed to fetch items');
     }
-  };
+  }, []);
 
-  const fetchStockEntries = async () => {
+  const fetchStockEntries = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/stock/stock-entries`);
       setStockEntries(res.data);
     } catch (error) {
       toast.error('Failed to fetch stock entries');
     }
-  };
+  }, []);
 
-  const checkReorder = async () => {
+  const checkReorder = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/stock/items/check-reorder`);
       setReorderItems(res.data.items || []);
     } catch (error) {
       toast.error('Failed to check reorder');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'items') fetchItems();
+    else if (activeTab === 'stock-entries') fetchStockEntries();
+    else if (activeTab === 'reorder') checkReorder();
+  }, [activeTab, fetchItems, fetchStockEntries, checkReorder]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

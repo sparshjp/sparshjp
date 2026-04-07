@@ -56,8 +56,8 @@ export default function ProjectsModule() {
           { label: 'Closed', value: closedCount, icon: CheckCircle, color: '#22c55e' },
           { label: 'Portfolio Value', value: `₹${(totalValue / 100000).toFixed(1)}L`, icon: TrendingUp, color: '#a78bfa' },
           { label: 'Billable Hours', value: totalHours.toLocaleString(), icon: Clock, color: '#00d4aa' },
-        ].map((c, i) => (
-          <div key={i} className="bg-[#0A1628] border border-[#1B2D42] rounded-lg p-4" data-testid={`project-summary-${i}`}>
+        ].map((c) => (
+          <div key={c.label} className="bg-[#0A1628] border border-[#1B2D42] rounded-lg p-4" data-testid={`project-summary-${c.label}`}>
             <div className="flex items-center gap-2 mb-2">
               <c.icon size={16} style={{ color: c.color }} />
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A5B6E]">{c.label}</span>
@@ -76,8 +76,8 @@ export default function ProjectsModule() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[#1B2D42] text-[#4A5B6E]">
-                {['Project', 'Client', 'Type', 'Health', 'Progress', 'Billable Hrs', 'Team', 'PM', ''].map((h, i) => (
-                  <th key={i} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
+                {['Project', 'Client', 'Type', 'Health', 'Progress', 'Billable Hrs', 'Team', 'PM', ''].map((h) => (
+                  <th key={h || 'actions'} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -154,8 +154,8 @@ export default function ProjectsModule() {
             <div>
               <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#4A5B6E] mb-2">Timesheet Hours ({projectTimesheets.length} entries)</h4>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                {projectTimesheets.slice(0, 8).map((ts, i) => (
-                  <div key={i} className="bg-[#152236] rounded p-2 text-[10px]">
+                {projectTimesheets.slice(0, 8).map((ts) => (
+                  <div key={ts.id || ts.employee_id + ts.week} className="bg-[#152236] rounded p-2 text-[10px]">
                     <span className="font-bold text-[#E8EDF2]">{ts.employee_name}</span>
                     <span className="text-[#4A5B6E] ml-1">{ts.week}</span>
                     <div className="mt-1 text-[#00d4aa] font-bold">{ts.billable_hours}h billable</div>

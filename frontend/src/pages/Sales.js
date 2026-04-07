@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API } from '../App';
 import { FileText, ShoppingCart, Truck } from 'lucide-react';
@@ -10,38 +10,38 @@ function Sales() {
   const [salesOrders, setSalesOrders] = useState([]);
   const [deliveryNotes, setDeliveryNotes] = useState([]);
 
-  useEffect(() => {
-    if (activeTab === 'quotations') fetchQuotations();
-    else if (activeTab === 'sales-orders') fetchSalesOrders();
-    else if (activeTab === 'delivery-notes') fetchDeliveryNotes();
-  }, [activeTab]);
-
-  const fetchQuotations = async () => {
+  const fetchQuotations = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/sales/quotations`);
       setQuotations(res.data);
     } catch (error) {
       toast.error('Failed to fetch quotations');
     }
-  };
+  }, []);
 
-  const fetchSalesOrders = async () => {
+  const fetchSalesOrders = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/sales/sales-orders`);
       setSalesOrders(res.data);
     } catch (error) {
       toast.error('Failed to fetch sales orders');
     }
-  };
+  }, []);
 
-  const fetchDeliveryNotes = async () => {
+  const fetchDeliveryNotes = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/sales/delivery-notes`);
       setDeliveryNotes(res.data);
     } catch (error) {
       toast.error('Failed to fetch delivery notes');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'quotations') fetchQuotations();
+    else if (activeTab === 'sales-orders') fetchSalesOrders();
+    else if (activeTab === 'delivery-notes') fetchDeliveryNotes();
+  }, [activeTab, fetchQuotations, fetchSalesOrders, fetchDeliveryNotes]);
 
   const convertToSalesOrder = async (quotId) => {
     try {

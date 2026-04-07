@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { API } from '../App';
+import DOMPurify from 'dompurify';
 import {
   Send, Plus, Trash2, ChevronDown, ChevronRight, Copy, Check, FileText,
   Code, Loader2, FolderOpen, X, Cpu, Wrench, Terminal, Database,
@@ -867,7 +868,7 @@ export default function AIAgentsPage() {
                         style={{ background: copied === i ? '#065f46' : '#152236', color: copied === i ? '#34d399' : '#4A5B6E', borderColor: copied === i ? '#34d399' : '#1B2D42' }}>
                         {copied === i ? <><Check size={10} className="inline" /> Copied</> : <><Copy size={10} className="inline" /> Copy</>}
                       </button>
-                      <div className="text-xs text-[#c8d4e0] leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
+                      <div className="text-xs text-[#c8d4e0] leading-relaxed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(msg.content)) }} />
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">

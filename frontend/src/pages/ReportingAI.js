@@ -46,7 +46,7 @@ function DataTable({ columns, data }) {
           </thead>
           <tbody>
             {data.map((row, i) => (
-              <tr key={i} className="border-b border-[#1B2D42]/40 hover:bg-[#1B2D42]/20 transition-colors">
+              <tr key={row.id || row.name || i} className="border-b border-[#1B2D42]/40 hover:bg-[#1B2D42]/20 transition-colors">
                 <td className="px-3 py-2 text-[#4A5B6E] font-mono text-xs">{i + 1}</td>
                 {columns.map(c => (
                   <td key={c.key} className={`px-3 py-2 ${['number','currency','percent'].includes(c.format) ? 'text-right font-mono text-[#E8EDF2]' : 'text-[#E8EDF2]'}`}>
@@ -206,10 +206,10 @@ export default function ReportingAI() {
               <p className="text-[#4A5B6E] text-sm mt-1">I'll query your database and show results as tables & charts</p>
             </div>
             <div className="flex flex-wrap justify-center gap-2 max-w-xl">
-              {EXAMPLE_QUERIES.map((q, i) => (
-                <button key={i} onClick={() => { setQuestion(q); handleQuery(q); }}
+              {EXAMPLE_QUERIES.map((q) => (
+                <button key={q} onClick={() => { setQuestion(q); handleQuery(q); }}
                   className="px-3 py-1.5 rounded-full text-xs bg-[#152236] border border-[#1B2D42] text-[#7A8BA0] hover:text-[#00C9A7] hover:border-[#00C9A7]/30 transition-colors"
-                  data-testid={`example-query-${i}`}>
+                  data-testid={`example-query-${q.slice(0,20)}`}>
                   {q}
                 </button>
               ))}
@@ -218,7 +218,7 @@ export default function ReportingAI() {
         )}
 
         {history.map((msg, i) => (
-          <div key={i}>
+          <div key={msg.timestamp || i}>
             {msg.role === 'user' && (
               <div className="flex justify-end">
                 <div className="bg-[#00C9A7]/10 border border-[#00C9A7]/20 rounded-xl rounded-br-sm px-4 py-2.5 max-w-lg">

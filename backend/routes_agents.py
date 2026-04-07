@@ -8,6 +8,7 @@ import os
 import json
 import glob
 import subprocess
+import shlex
 import asyncio
 import httpx
 import re
@@ -585,7 +586,7 @@ async def execute_tool(tool_name, args):
             if not os.path.isfile(log_path):
                 return {"status": "error", "error": f"Log file not found: {log_path}"}
             try:
-                proc = subprocess.run(f"tail -n {min(lines, 200)} {log_path}", shell=True, capture_output=True, text=True, timeout=5)
+                proc = subprocess.run(["tail", "-n", str(min(lines, 200)), log_path], capture_output=True, text=True, timeout=5)
                 return {"status": "ok", "service": service, "lines": proc.stdout[-8000:] if proc.stdout else "(empty)"}
             except Exception as e:
                 return {"status": "error", "error": str(e)}
@@ -596,13 +597,14 @@ async def execute_tool(tool_name, args):
             if not package or not re.match(r'^[a-zA-Z0-9\-_.=<>!@\[\],\s]+$', package):
                 return {"status": "error", "error": "Invalid package name"}
             try:
+                pkg_list = shlex.split(package)
                 if manager == "pip":
-                    proc = subprocess.run(f"pip install {package}", shell=True, capture_output=True, text=True, timeout=60, cwd="/app/backend")
+                    proc = subprocess.run(["pip", "install"] + pkg_list, capture_output=True, text=True, timeout=60, cwd="/app/backend")
                     if proc.returncode == 0:
-                        subprocess.run("pip freeze > /app/backend/requirements.txt", shell=True, timeout=10)
+                        subprocess.run(["sh", "-c", "pip freeze > /app/backend/requirements.txt"], timeout=10)
                     return {"status": "ok" if proc.returncode == 0 else "error", "package": package, "output": proc.stdout[-2000:]}
                 elif manager == "yarn":
-                    proc = subprocess.run(f"yarn add {package}", shell=True, capture_output=True, text=True, timeout=90, cwd="/app/frontend")
+                    proc = subprocess.run(["yarn", "add"] + pkg_list, capture_output=True, text=True, timeout=90, cwd="/app/frontend")
                     return {"status": "ok" if proc.returncode == 0 else "error", "package": package, "output": proc.stdout[-2000:]}
                 else:
                     return {"status": "error", "error": f"Unknown manager: {manager}"}
@@ -611,11 +613,16 @@ async def execute_tool(tool_name, args):
 
         elif tool_name == "run_tests":
             test_path = args.get("test_path", "/app/backend/tests/")
+            if not re.match(r'^[a-zA-Z0-9/_.\-]+$', test_path):
+                return {"status": "error", "error": "Invalid test path"}
             try:
                 proc = subprocess.run(
-                    f"cd /app && python -m pytest {test_path} -v --tb=short --no-header -q 2>&1 | tail -50",
-                    shell=True, capture_output=True, text=True, timeout=60)
-                return {"status": "ok", "output": proc.stdout[-5000:], "exit_code": proc.returncode}
+                    ["python", "-m", "pytest", test_path, "-v", "--tb=short", "--no-header", "-q"],
+                    capture_output=True, text=True, timeout=60, cwd="/app")
+                output = proc.stdout[-5000:]
+                if proc.stderr:
+                    output += proc.stderr[-1000:]
+                return {"status": "ok", "output": output, "exit_code": proc.returncode}
             except subprocess.TimeoutExpired:
                 return {"status": "error", "error": "Tests timed out"}
 
@@ -665,13 +672,15 @@ async def execute_tool(tool_name, args):
         elif tool_name == "run_command":
             cmd = args.get("command", "")
             timeout_secs = min(args.get("timeout", 60), 120)
-            # Only block truly dangerous operations
-            HARD_BLOCKED = ["rm -rf /", "mkfs", ":(){", "dd if="]
+            HARD_BLOCKED = ["rm -rf /", "mkfs", ":(){", "dd if=", "curl|sh", "wget|sh", "curl|bash", "wget|bash"]
             for bc in HARD_BLOCKED:
                 if bc in cmd:
                     return {"status": "error", "error": f"Command blocked for safety: contains '{bc}'"}
             try:
-                proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout_secs, cwd="/app")
+                proc = subprocess.run(
+                    ["bash", "-c", cmd],
+                    capture_output=True, text=True, timeout=timeout_secs, cwd="/app",
+                    env={**os.environ, "PATH": os.environ.get("PATH", "/usr/bin:/bin")})
                 output = proc.stdout[:8000]
                 if proc.stderr:
                     output += f"\n[STDERR]: {proc.stderr[:2000]}"
@@ -690,7 +699,7 @@ async def execute_tool(tool_name, args):
                 if check_type == "backend_health":
                     # Check if backend is running and responding
                     try:
-                        log_proc = subprocess.run("tail -n 10 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
+                        log_proc = subprocess.run(["tail", "-n", "10", "/var/log/supervisor/backend.err.log"], capture_output=True, text=True, timeout=5)
                         startup_ok = "Application startup complete" in (log_proc.stdout or "")
                         async with httpx.AsyncClient(timeout=10) as client:
                             resp = await client.get("http://localhost:8001/api/health")
@@ -777,22 +786,8 @@ async def execute_tool(tool_name, args):
             screenshot_path = f"/app/backend/uploads/screenshot_{screenshot_id}.png"
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "python3", "-c", f"""
-import asyncio
-from playwright.async_api import async_playwright
-
-async def shot():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-gpu'])
-        page = await browser.new_page(viewport={{'width': 1280, 'height': 720}})
-        await page.goto('{url}', wait_until='networkidle', timeout=15000)
-        await page.wait_for_timeout({wait_ms})
-        await page.screenshot(path='{screenshot_path}', full_page={full_page})
-        await browser.close()
-        print('OK')
-
-asyncio.run(shot())
-""",
+                    "python3", "/app/backend/screenshot_helper.py",
+                    url, screenshot_path, str(full_page), str(wait_ms),
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
@@ -921,22 +916,24 @@ asyncio.run(shot())
             fix = args.get("fix", False)
             if not path:
                 return {"status": "error", "error": "path is required"}
+            if not re.match(r'^[a-zA-Z0-9/_.\-]+$', path):
+                return {"status": "error", "error": "Invalid path characters"}
             ext = os.path.splitext(path)[1].lower()
             try:
                 if ext == ".py" or (os.path.isdir(path) and not path.endswith("src")):
-                    fix_flag = "--fix" if fix else ""
-                    proc = subprocess.run(
-                        f"cd /app && ruff check {path} {fix_flag} 2>&1 | head -50",
-                        shell=True, capture_output=True, text=True, timeout=30)
+                    cmd = ["ruff", "check", path]
+                    if fix:
+                        cmd.append("--fix")
+                    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd="/app")
                     issues = proc.stdout.strip() if proc.stdout.strip() else "No issues found"
-                    return {"status": "ok", "linter": "ruff", "path": path, "output": issues, "exit_code": proc.returncode}
+                    return {"status": "ok", "linter": "ruff", "path": path, "output": issues[:3000], "exit_code": proc.returncode}
                 elif ext in [".js", ".jsx", ".ts", ".tsx"] or path.endswith("src"):
-                    fix_flag = "--fix" if fix else ""
-                    proc = subprocess.run(
-                        f"cd /app/frontend && npx eslint {path} {fix_flag} 2>&1 | head -50",
-                        shell=True, capture_output=True, text=True, timeout=30)
+                    cmd = ["npx", "eslint", path]
+                    if fix:
+                        cmd.append("--fix")
+                    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd="/app/frontend")
                     issues = proc.stdout.strip() if proc.stdout.strip() else "No issues found"
-                    return {"status": "ok", "linter": "eslint", "path": path, "output": issues, "exit_code": proc.returncode}
+                    return {"status": "ok", "linter": "eslint", "path": path, "output": issues[:3000], "exit_code": proc.returncode}
                 else:
                     return {"status": "error", "error": f"No linter for extension: {ext}"}
             except subprocess.TimeoutExpired:
@@ -966,13 +963,17 @@ asyncio.run(shot())
             action = args.get("action", "log")  # log, status, diff
             try:
                 if action == "log":
-                    proc = subprocess.run("git log --oneline -20", shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                    proc = subprocess.run(["git", "log", "--oneline", "-20"], capture_output=True, text=True, timeout=10, cwd="/app")
                 elif action == "status":
-                    proc = subprocess.run("git status --short", shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                    proc = subprocess.run(["git", "status", "--short"], capture_output=True, text=True, timeout=10, cwd="/app")
                 elif action == "diff":
                     file_path = args.get("file", "")
-                    cmd = f"git diff HEAD -- {file_path}" if file_path else "git diff --stat HEAD"
-                    proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10, cwd="/app")
+                    git_cmd = ["git", "diff", "HEAD"]
+                    if file_path:
+                        git_cmd.extend(["--", file_path])
+                    else:
+                        git_cmd.append("--stat")
+                    proc = subprocess.run(git_cmd, capture_output=True, text=True, timeout=10, cwd="/app")
                 else:
                     return {"status": "error", "error": f"Unknown git action: {action}"}
                 return {"status": "ok", "action": action, "output": proc.stdout[:5000]}
@@ -1147,7 +1148,7 @@ async def _scaffold_module(args):
     await asyncio.sleep(3)
 
     # Verify startup
-    log_proc = subprocess.run("tail -n 15 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
+    log_proc = subprocess.run(["tail", "-n", "15", "/var/log/supervisor/backend.err.log"], capture_output=True, text=True, timeout=5)
     startup_ok = "Application startup complete" in (log_proc.stdout or "")
 
     # If startup failed, try auto-fix once
@@ -1155,10 +1156,10 @@ async def _scaffold_module(args):
     if not startup_ok:
         fix_result = _auto_fix_startup_error(file_path, log_proc.stdout or "")
         if fix_result:
-            auto_fix_applied = True
-            proc = subprocess.run(["sudo", "supervisorctl", "restart", "backend"], capture_output=True, text=True, timeout=15)
+            auto_fix_applied = True  # noqa: F841
+            subprocess.run(["sudo", "supervisorctl", "restart", "backend"], capture_output=True, text=True, timeout=15)
             await asyncio.sleep(3)
-            log_proc = subprocess.run("tail -n 15 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
+            log_proc = subprocess.run(["tail", "-n", "15", "/var/log/supervisor/backend.err.log"], capture_output=True, text=True, timeout=5)
             startup_ok = "Application startup complete" in (log_proc.stdout or "")
 
     # Test first GET endpoint
@@ -2025,9 +2026,9 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                 _tasks[task_id]["progress"] = f"Step {step_num}: Auto-restarting backend..."
                 # Save to DB BEFORE restart so state survives hot reload
                 await _save_task(task_id, _tasks[task_id])
-                proc = subprocess.run(["sudo", "supervisorctl", "restart", "backend"], capture_output=True, text=True, timeout=15)
+                subprocess.run(["sudo", "supervisorctl", "restart", "backend"], capture_output=True, text=True, timeout=15)
                 await asyncio.sleep(4)  # Wait for restart to complete
-                log_proc = subprocess.run("tail -n 5 /var/log/supervisor/backend.err.log", shell=True, capture_output=True, text=True, timeout=5)
+                log_proc = subprocess.run(["tail", "-n", "5", "/var/log/supervisor/backend.err.log"], capture_output=True, text=True, timeout=5)
                 startup_ok = "Application startup complete" in (log_proc.stdout or "")
                 step_tool_results.append({
                     "tool": "_auto_restart", "args": {},

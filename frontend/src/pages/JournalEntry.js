@@ -1,23 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BookOpen, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { ModuleAIPrompt } from '../components/AISmartEntry';
-
-const API = process.env.REACT_APP_BACKEND_URL;
+import { API } from '../App';
 
 function JournalEntry() {
   const [entries, setEntries] = useState([]);
 
-  useEffect(() => { fetchEntries(); }, []);
-
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     try {
       const res = await fetch(`${API}/journal-entries/manual`);
-      setEntries(await res.json());
+      if (res.ok) setEntries(await res.json());
     } catch (error) {
       toast.error('Failed to fetch journal entries');
     }
-  };
+  }, []);
+
+  useEffect(() => { fetchEntries(); }, [fetchEntries]);
 
   const postEntry = async (entryId) => {
     try {

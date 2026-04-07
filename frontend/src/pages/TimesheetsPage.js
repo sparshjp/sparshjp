@@ -46,8 +46,8 @@ export default function TimesheetsPage() {
           { label: 'Total Billable', value: `${summary.total_billable || 0}h`, icon: Clock, color: '#38bdf8' },
           { label: 'Billable Staff', value: summary.headcount || 0, icon: Users, color: '#a78bfa' },
           { label: 'Timesheets', value: timesheets.length, icon: CheckCircle, color: '#00d4aa' },
-        ].map((c, i) => (
-          <div key={i} className="bg-[#0A1628] border border-[#1B2D42] rounded-lg p-4" data-testid={`ts-summary-${i}`}>
+        ].map((c) => (
+          <div key={c.label} className="bg-[#0A1628] border border-[#1B2D42] rounded-lg p-4" data-testid={`ts-summary-${c.label}`}>
             <div className="flex items-center gap-2 mb-2">
               <c.icon size={16} style={{ color: c.color }} />
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A5B6E]">{c.label}</span>
@@ -82,7 +82,7 @@ export default function TimesheetsPage() {
               <thead>
                 <tr className="border-b border-[#1B2D42] text-[#4A5B6E]">
                   {['Employee', 'Role', 'Location', 'Billable', 'Non-Bill', 'Total', 'Utilization', 'Status'].map((h, i) => (
-                    <th key={i} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
+                    <th key={h} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -130,7 +130,7 @@ export default function TimesheetsPage() {
               <thead>
                 <tr className="border-b border-[#1B2D42] text-[#4A5B6E]">
                   {['Project', 'Client', 'Type', 'Billable Hrs', 'Non-Bill Hrs', 'Total', 'Team'].map((h, i) => (
-                    <th key={i} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
+                    <th key={h} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -167,15 +167,15 @@ export default function TimesheetsPage() {
                 <thead>
                   <tr className="border-b border-[#1B2D42] text-[#4A5B6E]">
                     {['Employee', 'Week', 'Period', 'Total Hrs', 'Status', 'Entries', ''].map((h, i) => (
-                      <th key={i} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
+                      <th key={h} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {timesheets.map((ts, idx) => (
-                    <>
-                      <tr key={idx} className="border-b border-[#1B2D42]/50 hover:bg-[#152236]/50 cursor-pointer transition-colors"
-                          onClick={() => setExpandedEmployee(expandedEmployee === idx ? null : idx)}>
+                  {timesheets.map((ts) => (
+                    <React.Fragment key={ts.id || ts.employee_id + ts.week}>
+                      <tr className="border-b border-[#1B2D42]/50 hover:bg-[#152236]/50 cursor-pointer transition-colors"
+                          onClick={() => setExpandedEmployee(expandedEmployee === ts.id ? null : ts.id)}>
                         <td className="px-3 py-2.5">
                           <span className="font-mono text-[#38bdf8] text-[10px]">{ts.employee_id}</span>
                           <span className="font-bold text-[#E8EDF2] ml-1.5">{ts.employee_name}</span>
@@ -187,14 +187,14 @@ export default function TimesheetsPage() {
                           <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${ts.status === 'Approved' ? 'bg-[#22c55e]/10 text-[#22c55e]' : ts.status === 'Rejected' ? 'bg-[#ef4444]/10 text-[#ef4444]' : 'bg-[#eab308]/10 text-[#eab308]'}`}>{ts.status}</span>
                         </td>
                         <td className="px-3 py-2.5 text-[#4A5B6E]">{ts.entries?.length} entries</td>
-                        <td className="px-3 py-2.5 text-[#4A5B6E]">{expandedEmployee === idx ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</td>
+                        <td className="px-3 py-2.5 text-[#4A5B6E]">{expandedEmployee === ts.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</td>
                       </tr>
-                      {expandedEmployee === idx && (
-                        <tr key={`${idx}-detail`}>
+                      {expandedEmployee === ts.id && (
+                        <tr key={`${ts.id || ts.employee_id + ts.week}-detail`}>
                           <td colSpan={7} className="p-3 bg-[#152236]/50">
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                              {ts.entries?.map((entry, ei) => (
-                                <div key={ei} className={`p-2 rounded border text-[10px] ${entry.billable ? 'border-[#00d4aa]/30 bg-[#00d4aa]/5' : 'border-[#1B2D42] bg-[#0A1628]'}`}>
+                              {ts.entries?.map((entry) => (
+                                <div key={entry.project_id + entry.hours} className={`p-2 rounded border text-[10px] ${entry.billable ? 'border-[#00d4aa]/30 bg-[#00d4aa]/5' : 'border-[#1B2D42] bg-[#0A1628]'}`}>
                                   <div className="flex items-center gap-1 mb-0.5">
                                     <span className="font-mono font-bold text-[#38bdf8]">{entry.project_id}</span>
                                     <span className={`text-[8px] font-bold px-1 rounded ${entry.billable ? 'bg-[#00d4aa]/20 text-[#00d4aa]' : 'bg-[#4A5B6E]/20 text-[#4A5B6E]'}`}>{entry.billable ? 'BILLABLE' : 'NON-BILL'}</span>
@@ -214,7 +214,7 @@ export default function TimesheetsPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

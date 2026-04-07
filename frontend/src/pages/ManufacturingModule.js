@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Factory, Play, CheckCircle, XCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { ModuleAIPrompt } from '../components/AISmartEntry';
-
-const API = process.env.REACT_APP_BACKEND_URL;
+import { API } from '../App';
 
 function formatINR(num) {
   if (!num && num !== 0) return '--';
@@ -17,16 +16,16 @@ export default function ManufacturingModule() {
   const [completeData, setCompleteData] = useState({ qty_produced: 0, qty_rejected: 0, scrap_reason: '' });
   const [showCompleteModal, setShowCompleteModal] = useState(null);
 
-  useEffect(() => { fetchWorkOrders(); }, []);
-
-  async function fetchWorkOrders() {
+  const fetchWorkOrders = useCallback(async () => {
     try {
       setLoading(true);
       const r = await fetch(`${API}/manufacturing/work-orders`);
       if (r.ok) setWorkOrders(await r.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }
+  }, []);
+
+  useEffect(() => { fetchWorkOrders(); }, [fetchWorkOrders]);
 
   async function startWO(woId) {
     try {

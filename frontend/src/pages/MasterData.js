@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API } from '../App';
 import { Plus, Search, Building, Users } from 'lucide-react';
@@ -20,11 +20,7 @@ function MasterData() {
     email: ''
   });
 
-  useEffect(() => {
-    fetchEntities();
-  }, [entityType]);
-
-  const fetchEntities = async () => {
+  const fetchEntities = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API}/entities?entity_type=${entityType}`);
@@ -35,7 +31,11 @@ function MasterData() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [entityType]);
+
+  useEffect(() => {
+    fetchEntities();
+  }, [fetchEntities]);
 
   const handleAddEntity = async () => {
     if (!newEntity.name) {
