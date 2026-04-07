@@ -8,47 +8,44 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 - **Industry:** IT Services | **Billing:** INR, USD, GBP
 
 ## Architecture
-- Frontend: React 18, Tailwind CSS, Shadcn/UI, Lucide React
-- Backend: FastAPI, Motor (async MongoDB), anthropic SDK, openai SDK
+- Frontend: React 18, Tailwind CSS, Shadcn/UI, Lucide React, DOMPurify
+- Backend: FastAPI, Motor (async MongoDB), anthropic SDK, openai SDK, shlex (security)
 - AI: 7 LLM Providers — Claude Direct, GPT-4o Direct, Claude (Emergent), Gemini 3 Flash, GPT-5 (Emergent), Groq Llama 3.3, OpenRouter
 - DB: MongoDB
 
-## Kairos AI Engine v4 — Full Access (Updated 2026-04-07)
-### 30 Tools (full parity with E1):
-**File I/O**: read_file, create_file, write_file, patch_file, insert_lines, delete_lines, delete_file, move_file
-**Search**: grep_search, list_files
-**Bash**: run_command (full access, 120s timeout)
-**DB**: run_query (full CRUD), get_schema
-**Infra**: restart_service, install_package, check_logs, run_tests
-**Verification**: verify_deployment, test_api
-**Research**: web_search, crawl_url, take_screenshot
-**Config**: manage_env
-**Code Quality**: lint_code
-**Git**: git_info
-**Compound**: scaffold_module, create_page
-**Subagents**: call_subagent (tester, designer, integrator, troubleshooter)
-**Batch**: batch_operations (parallel multi-file ops, max 20)
-**Image**: generate_image (GPT Image 1)
-
-### LLM Providers (Priority Order — Direct keys first):
-1. Claude Direct (User's Anthropic key) — Zero Emergent credits
-2. GPT-4o Direct (User's OpenAI key) — Zero Emergent credits
-3. Claude Sonnet 4.5 (Emergent Key) — Primary Emergent
-4. Gemini 3 Flash (Emergent Key) — Fast fallback
-5. GPT-5 (Emergent Key) — Strong code gen
-6. Groq / Llama 3.3 (User Groq Key) — Fast inference
-7. OpenRouter Auto (User OpenRouter Key) — Last resort
+## Kairos AI Engine v4 — 30 Tools
+### LLM Providers (Direct keys first, zero Emergent credits when configured):
+1. Claude Direct (User Anthropic key) | 2. GPT-4o Direct (User OpenAI key)
+3. Claude Sonnet 4.5 (Emergent) | 4. Gemini 3 Flash (Emergent) | 5. GPT-5 (Emergent)
+6. Groq Llama 3.3 (User key) | 7. OpenRouter (User key)
 
 ### System Prompt: E1-Level Reasoning
-- **Reasoning Methodology**: Decompose → Risk assess → Plan tool calls → Execute → Verify → Self-heal
-- **Debugging Discipline**: Reproduce first → Trace chain → Fix root cause → Verify → Regression check
-- **Token Efficiency**: Minimal args, patch_file over write_file, compound tools, compressed results (8KB cap), context window 10 messages
+- Reasoning Methodology: Decompose → Risk assess → Plan → Execute → Verify → Self-heal
+- Debugging Discipline: Reproduce → Trace → Root cause → Verify → Regression check
+- Token Efficiency: 8KB result cap, 10-msg context window, compressed prompt
 
-### API Key Management (NEW 2026-04-07)
-- **GET /api/agents/api-keys** — Check which direct keys are configured (masked)
-- **POST /api/agents/api-keys** — Save/remove API key for any provider
-- Keys persisted to backend/.env, loaded on startup
-- UI panel in AI Engine page with Save/Remove for all 4 providers
+## Code Quality Fixes Applied (2026-04-07)
+### Security (Critical)
+- **Shell Injection**: All `shell=True` removed; subprocess uses argument lists; `shlex.quote()` imported; HARD_BLOCKED expanded to include `curl|sh`, `wget|sh`, `curl|bash`, `wget|bash`
+- **Code Injection**: Replaced `exec()` screenshot with safe `screenshot_helper.py` subprocess called via `asyncio.create_subprocess_exec` with argument passing
+- **XSS**: Added DOMPurify sanitization to `dangerouslySetInnerHTML` in AIAgentsPage.js
+- **Path Validation**: Added regex validation for `lint_code` tool path parameter
+
+### React Hook Dependencies (5 files)
+- Stock.js: useCallback for fetchItems, fetchStockEntries, checkReorder
+- Sales.js: useCallback for fetchQuotations, fetchSalesOrders, fetchDeliveryNotes
+- JournalEntry.js: useCallback for fetchEntries + fixed API import
+- ManufacturingModule.js: useCallback for fetchWorkOrders + fixed API import
+- MasterData.js: useCallback for fetchEntities with entityType dependency
+
+### Key-as-Index Anti-pattern (3 files)
+- TimesheetsPage.js: ts.id instead of idx
+- ProjectsModule.js: c.label, ts.id instead of i
+- ReportingAI.js: q and msg.timestamp instead of i
+
+### execute_tool Refactoring (P3 - In Progress)
+- Security hardening applied to all 30 tool handlers
+- Tool registry pattern designed but not yet extracted (function works, code is functional)
 
 ## Modules Implemented
 ### Core: Dashboard, Company Setup, CRM, Selling, Buying, Stock, HR & Payroll
@@ -57,13 +54,8 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 ### Finance: Expense Management, Journal Entries, CoA, Financial Statements, AP/AR Aging, Audit Trail, GST, TDS
 ### Other: Leave Management, Employee Analytics, Bank Reconciliation, Client Feedback, Announcements
 
-## Bug Fixes (2026-04-07)
-- Fixed backend STOPPED causing "body stream already read" errors across all ERP modules
-- Fixed double `/api` prefix bug in 18+ frontend files
-- Added resilient `r.ok` checks to all fetch-based pages
-- Fixed FinancialStatements.js using process.env directly instead of API constant
-
 ## Backlog
 ### P1: Client Portal, Inventory Landed Cost, Fixed Asset Depreciation
 ### P2: E-Way Bill, Mobile Responsiveness
-### P3: Refactor routes_agents.py (>2100 lines, extract tools into tools.py)
+### P3: Extract tool handlers from execute_tool() into kairos_tools.py (refactoring)
+### P3: Split large React components (AIAgentsPage 820→multiple, BuyingModule 304, SellingModule 306)
