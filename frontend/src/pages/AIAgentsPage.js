@@ -548,7 +548,7 @@ export default function AIAgentsPage() {
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-xs font-bold text-[#E8EDF2] leading-none">Kairos AI Engine</h1>
-                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v3</span>
+                <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#00d4aa]/10 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">v4</span>
               </div>
               <p className="text-[9px] text-[#4A5B6E] leading-none mt-0.5 flex items-center gap-1">
                 <GitBranch size={8} /> 27 Tools &middot; Full Bash Access &middot; 5 LLM Providers
@@ -687,7 +687,7 @@ export default function AIAgentsPage() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00d4aa]/15 to-[#00d4aa]/5 border border-[#00d4aa]/20 flex items-center justify-center mb-4">
                 <Cpu size={28} className="text-[#00d4aa]" />
               </div>
-              <h2 className="text-lg font-bold text-[#E8EDF2] mb-1">Kairos AI Engine v3</h2>
+              <h2 className="text-lg font-bold text-[#E8EDF2] mb-1">Kairos AI Engine v4</h2>
               <p className="text-xs text-[#4A5B6E] max-w-md mb-2">
                 Agentic AI developer with multi-step autonomous execution.
               </p>
