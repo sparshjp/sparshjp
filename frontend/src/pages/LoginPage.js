@@ -1,53 +1,23 @@
 import { useState } from 'react';
-import { API } from '../App';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card } from '../components/ui/card';
-import { Lock, Mail, User, LogIn } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Lock, Mail, LogIn, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
-  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
     try {
-      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register';
-      const payload = mode === 'login' 
-        ? { email, password }
-        : { email, password, name, role: 'user' };
-      
-      const res = await fetch(`${API}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Request failed');
-      }
-      
-      const data = await res.json();
-      
-      if (mode === 'login') {
-        localStorage.setItem('kairos_token', data.token);
-        localStorage.setItem('kairos_user', JSON.stringify(data.user));
-        toast.success(`Welcome back, ${data.user.name || data.user.email}!`);
-        navigate('/');
-      } else {
-        toast.success('Account created! Please log in.');
-        setMode('login');
-        setPassword('');
-      }
+      const user = await login(email, password);
+      toast.success(`Welcome, ${user.name || user.email}`);
+      navigate('/');
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -56,87 +26,63 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D1B2A] p-4">
-      <Card className="w-full max-w-md p-8 bg-[#152236] border-[#1B2D42]">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#00d4aa]/10 mb-4">
-            <LogIn className="w-8 h-8 text-[#00d4aa]" />
+    <div className="min-h-screen flex items-center justify-center bg-[#060e1a]" data-testid="login-page">
+      <div className="w-full max-w-md p-8">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#00d4aa] to-[#00a88a] mb-4 shadow-lg shadow-[#00d4aa]/20">
+            <LogIn className="w-6 h-6 text-[#060e1a]" />
           </div>
-          <h1 className="text-2xl font-bold text-[#E8EDF2] mb-2">
-            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
-          </h1>
-          <p className="text-[#7A8BA0] text-sm">
-            {mode === 'login' ? 'Sign in to continue to Kairos' : 'Sign up to get started'}
-          </p>
+          <h1 className="text-3xl font-black text-[#E8EDF2] tracking-tight">Nexora ERP</h1>
+          <p className="text-[#4A5B6E] text-sm mt-2">Sign in to your workspace</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'register' && (
-            <div>
-              <label className="block text-sm font-medium text-[#E8EDF2] mb-2">
-                <User className="inline w-4 h-4 mr-2" />
-                Full Name
-              </label>
-              <Input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                required
-                className="bg-[#0D1B2A] border-[#1B2D42] text-[#E8EDF2]"
-              />
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit} className="space-y-5" data-testid="login-form">
           <div>
-            <label className="block text-sm font-medium text-[#E8EDF2] mb-2">
-              <Mail className="inline w-4 h-4 mr-2" />
-              Email
+            <label className="block text-xs font-bold text-[#7A8BA0] mb-2 uppercase tracking-wider">
+              <Mail className="inline w-3.5 h-3.5 mr-1.5 opacity-60" />Username / Email
             </label>
-            <Input
-              type="email"
+            <input
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="kairoserp"
               required
-              className="bg-[#0D1B2A] border-[#1B2D42] text-[#E8EDF2]"
+              data-testid="login-email"
+              className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-4 py-3 text-sm text-[#E8EDF2] placeholder-[#2A3F56] focus:border-[#00d4aa]/60 focus:outline-none focus:ring-1 focus:ring-[#00d4aa]/20 transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#E8EDF2] mb-2">
-              <Lock className="inline w-4 h-4 mr-2" />
-              Password
+            <label className="block text-xs font-bold text-[#7A8BA0] mb-2 uppercase tracking-wider">
+              <Lock className="inline w-3.5 h-3.5 mr-1.5 opacity-60" />Password
             </label>
-            <Input
+            <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Enter password"
               required
-              minLength={6}
-              className="bg-[#0D1B2A] border-[#1B2D42] text-[#E8EDF2]"
+              data-testid="login-password"
+              className="w-full bg-[#0D1B2A] border border-[#1B2D42] rounded-lg px-4 py-3 text-sm text-[#E8EDF2] placeholder-[#2A3F56] focus:border-[#00d4aa]/60 focus:outline-none focus:ring-1 focus:ring-[#00d4aa]/20 transition-all"
             />
           </div>
 
-          <Button
+          <button
             type="submit"
-            className="w-full bg-[#00d4aa] hover:bg-[#00b894] text-[#0D1B2A]"
             disabled={loading}
+            data-testid="login-submit"
+            className="w-full py-3 rounded-lg bg-gradient-to-r from-[#00d4aa] to-[#00b894] text-[#060e1a] font-bold text-sm hover:shadow-lg hover:shadow-[#00d4aa]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {loading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
-          </Button>
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-[#060e1a]/30 border-t-[#060e1a] rounded-full animate-spin" />
+            ) : (
+              <>Sign In <ArrowRight size={16} /></>
+            )}
+          </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-            className="text-sm text-[#00d4aa] hover:underline"
-          >
-            {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-          </button>
-        </div>
-      </Card>
+        <p className="text-center text-[10px] text-[#2A3F56] mt-8">Nexora Digital Solutions Pvt. Ltd.</p>
+      </div>
     </div>
   );
 }

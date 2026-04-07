@@ -24,6 +24,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
+import routes_auth
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -1493,6 +1494,8 @@ async def export_table_data(table_name: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Include router
+routes_auth.set_db(db)
+api_router.include_router(routes_auth.router)
 app.include_router(api_router)
 
 app.add_middleware(
@@ -1516,6 +1519,10 @@ async def startup():
         logger.info("Kairos Accounting - Storage initialized")
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
+    try:
+        await routes_auth.seed_users()
+    except Exception as e:
+        logger.error(f"User seeding failed: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

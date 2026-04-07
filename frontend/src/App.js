@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import '@/App.css';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { 
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
   Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock,
-  FolderKanban, ArrowLeftRight, CreditCard
+  FolderKanban, ArrowLeftRight, CreditCard, LogOut, User
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
@@ -57,12 +58,14 @@ import ItemSampleTracking from './pages/ItemSampleTracking';
 import LeadProbabilityScore from './pages/LeadProbabilityScore';
 import AnnouncementsPage from './pages/AnnouncementsPage';
 import LoginPage from './pages/LoginPage';
+import UserManagement from './pages/UserManagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
 function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
+  const { hasAccess, user } = useAuth();
   const [expandedSections, setExpandedSections] = useState(['core', 'selling', 'buying', 'stock', 'accounting', 'reporting-ai']);
 
   const toggleSection = (section) => {
@@ -185,8 +188,18 @@ function Sidebar({ isOpen, setIsOpen }) {
         { path: '/reports', label: 'Reports', icon: FileText },
         { path: '/admin/tables', label: 'Data Tables', icon: Database },
       ]
+    },
+    {
+      id: 'user-management',
+      title: 'Administration',
+      items: [
+        { path: '/user-management', label: 'User Management', icon: Users },
+      ]
     }
   ];
+
+  // Filter sections based on role access
+  const filteredSections = menuSections.filter(s => hasAccess(s.id));
 
   return (
     <>
@@ -224,7 +237,7 @@ function Sidebar({ isOpen, setIsOpen }) {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-            {menuSections.map((section) => (
+            {filteredSections.map((section) => (
               <div key={section.id} className="mb-2">
                 <button
                   onClick={() => toggleSection(section.id)}
@@ -261,10 +274,19 @@ function Sidebar({ isOpen, setIsOpen }) {
             ))}
           </nav>
 
-          {/* Footer */}
-          <div className="p-3 border-t border-[#1B2D42] text-xs text-[#4A5B6E]">
-            <p className="font-semibold tracking-wider">Kairos AI ERP</p>
-            <p className="text-[10px] mt-1 text-[#00C9A7]">AI-Powered ERP</p>
+          {/* Footer — User info */}
+          <div className="p-3 border-t border-[#1B2D42]">
+            {user && (
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-[#00C9A7]/20 flex items-center justify-center">
+                  <User size={13} className="text-[#00C9A7]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-[#E8EDF2] truncate">{user.name}</p>
+                  <p className="text-[9px] text-[#00C9A7] capitalize">{user.role?.replace('_', ' ')}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -274,7 +296,34 @@ function Sidebar({ isOpen, setIsOpen }) {
 
 function AppShell({ sidebarOpen, setSidebarOpen }) {
   const loc = useLocation();
+  const navigate = useNavigate();
   const isAIEngine = loc.pathname === '/ai-agents';
+  const { user, logout, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#060e1a] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#00d4aa]/30 border-t-[#00d4aa] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+        <Toaster position="top-right" />
+      </>
+    );
+  }
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <>
@@ -285,7 +334,16 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Menu size={24} />
           </button>
           <div className="flex-1" />
-          <button className="text-sm text-[#7A8BA0] hover:text-[#00C9A7] font-medium transition-colors">Admin</button>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-[#4A5B6E]">{user.name}</span>
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold capitalize border"
+              style={{ color: '#00d4aa', borderColor: '#00d4aa40', background: '#00d4aa15' }}>
+              {user.role?.replace('_', ' ')}
+            </span>
+            <button onClick={handleLogout} className="p-1.5 rounded hover:bg-[#1B2D42] text-[#4A5B6E] hover:text-[#ef4444] transition-colors" data-testid="logout-btn" title="Sign out">
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
         <div className={isAIEngine ? '' : 'p-4 sm:p-6'}>
           <Routes>
@@ -327,7 +385,7 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Route path="/revenue-recognition" element={<RevenueRecognition />} />
             <Route path="/transaction-explorer" element={<TransactionExplorer />} />
             <Route path="/bank-reconciliation" element={<BankReconciliation />} />
-            <Route path="/ai-agents" element={<AIAgentsPage />} />
+            <Route path="/ai-agents" element={user.role === 'creator' ? <AIAgentsPage /> : <Navigate to="/" replace />} />
                         <Route path="/expense-management" element={<ExpenseManagement />} />
                             <Route path="/feedback" element={<FeedbackPage />} />
                             <Route path="/leads/enrich" element={<LeadEnrichment />} />
@@ -335,12 +393,12 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
                             <Route path="/items/sample-tracking" element={<ItemSampleTracking />} />
                             <Route path="/leads/probability" element={<LeadProbabilityScore />} />
                             <Route path="/announcements" element={<AnnouncementsPage />} />
-                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/user-management" element={['creator', 'admin'].includes(user.role) ? <UserManagement /> : <Navigate to="/" replace />} />
+                            <Route path="/login" element={<Navigate to="/" replace />} />
               </Routes>
         </div>
         {!isAIEngine && <UniversalAI />}
       </div>
-      <Toaster position="top-right" />
     </>
   );
 }
@@ -351,7 +409,10 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <AppShell sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <AuthProvider>
+          <AppShell sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+          <Toaster position="top-right" richColors theme="dark" />
+        </AuthProvider>
       </BrowserRouter>
     </div>
   );
