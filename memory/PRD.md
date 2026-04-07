@@ -9,40 +9,46 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 
 ## Architecture
 - Frontend: React 18, Tailwind CSS, Shadcn/UI, Lucide React
-- Backend: FastAPI, Motor (async MongoDB)
-- AI: 5 LLM Providers — Claude 4.5, Gemini 3 Flash, GPT-5, Groq Llama 3.3, OpenRouter
+- Backend: FastAPI, Motor (async MongoDB), anthropic SDK, openai SDK
+- AI: 7 LLM Providers — Claude Direct, GPT-4o Direct, Claude (Emergent), Gemini 3 Flash, GPT-5 (Emergent), Groq Llama 3.3, OpenRouter
 - DB: MongoDB
 
 ## Kairos AI Engine v4 — Full Access (Updated 2026-04-07)
 ### 30 Tools (full parity with E1):
 **File I/O**: read_file, create_file, write_file, patch_file, insert_lines, delete_lines, delete_file, move_file
 **Search**: grep_search, list_files
-**Bash**: run_command (full access, 120s timeout — rm, mv, cp, sudo, apt, yarn all allowed)
-**DB**: run_query (full CRUD: find, count, insert_one, insert_many, update_one, update_many, delete_one, delete_many, aggregate, distinct, drop), get_schema
-**Infra**: restart_service (backend + frontend), install_package (pip + yarn), check_logs, run_tests
+**Bash**: run_command (full access, 120s timeout)
+**DB**: run_query (full CRUD), get_schema
+**Infra**: restart_service, install_package, check_logs, run_tests
 **Verification**: verify_deployment, test_api
 **Research**: web_search, crawl_url, take_screenshot
-**Config**: manage_env (read/set/delete .env vars with protected keys)
-**Code Quality**: lint_code (ruff for Python, eslint for JS)
-**Git**: git_info (log, status, diff)
+**Config**: manage_env
+**Code Quality**: lint_code
+**Git**: git_info
 **Compound**: scaffold_module, create_page
-**NEW**: call_subagent (4 subagents: tester, designer, integrator, troubleshooter)
-**NEW**: batch_operations (parallel multi-file create/write/delete/move/patch/read, max 20 ops)
-**NEW**: generate_image (GPT Image 1 via Emergent LLM Key, saves to /app/backend/uploads/)
+**Subagents**: call_subagent (tester, designer, integrator, troubleshooter)
+**Batch**: batch_operations (parallel multi-file ops, max 20)
+**Image**: generate_image (GPT Image 1)
 
-### LLM Providers (Priority Order):
-1. Claude Sonnet 4.5 (Emergent Key) — Primary
-2. Gemini 3 Flash (Emergent Key) — Fast, graceful fallback
-3. GPT-5 (Emergent Key) — Strong code generation
-4. Groq / Llama 3.3 (Groq API Key) — Fast inference
-5. OpenRouter Auto (OpenRouter Key) — Last resort
+### LLM Providers (Priority Order — Direct keys first):
+1. Claude Direct (User's Anthropic key) — Zero Emergent credits
+2. GPT-4o Direct (User's OpenAI key) — Zero Emergent credits
+3. Claude Sonnet 4.5 (Emergent Key) — Primary Emergent
+4. Gemini 3 Flash (Emergent Key) — Fast fallback
+5. GPT-5 (Emergent Key) — Strong code gen
+6. Groq / Llama 3.3 (User Groq Key) — Fast inference
+7. OpenRouter Auto (User OpenRouter Key) — Last resort
 
-### Autonomous Execution:
-- Executes immediately without asking "proceed" — mandated by system prompt
-- Auto-continue logic when LLM outputs plan without tool calls
-- Task state persisted to MongoDB for restart resilience
-- Smart provider routing with failure tracking
-- Context window summarization when context exceeds threshold
+### System Prompt: E1-Level Reasoning
+- **Reasoning Methodology**: Decompose → Risk assess → Plan tool calls → Execute → Verify → Self-heal
+- **Debugging Discipline**: Reproduce first → Trace chain → Fix root cause → Verify → Regression check
+- **Token Efficiency**: Minimal args, patch_file over write_file, compound tools, compressed results (8KB cap), context window 10 messages
+
+### API Key Management (NEW 2026-04-07)
+- **GET /api/agents/api-keys** — Check which direct keys are configured (masked)
+- **POST /api/agents/api-keys** — Save/remove API key for any provider
+- Keys persisted to backend/.env, loaded on startup
+- UI panel in AI Engine page with Save/Remove for all 4 providers
 
 ## Modules Implemented
 ### Core: Dashboard, Company Setup, CRM, Selling, Buying, Stock, HR & Payroll
@@ -53,8 +59,9 @@ Build an AI-Native ERP (India Localization) pivoted to IT Services context ("Nex
 
 ## Bug Fixes (2026-04-07)
 - Fixed backend STOPPED causing "body stream already read" errors across all ERP modules
-- Fixed double `/api` prefix bug in 18 frontend files (FinancialStatements, AgingReport, AuditTrail, BuyingModule, CompanySetup, CustomersPage, EInvoicePage, GSTModule, GSTR1/3B, ItemsPage, JournalEntry, ManufacturingModule, ReportingAI, SellingModule, TDSPage, VendorsPage, AISmartEntry, UniversalAI)
-- Added resilient error handling (`r.ok` checks) to fetch calls in ProjectsModule, TimesheetsPage, RevenueRecognition, FinancialStatements, Dashboard, AIAgentsPage
+- Fixed double `/api` prefix bug in 18+ frontend files
+- Added resilient `r.ok` checks to all fetch-based pages
+- Fixed FinancialStatements.js using process.env directly instead of API constant
 
 ## Backlog
 ### P1: Client Portal, Inventory Landed Cost, Fixed Asset Depreciation
