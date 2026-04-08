@@ -1,0 +1,31 @@
+{
+  "total": 2,
+  "passed": 2,
+  "failed": 0,
+  "skipped": 0,
+  "tests": [
+    {
+      "id": "T1",
+      "name": "GET /api/projects - List all projects with valid auth",
+      "status": "pass",
+      "details": {
+        "status": "pass",
+        "test_name": "GET /api/projects - List all projects with valid auth",
+        "output": "[{\"id\":\"PRJ-2E81F0\",\"name\":\"Test Project Alpha\",\"client\":\"Acme Corp\",\"type\":\"T&M\",\"pm\":\"John\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1500000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"Monthly\",\"duration\":\"\",\"team_names\":[\"Alice\",\"Bob\"],\"milestones\":[],\"created_at\":\"2026-04-07T07:35:27.637847+00:00\"},{\"id\":\"PRJ-3FAAFF\",\"name\":\"SOW CloudMigrate\",\"client\":\"TechCorp\",\"type\":\"Fixed-Price\",\"pm\":\"\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":0,\"value_usd\":50000,\"currency\":\"USD\",\"billing\":\"fixed\",\"duration\":\"2026-04-01 to 2026-12-31\",\"team_names\":[],\"milestones\":[{\"id\":\"cc74c820\",\"name\":\"Phase 1 Discovery\",\"value\":25000,\"currency\":\"USD\",\"status\":\"Pending\",\"date\":\"\"},{\"id\":\"40230ffb\",\"name\":\"Phase 2 Delivery\",\"value\":25000,\"currency\":\"USD\",\"status\":\"Pending\",\"date\":\"\"}],\"source_contract_id\":\"9e151e54-cdd5-4504-8e9e-4c4dee7c6b36\",\"created_at\":\"2026-04-07T07:36:02.117380+00:00\"},{\"id\":\"PRJ-14733D\",\"name\":\"TEST_Contract_InterModule\",\"client\":\"Test Client Corp\",\"type\":\"Fixed-Price\",\"pm\":\"\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1000000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"fixed\",\"duration\":\"2026-01-01 to 2026-12-31\",\"team_names\":[],\"milestones\":[{\"id\":\"f920fba4\",\"name\":\"Milestone 1\",\"value\":300000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-03-31\"},{\"id\":\"912c097e\",\"name\":\"Milestone 2\",\"value\":400000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-06-30\"},{\"id\":\"53f2369d\",\"name\":\"Milestone 3\",\"value\":300000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-12-31\"}],\"source_contract_id\":\"f074e5b0-e5a8-44ed-baf4-c8511786823c\",\"created_at\":\"2026-04-07T07:38:39.364188+00:00\"},{\"id\":\"PRJ-8EEDEF\",\"name\":\"TEST_ManualEntry_Project\",\"client\":\"Test Client Corp\",\"type\":\"T&M\",\"pm\":\"Test PM\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1000000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"Monthly\",\"duration\":\"\",\"team_names\":[\"Alice\",\"Bob\",\"Charlie\"],\"milestones\":[],\"created_at\":\"2026-04-07T08:46:41.",
+        "returncode": 0
+      }
+    },
+    {
+      "id": "T2",
+      "name": "GET /api/projects - Unauthorized access without token",
+      "status": "pass",
+      "details": {
+        "status": "pass",
+        "test_name": "GET /api/projects - Unauthorized access without token",
+        "output": "[{\"id\":\"PRJ-2E81F0\",\"name\":\"Test Project Alpha\",\"client\":\"Acme Corp\",\"type\":\"T&M\",\"pm\":\"John\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1500000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"Monthly\",\"duration\":\"\",\"team_names\":[\"Alice\",\"Bob\"],\"milestones\":[],\"created_at\":\"2026-04-07T07:35:27.637847+00:00\"},{\"id\":\"PRJ-3FAAFF\",\"name\":\"SOW CloudMigrate\",\"client\":\"TechCorp\",\"type\":\"Fixed-Price\",\"pm\":\"\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":0,\"value_usd\":50000,\"currency\":\"USD\",\"billing\":\"fixed\",\"duration\":\"2026-04-01 to 2026-12-31\",\"team_names\":[],\"milestones\":[{\"id\":\"cc74c820\",\"name\":\"Phase 1 Discovery\",\"value\":25000,\"currency\":\"USD\",\"status\":\"Pending\",\"date\":\"\"},{\"id\":\"40230ffb\",\"name\":\"Phase 2 Delivery\",\"value\":25000,\"currency\":\"USD\",\"status\":\"Pending\",\"date\":\"\"}],\"source_contract_id\":\"9e151e54-cdd5-4504-8e9e-4c4dee7c6b36\",\"created_at\":\"2026-04-07T07:36:02.117380+00:00\"},{\"id\":\"PRJ-14733D\",\"name\":\"TEST_Contract_InterModule\",\"client\":\"Test Client Corp\",\"type\":\"Fixed-Price\",\"pm\":\"\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1000000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"fixed\",\"duration\":\"2026-01-01 to 2026-12-31\",\"team_names\":[],\"milestones\":[{\"id\":\"f920fba4\",\"name\":\"Milestone 1\",\"value\":300000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-03-31\"},{\"id\":\"912c097e\",\"name\":\"Milestone 2\",\"value\":400000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-06-30\"},{\"id\":\"53f2369d\",\"name\":\"Milestone 3\",\"value\":300000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-12-31\"}],\"source_contract_id\":\"f074e5b0-e5a8-44ed-baf4-c8511786823c\",\"created_at\":\"2026-04-07T07:38:39.364188+00:00\"},{\"id\":\"PRJ-8EEDEF\",\"name\":\"TEST_ManualEntry_Project\",\"client\":\"Test Client Corp\",\"type\":\"T&M\",\"pm\":\"Test PM\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1000000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"Monthly\",\"duration\":\"\",\"team_names\":[\"Alice\",\"Bob\",\"Charlie\"],\"milestones\":[],\"created_at\":\"2026-04-07T08:46:41.",
+        "returncode": 0
+      }
+    }
+  ],
+  "timestamp": "2026-04-08T20:48:37.023000+00:00"
+}

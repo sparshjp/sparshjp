@@ -14,7 +14,7 @@ import httpx
 import re
 import logging
 import base64
-from kairos_subagents import call_subagent, generate_image as gen_image
+from kairos_subagents import call_subagent, generate_image as gen_image, run_test_suite, run_playwright_test, run_api_test, VERIFIED_PLAYBOOKS
 
 router = APIRouter(prefix="/agents", tags=["AI Engine"])
 
@@ -371,7 +371,9 @@ When fixing bugs:
 **Config**: manage_env(action,file?,key?,value?)
 **Quality**: lint_code(path,fix?)
 **Git**: git_info(action,file?)
-**Subagents**: call_subagent(agent_type,task,context?) — types: tester, designer, integrator, troubleshooter
+**Subagents**: call_subagent(agent_type,task,context?,run_tests?) — types: tester, designer, integrator, troubleshooter. Set run_tests=true with tester to auto-execute generated tests.
+**Testing**: run_test(type,command|script,name?) — run single test (curl/playwright). run_test_suite(tests[]) — batch tests with report
+**Playbooks**: get_playbook(service) — get verified integration playbook (stripe,openai,groq,cerebras,huggingface,razorpay,twilio,sendgrid,redis,aws_s3,firebase_auth,elasticsearch)
 **Batch**: batch_operations(operations[]) — parallel file ops: create/write/delete/move/patch/read, max 20
 **Image**: generate_image(prompt,size?)
 
@@ -413,7 +415,7 @@ QA_ONLY_SUFFIX = "\n\nMODE: Testing/Validation Only. Run queries, test APIs, che
 # ══════════════════════════════════════════════════════════
 
 WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page", "delete_file", "move_file", "manage_env", "batch_operations"}
-READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot", "lint_code", "crawl_url", "git_info", "call_subagent", "generate_image"}
+READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot", "lint_code", "crawl_url", "git_info", "call_subagent", "generate_image", "run_test", "run_test_suite", "get_playbook"}
 
 async def execute_tool(tool_name, args):
     try:
@@ -1085,9 +1087,37 @@ async def execute_tool(tool_name, args):
             agent_type = args.get("agent_type", "")
             task = args.get("task", "")
             context = args.get("context", "")
+            run_tests = args.get("run_tests", False)
             if not agent_type or not task:
                 return {"status": "error", "error": "agent_type and task are required"}
-            return await call_subagent(agent_type, task, context)
+            return await call_subagent(agent_type, task, context, run_tests=run_tests)
+
+
+        elif tool_name == "run_test":
+            """Run a single test (API curl or Playwright browser test) and return pass/fail result."""
+            test_type = args.get("type", "curl")  # curl, python, playwright
+            command = args.get("command", "")
+            script = args.get("script", "")
+            name = args.get("name", "test")
+            if test_type == "playwright":
+                return await run_playwright_test(script or command, name)
+            else:
+                return await run_api_test(command, name)
+
+        elif tool_name == "run_test_suite":
+            """Run a batch of tests and produce a structured report. Input: tests[] array."""
+            tests = args.get("tests", [])
+            if not tests:
+                return {"status": "error", "error": "tests array required. Each: {id, name, type: curl|playwright, command|script}"}
+            return await run_test_suite(tests)
+
+        elif tool_name == "get_playbook":
+            """Get a verified integration playbook for a service. Returns pre-tested code patterns."""
+            service = args.get("service", "").lower()
+            if service in VERIFIED_PLAYBOOKS:
+                return {"status": "ok", "verified": True, "playbook": VERIFIED_PLAYBOOKS[service]}
+            available = list(VERIFIED_PLAYBOOKS.keys())
+            return {"status": "not_found", "message": f"No verified playbook for '{service}'. Available: {available}. Use call_subagent(agent_type='integrator') for unverified."}
 
         elif tool_name == "batch_operations":
             """Execute multiple file operations in parallel. Each op: {action, path, content?, destination?}."""
@@ -1685,6 +1715,17 @@ def _compress_tool_result(tool_name, result):
         docs = result.get("documents", result.get("results", []))
         if isinstance(docs, list) and len(docs) > 10:
             return {**result, "documents": docs[:10], "note": f"Showing 10/{len(docs)} results"}
+
+    if tool_name == "call_subagent":
+        resp = result.get("response", "")
+        if len(resp) > 6000:
+            return {**result, "response": resp[:6000] + "\n... [TRUNCATED]", "full_length": result.get("full_length")}
+
+    if tool_name == "run_test_suite":
+        report = result
+        if report.get("tests") and len(report["tests"]) > 20:
+            return {**report, "tests": report["tests"][:20], "note": f"Showing 20/{len(report['tests'])} tests"}
+
 
     if tool_name == "lint_code":
         output = result.get("output", "")

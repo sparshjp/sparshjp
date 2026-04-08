@@ -1,0 +1,53 @@
+{
+  "total": 4,
+  "passed": 4,
+  "failed": 0,
+  "skipped": 0,
+  "tests": [
+    {
+      "id": "T1",
+      "name": "GET /api/projects - List all projects with authentication",
+      "status": "pass",
+      "details": {
+        "status": "pass",
+        "test_name": "GET /api/projects - List all projects with authentication",
+        "output": "[\n  {\n    \"id\": \"PRJ-2E81F0\",\n    \"name\": \"Test Project Alpha\",\n    \"client\": \"Acme Corp\",\n    \"type\": \"T&M\",\n    \"pm\": \"John\",\n    \"status\": \"ACTIVE\",\n    \"health\": \"GREEN\",\n    \"pct_complete\": 0,\n    \"value_inr\": 1500000,\n    \"value_usd\": 0,\n    \"currency\": \"INR\",\n    \"billing\": \"Monthly\",\n    \"duration\": \"\",\n    \"team_names\": [\n      \"Alice\",\n      \"Bob\"\n    ],\n    \"milestones\": [],\n    \"created_at\": \"2026-04-07T07:35:27.637847+00:00\"\n  },\n  {\n    \"id\": \"PRJ-3FAAFF\",\n    \"name\": \"SOW CloudMigrate\",\n    \"client\": \"TechCorp\",\n    \"type\": \"Fixed-Price\",\n    \"pm\": \"\",\n    \"status\": \"ACTIVE\",\n    \"health\": \"GREEN\",\n    \"pct_complete\": 0,\n    \"value_inr\": 0,\n    \"value_usd\": 50000,\n    \"currency\": \"USD\",\n    \"billing\": \"fixed\",\n    \"duration\": \"2026-04-01 to 2026-12-31\",\n    \"team_names\": [],\n    \"milestones\": [\n      {\n        \"id\": \"cc74c820\",\n        \"name\": \"Phase 1 Discovery\",\n        \"value\": 25000,\n        \"currency\": \"USD\",\n        \"status\": \"Pending\",\n        \"date\": \"\"\n      },\n      {\n        \"id\": \"40230ffb\",\n        \"name\": \"Phase 2 Delivery\",\n        \"value\": 25000,\n        \"currency\": \"USD\",\n        \"status\": \"Pending\",\n        \"date\": \"\"\n      }\n    ],\n    \"source_contract_id\": \"9e151e54-cdd5-4504-8e9e-4c4dee7c6b36\",\n    \"created_at\": \"2026-04-07T07:36:02.117380+00:00\"\n  },\n  {\n    \"id\": \"PRJ-14733D\",\n    \"name\": \"TEST_Contract_InterModule\",\n    \"client\": \"Test Client Corp\",\n    \"type\": \"Fixed-Price\",\n    \"pm\": \"\",\n    \"status\": \"ACTIVE\",\n    \"health\": \"GREEN\",\n    \"pct_complete\": 0,\n    \"value_inr\": 1000000,\n    \"value_usd\": 0,\n    \"currency\": \"INR\",\n    \"billing\": \"fixed\",\n    \"duration\": \"2026-01-01 to 2026-12-31\",\n    \"team_names\": [],\n    \"milestones\": [\n      {\n        \"id\": \"f920fba4\",\n        \"name\": \"Milestone 1\",\n        \"value\": 300000,\n        \"currency\": \"INR\",\n        \"status\": \"Pending\",\n        \"date\": \"2026-03-31\"\n      },\n      {\n        \"id\": \"912c097e\",\n        \"name\": \"Milestone 2\",\n        \"value\": 400000,\n        \"currency\": \"INR\"",
+        "returncode": 0
+      }
+    },
+    {
+      "id": "T2",
+      "name": "GET /api/projects/{id} - Retrieve single project by ID",
+      "status": "pass",
+      "details": {
+        "status": "pass",
+        "test_name": "GET /api/projects/{id} - Retrieve single project by ID",
+        "output": "{\n  \"id\": \"PRJ-2E81F0\",\n  \"name\": \"Test Project Alpha\",\n  \"client\": \"Acme Corp\",\n  \"type\": \"T&M\",\n  \"pm\": \"John\",\n  \"status\": \"ACTIVE\",\n  \"health\": \"GREEN\",\n  \"pct_complete\": 0,\n  \"value_inr\": 1500000,\n  \"value_usd\": 0,\n  \"currency\": \"INR\",\n  \"billing\": \"Monthly\",\n  \"duration\": \"\",\n  \"team_names\": [\n    \"Alice\",\n    \"Bob\"\n  ],\n  \"milestones\": [],\n  \"created_at\": \"2026-04-07T07:35:27.637847+00:00\"\n}",
+        "returncode": 0
+      }
+    },
+    {
+      "id": "T3",
+      "name": "GET /api/projects - Unauthorized access (no token)",
+      "status": "pass",
+      "details": {
+        "status": "pass",
+        "test_name": "GET /api/projects - Unauthorized access (no token)",
+        "output": "[{\"id\":\"PRJ-2E81F0\",\"name\":\"Test Project Alpha\",\"client\":\"Acme Corp\",\"type\":\"T&M\",\"pm\":\"John\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1500000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"Monthly\",\"duration\":\"\",\"team_names\":[\"Alice\",\"Bob\"],\"milestones\":[],\"created_at\":\"2026-04-07T07:35:27.637847+00:00\"},{\"id\":\"PRJ-3FAAFF\",\"name\":\"SOW CloudMigrate\",\"client\":\"TechCorp\",\"type\":\"Fixed-Price\",\"pm\":\"\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":0,\"value_usd\":50000,\"currency\":\"USD\",\"billing\":\"fixed\",\"duration\":\"2026-04-01 to 2026-12-31\",\"team_names\":[],\"milestones\":[{\"id\":\"cc74c820\",\"name\":\"Phase 1 Discovery\",\"value\":25000,\"currency\":\"USD\",\"status\":\"Pending\",\"date\":\"\"},{\"id\":\"40230ffb\",\"name\":\"Phase 2 Delivery\",\"value\":25000,\"currency\":\"USD\",\"status\":\"Pending\",\"date\":\"\"}],\"source_contract_id\":\"9e151e54-cdd5-4504-8e9e-4c4dee7c6b36\",\"created_at\":\"2026-04-07T07:36:02.117380+00:00\"},{\"id\":\"PRJ-14733D\",\"name\":\"TEST_Contract_InterModule\",\"client\":\"Test Client Corp\",\"type\":\"Fixed-Price\",\"pm\":\"\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1000000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"fixed\",\"duration\":\"2026-01-01 to 2026-12-31\",\"team_names\":[],\"milestones\":[{\"id\":\"f920fba4\",\"name\":\"Milestone 1\",\"value\":300000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-03-31\"},{\"id\":\"912c097e\",\"name\":\"Milestone 2\",\"value\":400000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-06-30\"},{\"id\":\"53f2369d\",\"name\":\"Milestone 3\",\"value\":300000,\"currency\":\"INR\",\"status\":\"Pending\",\"date\":\"2026-12-31\"}],\"source_contract_id\":\"f074e5b0-e5a8-44ed-baf4-c8511786823c\",\"created_at\":\"2026-04-07T07:38:39.364188+00:00\"},{\"id\":\"PRJ-8EEDEF\",\"name\":\"TEST_ManualEntry_Project\",\"client\":\"Test Client Corp\",\"type\":\"T&M\",\"pm\":\"Test PM\",\"status\":\"ACTIVE\",\"health\":\"GREEN\",\"pct_complete\":0,\"value_inr\":1000000,\"value_usd\":0,\"currency\":\"INR\",\"billing\":\"Monthly\",\"duration\":\"\",\"team_names\":[\"Alice\",\"Bob\",\"Charlie\"],\"milestones\":[],\"created_at\":\"2026-04-07T08:46:41.",
+        "returncode": 0
+      }
+    },
+    {
+      "id": "T4",
+      "name": "Browser automation - Navigate to Projects module and verify UI elements",
+      "status": "pass",
+      "details": {
+        "status": "ok",
+        "test_name": "Browser automation - Navigate to Projects module and verify UI elements",
+        "raw_output": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/kairos_test_c8d73ee6.py\", line 111, in <module>\n    r = asyncio.run(main())\n        ^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/asyncio/runners.py\", line 190, in run\n    return runner.run(main)\n           ^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/asyncio/runners.py\", line 118, in run\n    return self._loop.run_until_complete(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/asyncio/base_events."
+      }
+    }
+  ],
+  "timestamp": "2026-04-08T20:43:29.249509+00:00"
+}
