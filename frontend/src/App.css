@@ -1,5 +1,5 @@
 /* Hide external floater badge */
-iframe[src*="emergent"], div[class*="emergent-badge"], div[id*="emergent"] { display: none !important; }
+#emergent-badge { display: none !important; }
 
 .App {
   min-height: 100vh;

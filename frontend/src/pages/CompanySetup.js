@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Building2, Save, Upload, Check, Loader2, MapPin, Globe, Banknote, FileText, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
 const LEGAL_STRUCTURES = ['Private Limited', 'Public Limited', 'LLP', 'Sole Proprietor', 'Partnership', 'OPC', 'Section 8'];
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'JPY'];
