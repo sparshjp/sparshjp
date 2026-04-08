@@ -23,16 +23,20 @@ GROQ_KEY = ""
 OPENROUTER_KEY = ""
 ANTHROPIC_API_KEY = ""
 OPENAI_API_KEY = ""
+CEREBRAS_KEY = ""
+HUGGINGFACE_KEY = ""
 db = None
 
 def set_config(key, database):
-    global EMERGENT_KEY, db, GROQ_KEY, OPENROUTER_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY
+    global EMERGENT_KEY, db, GROQ_KEY, OPENROUTER_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, CEREBRAS_KEY, HUGGINGFACE_KEY
     EMERGENT_KEY = key
     db = database
     GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
     OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+    CEREBRAS_KEY = os.environ.get("CEREBRAS_API_KEY", "")
+    HUGGINGFACE_KEY = os.environ.get("HUGGINGFACE_API_KEY", "")
 
 # ══════════════════════════════════════════════════════════
 # MULTI-PROVIDER LLM CLIENT (Claude → Gemini → GPT-5 → Groq → OpenRouter)
@@ -121,6 +125,29 @@ async def _call_gpt_direct(system: str, messages: list) -> str:
     )
     return response.choices[0].message.content
 
+
+def _call_cerebras_sync(system: str, messages: list) -> str:
+    """Call Cerebras free tier — Llama 3.3 70B at ~2000 tok/s. Free: 1M tokens/day."""
+    from cerebras.cloud.sdk import Cerebras
+    client = Cerebras(api_key=CEREBRAS_KEY)
+    msgs = [{"role": "system", "content": system}]
+    msgs.extend(messages)
+    response = client.chat.completions.create(
+        model="llama-3.3-70b", messages=msgs, max_tokens=16000, temperature=0.3,
+    )
+    return response.choices[0].message.content
+
+def _call_huggingface_sync(system: str, messages: list) -> str:
+    """Call HuggingFace free inference — Qwen 2.5 Coder 32B. Free tier available."""
+    from huggingface_hub import InferenceClient
+    client = InferenceClient(api_key=HUGGINGFACE_KEY)
+    msgs = [{"role": "system", "content": system}]
+    msgs.extend(messages)
+    response = client.chat_completion(
+        model="Qwen/Qwen2.5-Coder-32B-Instruct", messages=msgs, max_tokens=16000, temperature=0.3,
+    )
+    return response.choices[0].message.content
+
 # Track recent provider failures for smart routing
 _provider_failures = {}  # {"groq": [timestamp, ...], ...}
 _FAILURE_WINDOW = 300  # 5 minutes — skip provider if failed recently
@@ -144,22 +171,37 @@ def _clear_failures(provider: str):
 
 async def call_llm(system: str, messages: list, preferred: str = "auto") -> tuple:
     PROVIDER_ORDERS = {
-        "claude": ["claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "groq", "openrouter"],
-        "gemini": ["gemini", "claude_direct", "claude", "gpt_direct", "gpt5", "groq", "openrouter"],
-        "gpt5": ["gpt_direct", "gpt5", "claude_direct", "claude", "gemini", "groq", "openrouter"],
-        "groq": ["groq", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "openrouter"],
-        "openrouter": ["openrouter", "groq", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5"],
+        "claude": ["claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "groq", "cerebras", "huggingface", "openrouter"],
+        "gemini": ["gemini", "claude_direct", "claude", "gpt_direct", "gpt5", "groq", "cerebras", "huggingface", "openrouter"],
+        "gpt5": ["gpt_direct", "gpt5", "claude_direct", "claude", "gemini", "groq", "cerebras", "huggingface", "openrouter"],
+        "groq": ["groq", "cerebras", "huggingface", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "openrouter"],
+        "cerebras": ["cerebras", "groq", "huggingface", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "openrouter"],
+        "huggingface": ["huggingface", "cerebras", "groq", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5", "openrouter"],
+        "openrouter": ["openrouter", "groq", "cerebras", "huggingface", "claude_direct", "claude", "gpt_direct", "gemini", "gpt5"],
     }
-    # Smart default: direct keys first (zero Emergent credits), then Emergent, then 3rd party
+    # Smart default: free providers first (zero credits), then direct keys, then Emergent
     default_order = []
+    # Free providers first
+    if GROQ_KEY:
+        default_order.append("groq")
+    if CEREBRAS_KEY:
+        default_order.append("cerebras")
+    if HUGGINGFACE_KEY:
+        default_order.append("huggingface")
+    # Then user's own paid keys
     if ANTHROPIC_API_KEY:
         default_order.append("claude_direct")
     if OPENAI_API_KEY:
         default_order.append("gpt_direct")
-    default_order.extend(["claude", "gemini", "gpt5", "groq", "openrouter"])
+    if OPENROUTER_KEY:
+        default_order.append("openrouter")
+    # Then Emergent credits as fallback
+    default_order.extend(["claude", "gemini", "gpt5"])
+    # Deduplicate while preserving order
+    seen = set()
+    default_order = [x for x in default_order if not (x in seen or seen.add(x))]
 
     order = PROVIDER_ORDERS.get(preferred, default_order)
-    # If user has direct keys, inject them at front of any provider order
     if preferred not in PROVIDER_ORDERS:
         order = default_order
     errors = []
@@ -180,7 +222,15 @@ async def call_llm(system: str, messages: list, preferred: str = "auto") -> tupl
             elif provider == "groq" and GROQ_KEY:
                 text = await loop.run_in_executor(None, _call_groq_sync, system, messages)
                 _clear_failures(provider)
-                return text, "groq"
+                return text, "groq (free)"
+            elif provider == "cerebras" and CEREBRAS_KEY:
+                text = await loop.run_in_executor(None, _call_cerebras_sync, system, messages)
+                _clear_failures(provider)
+                return text, "cerebras (free)"
+            elif provider == "huggingface" and HUGGINGFACE_KEY:
+                text = await loop.run_in_executor(None, _call_huggingface_sync, system, messages)
+                _clear_failures(provider)
+                return text, "huggingface (free)"
             elif provider == "openrouter" and OPENROUTER_KEY:
                 text = await loop.run_in_executor(None, _call_openrouter_sync, system, messages)
                 _clear_failures(provider)
@@ -2237,17 +2287,19 @@ async def get_providers():
 async def get_api_keys():
     """Check which direct API keys are configured."""
     return {
-        "anthropic": {"configured": bool(ANTHROPIC_API_KEY), "masked": f"sk-ant-...{ANTHROPIC_API_KEY[-4:]}" if ANTHROPIC_API_KEY else None},
-        "openai": {"configured": bool(OPENAI_API_KEY), "masked": f"sk-...{OPENAI_API_KEY[-4:]}" if OPENAI_API_KEY else None},
-        "groq": {"configured": bool(GROQ_KEY), "masked": f"gsk_...{GROQ_KEY[-4:]}" if GROQ_KEY else None},
-        "openrouter": {"configured": bool(OPENROUTER_KEY), "masked": f"sk-or-...{OPENROUTER_KEY[-4:]}" if OPENROUTER_KEY else None},
+        "groq": {"configured": bool(GROQ_KEY), "masked": f"gsk_...{GROQ_KEY[-4:]}" if GROQ_KEY else None, "free": True},
+        "cerebras": {"configured": bool(CEREBRAS_KEY), "masked": f"csk-...{CEREBRAS_KEY[-4:]}" if CEREBRAS_KEY else None, "free": True},
+        "huggingface": {"configured": bool(HUGGINGFACE_KEY), "masked": f"hf_...{HUGGINGFACE_KEY[-4:]}" if HUGGINGFACE_KEY else None, "free": True},
+        "openrouter": {"configured": bool(OPENROUTER_KEY), "masked": f"sk-or-...{OPENROUTER_KEY[-4:]}" if OPENROUTER_KEY else None, "free": False},
+        "anthropic": {"configured": bool(ANTHROPIC_API_KEY), "masked": f"sk-ant-...{ANTHROPIC_API_KEY[-4:]}" if ANTHROPIC_API_KEY else None, "free": False},
+        "openai": {"configured": bool(OPENAI_API_KEY), "masked": f"sk-...{OPENAI_API_KEY[-4:]}" if OPENAI_API_KEY else None, "free": False},
     }
 
 
 @router.post("/api-keys")
 async def set_api_key(body: dict):
     """Set a direct API key. Saved to backend .env for persistence."""
-    global ANTHROPIC_API_KEY, OPENAI_API_KEY, GROQ_KEY, OPENROUTER_KEY
+    global ANTHROPIC_API_KEY, OPENAI_API_KEY, GROQ_KEY, OPENROUTER_KEY, CEREBRAS_KEY, HUGGINGFACE_KEY
     provider = body.get("provider", "")
     key = body.get("key", "").strip()
 
@@ -2256,10 +2308,12 @@ async def set_api_key(body: dict):
         "openai": ("OPENAI_API_KEY", lambda k: globals().__setitem__("OPENAI_API_KEY", k)),
         "groq": ("GROQ_API_KEY", lambda k: globals().__setitem__("GROQ_API_KEY", k)),
         "openrouter": ("OPENROUTER_API_KEY", lambda k: globals().__setitem__("OPENROUTER_API_KEY", k)),
+        "cerebras": ("CEREBRAS_API_KEY", lambda k: globals().__setitem__("CEREBRAS_API_KEY", k)),
+        "huggingface": ("HUGGINGFACE_API_KEY", lambda k: globals().__setitem__("HUGGINGFACE_API_KEY", k)),
     }
 
     if provider not in key_map:
-        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}. Use: anthropic, openai, groq, openrouter")
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}. Use: groq, cerebras, huggingface, openrouter, anthropic, openai")
 
     env_var, setter = key_map[provider]
 
@@ -2272,6 +2326,10 @@ async def set_api_key(body: dict):
         GROQ_KEY = key
     elif provider == "openrouter":
         OPENROUTER_KEY = key
+    elif provider == "cerebras":
+        CEREBRAS_KEY = key
+    elif provider == "huggingface":
+        HUGGINGFACE_KEY = key
 
     # Persist to .env
     env_path = "/app/backend/.env"

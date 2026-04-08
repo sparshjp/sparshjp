@@ -232,10 +232,12 @@ function QuestionBlock({ question }) {
 
 const PROVIDERS = [
   { id: 'auto', label: 'Auto (Best Available)', color: '#00d4aa' },
+  { id: 'groq', label: 'Groq / Llama 3.3 (Free)', color: '#f97316' },
+  { id: 'cerebras', label: 'Cerebras / Llama 3.3 (Free)', color: '#22d3ee' },
+  { id: 'huggingface', label: 'HuggingFace / Qwen Coder (Free)', color: '#fbbf24' },
   { id: 'claude', label: 'Claude Sonnet 4.5', color: '#a78bfa' },
   { id: 'gemini', label: 'Gemini 3 Flash', color: '#4285f4' },
   { id: 'gpt5', label: 'GPT-5', color: '#10a37f' },
-  { id: 'groq', label: 'Groq / Llama 3.3', color: '#f97316' },
   { id: 'openrouter', label: 'OpenRouter', color: '#06b6d4' },
 ];
 
@@ -265,7 +267,7 @@ export default function AIAgentsPage() {
   const [thinkingText, setThinkingText] = useState('');
   const [showApiKeys, setShowApiKeys] = useState(false);
   const [apiKeys, setApiKeys] = useState({});
-  const [keyInputs, setKeyInputs] = useState({ anthropic: '', openai: '', groq: '', openrouter: '' });
+  const [keyInputs, setKeyInputs] = useState({ groq: '', cerebras: '', huggingface: '', openrouter: '', anthropic: '', openai: '' });
   const [keySaving, setKeySaving] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -738,19 +740,25 @@ export default function AIAgentsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-[#E8EDF2] flex items-center gap-2"><Key size={14} className="text-[#a78bfa]" /> Your API Keys</h3>
-                  <p className="text-[10px] text-[#4A5B6E] mt-0.5">Link your own keys to bypass Emergent credits. Direct keys are always used first.</p>
+                  <p className="text-[10px] text-[#4A5B6E] mt-0.5">Add free API keys to run Kairos without any credits. Free providers are used first.</p>
                 </div>
                 <button onClick={() => setShowApiKeys(false)} className="text-[#4A5B6E] hover:text-[#E8EDF2]"><X size={14} /></button>
               </div>
+              <p className="text-[9px] text-[#00d4aa] bg-[#00d4aa]/5 border border-[#00d4aa]/15 rounded-lg px-3 py-1.5">Free tier providers — sign up and get an API key, no credit card required</p>
               {[
-                { id: 'anthropic', label: 'Anthropic (Claude)', placeholder: 'sk-ant-api03-...', color: '#a78bfa' },
-                { id: 'openai', label: 'OpenAI (GPT-4o)', placeholder: 'sk-proj-...', color: '#10a37f' },
-                { id: 'groq', label: 'Groq (Llama 3.3)', placeholder: 'gsk_...', color: '#f97316' },
-                { id: 'openrouter', label: 'OpenRouter', placeholder: 'sk-or-v1-...', color: '#06b6d4' },
+                { id: 'groq', label: 'Groq (Llama 3.3 70B)', placeholder: 'gsk_...', color: '#f97316', free: true, signup: 'console.groq.com' },
+                { id: 'cerebras', label: 'Cerebras (Llama 3.3 70B)', placeholder: 'csk-...', color: '#22d3ee', free: true, signup: 'cloud.cerebras.ai' },
+                { id: 'huggingface', label: 'HuggingFace (Qwen Coder 32B)', placeholder: 'hf_...', color: '#fbbf24', free: true, signup: 'huggingface.co/settings/tokens' },
+                { id: 'openrouter', label: 'OpenRouter', placeholder: 'sk-or-v1-...', color: '#06b6d4', free: false },
+                { id: 'anthropic', label: 'Anthropic (Claude)', placeholder: 'sk-ant-api03-...', color: '#a78bfa', free: false },
+                { id: 'openai', label: 'OpenAI (GPT-4o)', placeholder: 'sk-proj-...', color: '#10a37f', free: false },
               ].map(p => (
                 <div key={p.id} className="flex items-center gap-2" data-testid={`api-key-${p.id}`}>
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ background: apiKeys[p.id]?.configured ? p.color : '#1B2D42' }} />
-                  <span className="text-[10px] font-bold text-[#7A8BA0] w-32 shrink-0">{p.label}</span>
+                  <span className="text-[10px] font-bold text-[#7A8BA0] w-40 shrink-0 flex items-center gap-1.5">
+                    {p.label}
+                    {p.free && <span className="text-[8px] px-1 py-0 rounded bg-[#00d4aa]/15 text-[#00d4aa] border border-[#00d4aa]/20 font-bold">FREE</span>}
+                  </span>
                   {apiKeys[p.id]?.configured ? (
                     <div className="flex-1 flex items-center gap-2">
                       <span className="text-[10px] font-mono text-[#00d4aa]">{apiKeys[p.id].masked}</span>
@@ -779,7 +787,7 @@ export default function AIAgentsPage() {
                   )}
                 </div>
               ))}
-              <p className="text-[9px] text-[#2A3F56] mt-2">Keys are stored in your backend .env file and never leave your server. When a direct key is configured, it takes priority over Emergent credits.</p>
+              <p className="text-[9px] text-[#2A3F56] mt-2">Keys are stored in your backend .env file. Free providers (Groq, Cerebras, HuggingFace) are prioritized first so you won't use any credits.</p>
             </div>
           </div>
         )}

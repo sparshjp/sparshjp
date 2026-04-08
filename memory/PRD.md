@@ -26,15 +26,23 @@ Backend `/api/ai/parse-entry` + `AiEntryModal` component across 9 modules. Manua
 
 ### Phase 7 — Remove Login + Creator Mode (Done — April 8, 2026)
 - Removed login page — ERP loads directly to Dashboard
-- Creator Mode via top-right dropdown: "Switch to Creator" → full-page login → Kairos Engine access
-- Creator token persisted in localStorage
+- Creator Mode via top-right dropdown → full-page login → Kairos Engine access
 
 ### Phase 8 — Company Data Linking + UI Fixes (Done — April 9, 2026)
-- Financial Statements (Balance Sheet, P&L, Trial Balance) now pull company name dynamically from company_settings DB
-- Replaced hardcoded "PolyMerx" with dynamic fetch across backend
-- Seeded ABC Ltd company defaults
-- Hidden "Made with Emergent" badge
-- Fixed CompanySetup.js API URL bug (missing /api prefix)
+- Financial Statements dynamically pull company name from company_settings DB
+- Hidden "Made with Emergent" badge. Seeded ABC Ltd company defaults.
+
+### Phase 9 — Free LLM Provider Integration (Done — April 9, 2026)
+- **Added 3 free-tier providers**: Groq (Llama 3.3 70B), Cerebras (Llama 3.3 70B), HuggingFace (Qwen 2.5 Coder 32B)
+- Smart routing: Free providers prioritized first → user's own paid keys → Emergent credits as fallback
+- Provider selector updated with 7 options (3 free + 4 paid)
+- API Keys panel shows FREE badges, signup URLs, and priority explanation
+- All providers with failure tracking and automatic fallback
+
+## LLM Provider Priority (call_llm)
+1. **FREE**: Groq → Cerebras → HuggingFace (if keys configured)
+2. **Direct Keys**: Anthropic Claude → OpenAI GPT-4o → OpenRouter (if keys configured)
+3. **Emergent Credits**: Claude → Gemini → GPT-5 (fallback)
 
 ## Prioritized Backlog
 - P2: E-Way Bill generation
@@ -42,15 +50,12 @@ Backend `/api/ai/parse-entry` + `AiEntryModal` component across 9 modules. Manua
 - P3: Refactor routes_agents.py
 
 ## Key Files
-- `/app/frontend/src/App.js` — Sidebar, Creator Mode dropdown, CreatorLoginPage
+- `/app/backend/routes_agents.py` — Kairos AI Engine + 6-provider LLM routing + API key management
+- `/app/frontend/src/pages/AIAgentsPage.js` — Kairos UI + provider selector + API keys panel
+- `/app/frontend/src/App.js` — Sidebar, Creator Mode dropdown
 - `/app/frontend/src/contexts/AuthContext.js` — Default user, creatorMode state
-- `/app/backend/routes_financial_statements.py` — Dynamic company name from DB
-- `/app/backend/routes_ai_entry.py` — AI parse endpoint with 9 module schemas
-- `/app/frontend/src/components/AiEntryModal.js` — Reusable AI entry modal
 
 ## Test Reports
-- Iteration 34: 10 Enterprise modules (42/42 PASS)
-- Iteration 35: Inter-module linking + CRUD (17/17 PASS)
-- Iteration 36: AI-first entry (30/30 PASS)
+- Iteration 34-36: Enterprise modules + AI-first entry (PASS)
 - Iteration 37: Manual Entry form (18/18 PASS)
 - Iteration 38: Login removal + Creator Mode (12/12 PASS)
