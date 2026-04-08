@@ -1,100 +1,56 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { API } from '../App';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [creatorMode, setCreatorMode] = useState(false);
+  const [creatorToken, setCreatorToken] = useState(localStorage.getItem('kairos_creator_token') || '');
 
-  const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('kairos_token');
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      const res = await fetch(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const userData = await res.json();
-        setUser(userData);
-        localStorage.setItem('kairos_user', JSON.stringify(userData));
-      } else {
-        localStorage.removeItem('kairos_token');
-        localStorage.removeItem('kairos_user');
-        setUser(null);
-      }
-    } catch {
-      // Offline or backend down — use cached user
-      const cached = localStorage.getItem('kairos_user');
-      if (cached) setUser(JSON.parse(cached));
-    }
-    setLoading(false);
-  }, []);
+  // Default user — full access to ERP, no login needed
+  const user = {
+    name: creatorMode ? 'Kairos Creator' : 'Kairos User',
+    role: creatorMode ? 'creator' : 'admin',
+    username: creatorMode ? 'kairoserp' : 'user',
+  };
 
-  useEffect(() => { checkAuth(); }, [checkAuth]);
-
-  const login = async (email, password) => {
+  const enterCreatorMode = useCallback(async (password) => {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: 'kairoserp', password }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Login failed');
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Invalid password');
     }
     const data = await res.json();
-    localStorage.setItem('kairos_token', data.token);
-    localStorage.setItem('kairos_user', JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
-  };
+    localStorage.setItem('kairos_creator_token', data.token);
+    setCreatorToken(data.token);
+    setCreatorMode(true);
+    return true;
+  }, []);
 
-  const logout = async () => {
-    try { await fetch(`${API}/auth/logout`, { method: 'POST' }); } catch {}
-    localStorage.removeItem('kairos_token');
-    localStorage.removeItem('kairos_user');
-    setUser(null);
-  };
+  const exitCreatorMode = useCallback(() => {
+    localStorage.removeItem('kairos_creator_token');
+    setCreatorToken('');
+    setCreatorMode(false);
+  }, []);
 
-  const hasAccess = (section) => {
-    if (!user) return false;
-    const SECTION_ACCESS = {
-      core: ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager', 'ap_clerk', 'ar_clerk', 'tax_compliance', 'viewer'],
-      selling: ['creator', 'admin', 'finance_manager', 'ar_clerk'],
-      buying: ['creator', 'admin', 'finance_manager', 'ap_clerk'],
-      stock: ['creator', 'admin', 'finance_manager', 'ap_clerk', 'ar_clerk'],
-      hr: ['creator', 'admin', 'hr_manager'],
-      ai: ['creator'],
-      delivery: ['creator', 'admin', 'project_manager'],
-      accounting: ['creator', 'admin', 'finance_manager'],
-      gst: ['creator', 'admin', 'finance_manager', 'tax_compliance'],
-      tds: ['creator', 'admin', 'finance_manager', 'tax_compliance'],
-      'reporting-ai': ['creator', 'admin', 'finance_manager', 'project_manager'],
-      reports: ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager', 'viewer'],
-      settings: ['creator', 'admin'],
-      'user-management': ['creator', 'admin'],
-      approvals: ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager'],
-      budgets: ['creator', 'admin', 'finance_manager'],
-      contracts: ['creator', 'admin', 'finance_manager', 'project_manager'],
-      resources: ['creator', 'admin', 'project_manager', 'hr_manager'],
-      forex: ['creator', 'admin', 'finance_manager'],
-      billing: ['creator', 'admin', 'finance_manager', 'project_manager'],
-      'doc-mgmt': ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager', 'ap_clerk', 'ar_clerk'],
-      notifications: ['creator', 'admin', 'finance_manager', 'project_manager', 'hr_manager', 'ap_clerk', 'ar_clerk', 'tax_compliance', 'viewer'],
-      compliance: ['creator', 'admin'],
-      portal: ['creator', 'admin', 'project_manager'],
-    };
-    const allowed = SECTION_ACCESS[section] || [];
-    return allowed.includes(user.role);
-  };
+  // Check if stored token is still valid on mount
+  useState(() => {
+    if (creatorToken) {
+      fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${creatorToken}` } })
+        .then(res => { if (res.ok) setCreatorMode(true); else { localStorage.removeItem('kairos_creator_token'); setCreatorToken(''); } })
+        .catch(() => {});
+    }
+  });
+
+  // All sections accessible without login
+  const hasAccess = () => true;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasAccess, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading: false, hasAccess, creatorMode, enterCreatorMode, exitCreatorMode, creatorToken }}>
       {children}
     </AuthContext.Provider>
   );

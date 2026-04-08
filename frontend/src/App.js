@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import '@/App.css';
-import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { 
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
   Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock,
-  FolderKanban, ArrowLeftRight, CreditCard, LogOut, User,
+  FolderKanban, ArrowLeftRight, CreditCard, User, Lock, Unlock,
   CheckSquare, Wallet, ScrollText, UserCog, DollarSign, Bell, FolderOpen, Globe
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
@@ -58,7 +58,6 @@ import ProformaARLink from './pages/ProformaARLink';
 import ItemSampleTracking from './pages/ItemSampleTracking';
 import LeadProbabilityScore from './pages/LeadProbabilityScore';
 import AnnouncementsPage from './pages/AnnouncementsPage';
-import LoginPage from './pages/LoginPage';
 import UserManagement from './pages/UserManagement';
 import ApprovalsPage from './pages/ApprovalsPage';
 import BudgetsPage from './pages/BudgetsPage';
@@ -76,8 +75,12 @@ export const API = `${BACKEND_URL}/api`;
 
 function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
-  const { hasAccess, user } = useAuth();
+  const { creatorMode, enterCreatorMode, exitCreatorMode } = useAuth();
   const [expandedSections, setExpandedSections] = useState(['core', 'selling', 'buying', 'stock', 'accounting', 'reporting-ai']);
+  const [showCreatorModal, setShowCreatorModal] = useState(false);
+  const [creatorPassword, setCreatorPassword] = useState('');
+  const [creatorError, setCreatorError] = useState('');
+  const [creatorLoading, setCreatorLoading] = useState(false);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => 
@@ -137,13 +140,6 @@ function Sidebar({ isOpen, setIsOpen }) {
       title: 'HR',
       items: [
         { path: '/hr', label: 'HR & Payroll', icon: UserSquare },
-      ]
-    },
-    {
-      id: 'ai',
-      title: 'AI Engine',
-      items: [
-        { path: '/ai-agents', label: 'AI Engine', icon: Sparkles },
       ]
     },
     {
@@ -279,8 +275,18 @@ function Sidebar({ isOpen, setIsOpen }) {
     }
   ];
 
-  // Filter sections based on role access
-  const filteredSections = menuSections.filter(s => hasAccess(s.id));
+  const handleCreatorLogin = async () => {
+    setCreatorError('');
+    setCreatorLoading(true);
+    try {
+      await enterCreatorMode(creatorPassword);
+      setShowCreatorModal(false);
+      setCreatorPassword('');
+    } catch (e) {
+      setCreatorError(e.message || 'Invalid password');
+    }
+    setCreatorLoading(false);
+  };
 
   return (
     <>
@@ -318,7 +324,7 @@ function Sidebar({ isOpen, setIsOpen }) {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-            {filteredSections.map((section) => (
+            {menuSections.map((section) => (
               <div key={section.id} className="mb-2">
                 <button
                   onClick={() => toggleSection(section.id)}
@@ -355,56 +361,101 @@ function Sidebar({ isOpen, setIsOpen }) {
             ))}
           </nav>
 
-          {/* Footer — User info */}
-          <div className="p-3 border-t border-[#1B2D42]">
-            {user && (
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#00C9A7]/20 flex items-center justify-center">
-                  <User size={13} className="text-[#00C9A7]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-[#E8EDF2] truncate">{user.name}</p>
-                  <p className="text-[9px] text-[#00C9A7] capitalize">{user.role?.replace('_', ' ')}</p>
-                </div>
-              </div>
+          {/* Footer — Creator Mode */}
+          <div className="p-3 border-t border-[#1B2D42] space-y-2">
+            {creatorMode && (
+              <Link
+                to="/ai-agents"
+                onClick={() => window.innerWidth < 768 && setIsOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                  isActive('/ai-agents')
+                    ? 'bg-[#00C9A7]/15 text-[#00C9A7] border border-[#00C9A7]/30'
+                    : 'text-[#00C9A7] hover:bg-[#00C9A7]/10 border border-[#00C9A7]/20'
+                }`}
+                data-testid="kairos-engine-link"
+              >
+                <Sparkles size={16} />
+                <span className="font-semibold">Kairos AI Engine</span>
+              </Link>
             )}
+            <button
+              onClick={() => {
+                if (creatorMode) {
+                  exitCreatorMode();
+                } else {
+                  setShowCreatorModal(true);
+                  setCreatorError('');
+                  setCreatorPassword('');
+                }
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                creatorMode
+                  ? 'bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20 hover:bg-[#a78bfa]/15'
+                  : 'bg-[#152236] text-[#7A8BA0] border border-[#1B2D42] hover:border-[#a78bfa]/30 hover:text-[#a78bfa]'
+              }`}
+              data-testid="creator-mode-btn"
+            >
+              {creatorMode ? <Unlock size={16} /> : <Lock size={16} />}
+              <span className="font-semibold">{creatorMode ? 'Creator Mode' : 'Creator Mode'}</span>
+              {creatorMode && <span className="ml-auto text-[9px] bg-[#a78bfa]/20 px-1.5 py-0.5 rounded-full font-bold">ON</span>}
+            </button>
           </div>
         </div>
       </aside>
+
+      {/* Creator Mode Password Modal */}
+      {showCreatorModal && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={() => setShowCreatorModal(false)}>
+          <div onClick={e => e.stopPropagation()} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl w-full max-w-sm overflow-hidden" data-testid="creator-mode-modal">
+            <div className="p-5 border-b border-[#1B2D42] flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#a78bfa]/15 flex items-center justify-center">
+                <Lock size={18} className="text-[#a78bfa]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#E8EDF2]">Creator Mode</h3>
+                <p className="text-xs text-[#4A5B6E]">Enter password to access Kairos AI Engine</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs text-[#7A8BA0] mb-1.5 block">Password</label>
+                <input
+                  type="password"
+                  value={creatorPassword}
+                  onChange={e => setCreatorPassword(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreatorLogin(); }}
+                  placeholder="Enter creator password"
+                  className="w-full px-4 py-2.5 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none focus:border-[#a78bfa] placeholder:text-[#4A5B6E]/60"
+                  autoFocus
+                  data-testid="creator-password-input"
+                />
+              </div>
+              {creatorError && (
+                <p className="text-xs text-[#ef4444] bg-[#ef4444]/10 rounded-lg px-3 py-2">{creatorError}</p>
+              )}
+              <div className="flex gap-2">
+                <button onClick={() => setShowCreatorModal(false)} className="flex-1 px-4 py-2.5 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm hover:bg-[#152236]">Cancel</button>
+                <button
+                  onClick={handleCreatorLogin}
+                  disabled={creatorLoading || !creatorPassword}
+                  className="flex-1 px-4 py-2.5 bg-[#a78bfa] text-white rounded-lg text-sm font-bold hover:bg-[#9572f5] disabled:opacity-50 transition-all"
+                  data-testid="creator-login-btn"
+                >
+                  {creatorLoading ? 'Verifying...' : 'Unlock'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 function AppShell({ sidebarOpen, setSidebarOpen }) {
   const loc = useLocation();
-  const navigate = useNavigate();
   const isAIEngine = loc.pathname === '/ai-agents';
-  const { user, logout, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#060e1a] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#00d4aa]/30 border-t-[#00d4aa] rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-        <Toaster position="top-right" />
-      </>
-    );
-  }
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
+  const { user, creatorMode } = useAuth();
 
   return (
     <>
@@ -417,13 +468,12 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
           <div className="flex-1" />
           <div className="flex items-center gap-3">
             <span className="text-xs text-[#4A5B6E]">{user.name}</span>
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold capitalize border"
-              style={{ color: '#00d4aa', borderColor: '#00d4aa40', background: '#00d4aa15' }}>
-              {user.role?.replace('_', ' ')}
-            </span>
-            <button onClick={handleLogout} className="p-1.5 rounded hover:bg-[#1B2D42] text-[#4A5B6E] hover:text-[#ef4444] transition-colors" data-testid="logout-btn" title="Sign out">
-              <LogOut size={16} />
-            </button>
+            {creatorMode && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border"
+                style={{ color: '#a78bfa', borderColor: '#a78bfa40', background: '#a78bfa15' }}>
+                Creator
+              </span>
+            )}
           </div>
         </div>
         <div className={isAIEngine ? '' : 'p-4 sm:p-6'}>
@@ -466,27 +516,27 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Route path="/revenue-recognition" element={<RevenueRecognition />} />
             <Route path="/transaction-explorer" element={<TransactionExplorer />} />
             <Route path="/bank-reconciliation" element={<BankReconciliation />} />
-            <Route path="/ai-agents" element={user.role === 'creator' ? <AIAgentsPage /> : <Navigate to="/" replace />} />
-                        <Route path="/expense-management" element={<ExpenseManagement />} />
-                            <Route path="/feedback" element={<FeedbackPage />} />
-                            <Route path="/leads/enrich" element={<LeadEnrichment />} />
-                            <Route path="/proformas/ar-link" element={<ProformaARLink />} />
-                            <Route path="/items/sample-tracking" element={<ItemSampleTracking />} />
-                            <Route path="/leads/probability" element={<LeadProbabilityScore />} />
-                            <Route path="/announcements" element={<AnnouncementsPage />} />
-                            <Route path="/user-management" element={['creator', 'admin'].includes(user.role) ? <UserManagement /> : <Navigate to="/" replace />} />
-                            <Route path="/approvals" element={<ApprovalsPage />} />
-                            <Route path="/budgets" element={<BudgetsPage />} />
-                            <Route path="/contracts" element={<ContractsPage />} />
-                            <Route path="/resources" element={<ResourcesPage />} />
-                            <Route path="/forex" element={<ForexPage />} />
-                            <Route path="/billing" element={<BillingPage />} />
-                            <Route path="/doc-management" element={<DocumentsPage />} />
-                            <Route path="/notifications" element={<NotificationsPage />} />
-                            <Route path="/compliance" element={<CompliancePage />} />
-                            <Route path="/client-portal" element={<PortalPage />} />
-                            <Route path="/login" element={<Navigate to="/" replace />} />
-              </Routes>
+            <Route path="/ai-agents" element={creatorMode ? <AIAgentsPage /> : <Navigate to="/" replace />} />
+            <Route path="/expense-management" element={<ExpenseManagement />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/leads/enrich" element={<LeadEnrichment />} />
+            <Route path="/proformas/ar-link" element={<ProformaARLink />} />
+            <Route path="/items/sample-tracking" element={<ItemSampleTracking />} />
+            <Route path="/leads/probability" element={<LeadProbabilityScore />} />
+            <Route path="/announcements" element={<AnnouncementsPage />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/approvals" element={<ApprovalsPage />} />
+            <Route path="/budgets" element={<BudgetsPage />} />
+            <Route path="/contracts" element={<ContractsPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/forex" element={<ForexPage />} />
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/doc-management" element={<DocumentsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/compliance" element={<CompliancePage />} />
+            <Route path="/client-portal" element={<PortalPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </div>
         {!isAIEngine && <UniversalAI />}
       </div>
