@@ -307,6 +307,24 @@ function Sidebar({ isOpen, setIsOpen }) {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+            {/* Kairos Engine — top of sidebar when in creator mode */}
+            {creatorMode && (
+              <div className="mb-3">
+                <Link
+                  to="/ai-agents"
+                  onClick={() => window.innerWidth < 768 && setIsOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    isActive('/ai-agents')
+                      ? 'bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/30'
+                      : 'text-[#a78bfa] hover:bg-[#a78bfa]/10 border border-[#a78bfa]/20'
+                  }`}
+                  data-testid="kairos-engine-link"
+                >
+                  <Sparkles size={16} />
+                  <span className="font-semibold">Kairos AI Engine</span>
+                </Link>
+              </div>
+            )}
             {menuSections.map((section) => (
               <div key={section.id} className="mb-2">
                 <button
@@ -343,25 +361,6 @@ function Sidebar({ isOpen, setIsOpen }) {
               </div>
             ))}
           </nav>
-
-          {/* Footer — Kairos Engine link when in creator mode */}
-          {creatorMode && (
-            <div className="p-3 border-t border-[#1B2D42]">
-              <Link
-                to="/ai-agents"
-                onClick={() => window.innerWidth < 768 && setIsOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                  isActive('/ai-agents')
-                    ? 'bg-[#00C9A7]/15 text-[#00C9A7] border border-[#00C9A7]/30'
-                    : 'text-[#00C9A7] hover:bg-[#00C9A7]/10 border border-[#00C9A7]/20'
-                }`}
-                data-testid="kairos-engine-link"
-              >
-                <Sparkles size={16} />
-                <span className="font-semibold">Kairos AI Engine</span>
-              </Link>
-            </div>
-          )}
         </div>
       </aside>
     </>
