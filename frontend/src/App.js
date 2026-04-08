@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import '@/App.css';
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { 
   LayoutDashboard, Users, ShoppingCart, Package, Building, UserSquare, 
   Briefcase, ClipboardCheck, Settings, ChevronDown, ChevronRight, 
   Menu, X, TrendingUp, Boxes, FileText, Receipt, BookOpen, Database,
   Scale, IndianRupee, Factory, Building2, Sparkles, Shield, QrCode, Clock,
-  FolderKanban, ArrowLeftRight, CreditCard, User, Lock, Unlock,
+  FolderKanban, ArrowLeftRight, CreditCard, User, Lock, Unlock, LogOut,
   CheckSquare, Wallet, ScrollText, UserCog, DollarSign, Bell, FolderOpen, Globe
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
@@ -75,12 +75,8 @@ export const API = `${BACKEND_URL}/api`;
 
 function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
-  const { creatorMode, enterCreatorMode, exitCreatorMode } = useAuth();
+  const { creatorMode } = useAuth();
   const [expandedSections, setExpandedSections] = useState(['core', 'selling', 'buying', 'stock', 'accounting', 'reporting-ai']);
-  const [showCreatorModal, setShowCreatorModal] = useState(false);
-  const [creatorPassword, setCreatorPassword] = useState('');
-  const [creatorError, setCreatorError] = useState('');
-  const [creatorLoading, setCreatorLoading] = useState(false);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => 
@@ -275,19 +271,6 @@ function Sidebar({ isOpen, setIsOpen }) {
     }
   ];
 
-  const handleCreatorLogin = async () => {
-    setCreatorError('');
-    setCreatorLoading(true);
-    try {
-      await enterCreatorMode(creatorPassword);
-      setShowCreatorModal(false);
-      setCreatorPassword('');
-    } catch (e) {
-      setCreatorError(e.message || 'Invalid password');
-    }
-    setCreatorLoading(false);
-  };
-
   return (
     <>
       {/* Mobile overlay */}
@@ -361,9 +344,9 @@ function Sidebar({ isOpen, setIsOpen }) {
             ))}
           </nav>
 
-          {/* Footer — Creator Mode */}
-          <div className="p-3 border-t border-[#1B2D42] space-y-2">
-            {creatorMode && (
+          {/* Footer — Kairos Engine link when in creator mode */}
+          {creatorMode && (
+            <div className="p-3 border-t border-[#1B2D42]">
               <Link
                 to="/ai-agents"
                 onClick={() => window.innerWidth < 768 && setIsOpen(false)}
@@ -377,85 +360,113 @@ function Sidebar({ isOpen, setIsOpen }) {
                 <Sparkles size={16} />
                 <span className="font-semibold">Kairos AI Engine</span>
               </Link>
-            )}
-            <button
-              onClick={() => {
-                if (creatorMode) {
-                  exitCreatorMode();
-                } else {
-                  setShowCreatorModal(true);
-                  setCreatorError('');
-                  setCreatorPassword('');
-                }
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                creatorMode
-                  ? 'bg-[#a78bfa]/10 text-[#a78bfa] border border-[#a78bfa]/20 hover:bg-[#a78bfa]/15'
-                  : 'bg-[#152236] text-[#7A8BA0] border border-[#1B2D42] hover:border-[#a78bfa]/30 hover:text-[#a78bfa]'
-              }`}
-              data-testid="creator-mode-btn"
-            >
-              {creatorMode ? <Unlock size={16} /> : <Lock size={16} />}
-              <span className="font-semibold">{creatorMode ? 'Creator Mode' : 'Creator Mode'}</span>
-              {creatorMode && <span className="ml-auto text-[9px] bg-[#a78bfa]/20 px-1.5 py-0.5 rounded-full font-bold">ON</span>}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </aside>
-
-      {/* Creator Mode Password Modal */}
-      {showCreatorModal && (
-        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={() => setShowCreatorModal(false)}>
-          <div onClick={e => e.stopPropagation()} className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl w-full max-w-sm overflow-hidden" data-testid="creator-mode-modal">
-            <div className="p-5 border-b border-[#1B2D42] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#a78bfa]/15 flex items-center justify-center">
-                <Lock size={18} className="text-[#a78bfa]" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-[#E8EDF2]">Creator Mode</h3>
-                <p className="text-xs text-[#4A5B6E]">Enter password to access Kairos AI Engine</p>
-              </div>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="text-xs text-[#7A8BA0] mb-1.5 block">Password</label>
-                <input
-                  type="password"
-                  value={creatorPassword}
-                  onChange={e => setCreatorPassword(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleCreatorLogin(); }}
-                  placeholder="Enter creator password"
-                  className="w-full px-4 py-2.5 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none focus:border-[#a78bfa] placeholder:text-[#4A5B6E]/60"
-                  autoFocus
-                  data-testid="creator-password-input"
-                />
-              </div>
-              {creatorError && (
-                <p className="text-xs text-[#ef4444] bg-[#ef4444]/10 rounded-lg px-3 py-2">{creatorError}</p>
-              )}
-              <div className="flex gap-2">
-                <button onClick={() => setShowCreatorModal(false)} className="flex-1 px-4 py-2.5 border border-[#1B2D42] text-[#7A8BA0] rounded-lg text-sm hover:bg-[#152236]">Cancel</button>
-                <button
-                  onClick={handleCreatorLogin}
-                  disabled={creatorLoading || !creatorPassword}
-                  className="flex-1 px-4 py-2.5 bg-[#a78bfa] text-white rounded-lg text-sm font-bold hover:bg-[#9572f5] disabled:opacity-50 transition-all"
-                  data-testid="creator-login-btn"
-                >
-                  {creatorLoading ? 'Verifying...' : 'Unlock'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
+  );
+}
+
+
+function CreatorLoginPage() {
+  const navigate = useNavigate();
+  const { enterCreatorMode } = useAuth();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await enterCreatorMode(password);
+      navigate('/ai-agents');
+    } catch (e) {
+      setError(e.message || 'Invalid password');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#060e1a] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm" data-testid="creator-login-page">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#a78bfa]/10 border border-[#a78bfa]/20 mb-4">
+            <Sparkles size={28} className="text-[#a78bfa]" />
+          </div>
+          <h1 className="text-xl font-bold text-[#E8EDF2] mb-1">Creator Mode</h1>
+          <p className="text-sm text-[#4A5B6E]">Authenticate to access Kairos AI Engine</p>
+        </div>
+
+        <div className="bg-[#0D1B2A] border border-[#1B2D42] rounded-xl p-6 space-y-4">
+          <div>
+            <label className="text-xs text-[#7A8BA0] mb-1.5 block">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && password) handleLogin(); }}
+              placeholder="Enter creator password"
+              className="w-full px-4 py-3 bg-[#152236] border border-[#1B2D42] rounded-lg text-sm text-[#E8EDF2] outline-none focus:border-[#a78bfa] placeholder:text-[#4A5B6E]/60 transition-colors"
+              autoFocus
+              data-testid="creator-password-input"
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-[#ef4444] bg-[#ef4444]/10 rounded-lg px-3 py-2" data-testid="creator-login-error">{error}</p>
+          )}
+
+          <button
+            onClick={handleLogin}
+            disabled={loading || !password}
+            className="w-full px-4 py-3 bg-[#a78bfa] text-white rounded-lg text-sm font-bold hover:bg-[#9572f5] disabled:opacity-50 transition-all"
+            data-testid="creator-login-btn"
+          >
+            {loading ? 'Verifying...' : 'Unlock Creator Mode'}
+          </button>
+
+          <button
+            onClick={() => navigate('/')}
+            className="w-full px-4 py-2 text-sm text-[#4A5B6E] hover:text-[#7A8BA0] transition-colors"
+            data-testid="creator-login-back"
+          >
+            Back to ERP
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
 function AppShell({ sidebarOpen, setSidebarOpen }) {
   const loc = useLocation();
+  const navigate = useNavigate();
   const isAIEngine = loc.pathname === '/ai-agents';
-  const { user, creatorMode } = useAuth();
+  const isCreatorLogin = loc.pathname === '/creator-login';
+  const { user, creatorMode, exitCreatorMode } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false); };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Creator login page — show without sidebar/header
+  if (isCreatorLogin && !creatorMode) {
+    return (
+      <>
+        <Routes>
+          <Route path="/creator-login" element={<CreatorLoginPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Toaster position="top-right" richColors theme="dark" />
+      </>
+    );
+  }
 
   return (
     <>
@@ -466,13 +477,62 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Menu size={24} />
           </button>
           <div className="flex-1" />
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-[#4A5B6E]">{user.name}</span>
-            {creatorMode && (
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border"
-                style={{ color: '#a78bfa', borderColor: '#a78bfa40', background: '#a78bfa15' }}>
-                Creator
-              </span>
+          {/* Role Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#1B2D42] transition-colors"
+              data-testid="role-dropdown-trigger"
+            >
+              <div className="w-7 h-7 rounded-full bg-[#00C9A7]/20 flex items-center justify-center">
+                <User size={13} className="text-[#00C9A7]" />
+              </div>
+              <span className="text-xs text-[#E8EDF2] font-medium">{user.name}</span>
+              {creatorMode && (
+                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/30">Creator</span>
+              )}
+              <ChevronDown size={14} className="text-[#4A5B6E]" />
+            </button>
+
+            {showDropdown && (
+              <div className="absolute right-0 top-full mt-1 w-56 bg-[#0D1B2A] border border-[#1B2D42] rounded-xl shadow-2xl overflow-hidden z-50" data-testid="role-dropdown-menu">
+                <div className="p-3 border-b border-[#1B2D42]">
+                  <p className="text-[10px] text-[#4A5B6E] uppercase tracking-wider mb-1">Current Role</p>
+                  <p className="text-sm text-[#E8EDF2] font-medium">{creatorMode ? 'Creator' : 'User'}</p>
+                </div>
+                <div className="p-1.5">
+                  {!creatorMode ? (
+                    <button
+                      onClick={() => { setShowDropdown(false); navigate('/creator-login'); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#a78bfa] hover:bg-[#a78bfa]/10 transition-colors"
+                      data-testid="switch-to-creator"
+                    >
+                      <Lock size={15} />
+                      <span>Switch to Creator</span>
+                    </button>
+                  ) : (
+                    <>
+                      <Link
+                        to="/ai-agents"
+                        onClick={() => setShowDropdown(false)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#00C9A7] hover:bg-[#00C9A7]/10 transition-colors"
+                        data-testid="go-to-kairos"
+                      >
+                        <Sparkles size={15} />
+                        <span>Kairos AI Engine</span>
+                      </Link>
+                      <button
+                        onClick={() => { exitCreatorMode(); setShowDropdown(false); navigate('/'); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors"
+                        data-testid="exit-creator-mode"
+                      >
+                        <LogOut size={15} />
+                        <span>Exit Creator Mode</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -517,6 +577,7 @@ function AppShell({ sidebarOpen, setSidebarOpen }) {
             <Route path="/transaction-explorer" element={<TransactionExplorer />} />
             <Route path="/bank-reconciliation" element={<BankReconciliation />} />
             <Route path="/ai-agents" element={creatorMode ? <AIAgentsPage /> : <Navigate to="/" replace />} />
+            <Route path="/creator-login" element={creatorMode ? <Navigate to="/" replace /> : <CreatorLoginPage />} />
             <Route path="/expense-management" element={<ExpenseManagement />} />
             <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/leads/enrich" element={<LeadEnrichment />} />

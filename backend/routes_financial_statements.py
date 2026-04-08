@@ -22,6 +22,17 @@ def set_db(database):
 
 COMPANY_NAME = "PolyMerx Specialty Chemicals Pvt. Ltd."
 
+async def _get_company_name():
+    """Fetch company name from DB settings, fallback to default."""
+    if db is not None:
+        try:
+            settings = await db.company_settings.find_one({}, {"_id": 0, "legal_name": 1, "short_name": 1})
+            if settings:
+                return settings.get("legal_name") or settings.get("short_name") or COMPANY_NAME
+        except Exception:
+            pass
+    return COMPANY_NAME
+
 # Keywords to sub-classify within categories
 BS_CLASSIFY = {
     "share_capital": lambda n: "share capital" in n.lower(),
@@ -185,7 +196,7 @@ async def get_balance_sheet(as_of_date: Optional[str] = None):
     return {
         "report_type": "Balance Sheet",
         "format": "Schedule III - Companies Act 2013 (Division I)",
-        "company_name": COMPANY_NAME,
+        "company_name": await _get_company_name(),
         "as_of_date": as_of_date or datetime.now(timezone.utc).date().isoformat(),
         "currency": "INR",
 
@@ -312,7 +323,7 @@ async def get_profit_and_loss(start_date: Optional[str] = None, end_date: Option
     return {
         "report_type": "Statement of Profit and Loss",
         "format": "Schedule III - Companies Act 2013 (Division I)",
-        "company_name": COMPANY_NAME,
+        "company_name": await _get_company_name(),
         "period": {
             "from": start_date or "2025-04-01",
             "to": end_date or datetime.now(timezone.utc).date().isoformat()
@@ -392,7 +403,7 @@ async def get_trial_balance(as_of_date: Optional[str] = None):
 
     return {
         "report_type": "Trial Balance",
-        "company_name": COMPANY_NAME,
+        "company_name": await _get_company_name(),
         "as_of_date": as_of_date or datetime.now(timezone.utc).date().isoformat(),
         "entries": entries,
         "total_debit": round(total_debit, 2),
