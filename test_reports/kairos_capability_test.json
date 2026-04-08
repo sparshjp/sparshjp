@@ -1,0 +1,50 @@
+[
+  {
+    "test": "ERP Domain Knowledge",
+    "status": "PASS",
+    "provider": "claude",
+    "steps": 1,
+    "time": 8.7,
+    "has_response": true
+  },
+  {
+    "test": "Database Query",
+    "status": "PASS",
+    "provider": "claude",
+    "steps": 2,
+    "time": 7.7,
+    "has_response": true
+  },
+  {
+    "test": "Code Reading",
+    "status": "PASS",
+    "provider": "claude",
+    "steps": 3,
+    "time": 20.2,
+    "has_response": true
+  },
+  {
+    "test": "Code Writing",
+    "status": "FAIL",
+    "provider": "unknown",
+    "steps": 0,
+    "time": 5.6,
+    "has_response": false
+  },
+  {
+    "test": "Multi-Step Reasoning",
+    "status": "FAIL",
+    "provider": "unknown",
+    "steps": 0,
+    "time": 0.1,
+    "has_response": false
+  },
+  {
+    "test": "Schema Understanding",
+    "status": "FAIL",
+    "provider": "unknown",
+    "steps": 0,
+    "time": 0.1,
+    "has_response": false
+  }
+]
