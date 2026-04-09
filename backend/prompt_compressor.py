@@ -40,7 +40,10 @@ def compress_prompt(prompt: str, target_chars: int = 4000, tier: str = "groq") -
     if cache_key in _compression_cache:
         return _compression_cache[cache_key]
 
-    # Run compression pipeline
+    # Extract protected content BEFORE compression (critical for engine function)
+    protected_block = _extract_protected_content(prompt)
+
+    # Run compression pipeline on the remainder
     compressed = prompt
     compressed = _strip_markdown(compressed)
     compressed = _collapse_whitespace(compressed)
@@ -48,20 +51,45 @@ def compress_prompt(prompt: str, target_chars: int = 4000, tier: str = "groq") -
     compressed = _abbreviate_patterns(compressed)
     compressed = _deduplicate_lines(compressed)
 
-    # If still too long, apply section prioritization
-    if len(compressed) > target_chars:
-        compressed = _prioritize_sections(compressed, target_chars)
+    # Reserve space for protected block, then prioritize sections
+    protected_budget = len(protected_block) + 10  # +10 for separator
+    body_budget = target_chars - protected_budget
+    if len(compressed) > body_budget:
+        compressed = _prioritize_sections(compressed, body_budget)
 
     # Final whitespace cleanup
     compressed = _collapse_whitespace(compressed)
 
-    # Hard trim with ellipsis if still over (shouldn't happen often)
+    # Append protected content at the end
+    compressed = compressed + "\n\n" + protected_block
+
+    # Hard trim with ellipsis if still over
     if len(compressed) > target_chars:
-        compressed = compressed[:target_chars - 50] + "\n[Compressed prompt — core instructions preserved]"
+        overshoot = len(compressed) - target_chars + 50
+        # Trim from the body (before protected block), not the protected block
+        body_end = compressed.rfind("\n\n" + protected_block)
+        if body_end > overshoot:
+            compressed = compressed[:body_end - overshoot] + "\n[...trimmed]\n\n" + protected_block
+        else:
+            compressed = compressed[:target_chars - 50] + "\n[Compressed — core preserved]"
 
     # Cache result
     _compression_cache[cache_key] = compressed
     return compressed
+
+
+# Critical content that MUST survive any compression level
+_PROTECTED_SNIPPET = """TOOL FORMAT: ```TOOL_CALL
+{"tool":"tool_name","args":{...}}
+``` Multiple calls=parallel. ```DONE
+summary``` when complete.
+TOOLS: read_file,create_file,write_file,patch_file,insert_lines,delete_lines,delete_file,move_file,scaffold_module,create_page,run_query,get_schema,restart_service,test_api,check_logs,install_package,run_tests,grep_search,list_files,run_command,verify_deployment,web_search,take_screenshot,crawl_url,manage_env,lint_code,git_info,call_subagent,run_test,run_test_suite,get_playbook,batch_operations,generate_image
+CODE: APIRouter+set_db pattern. uuid.uuid4() for IDs. Exclude _id:{\"_id\":0}."""
+
+
+def _extract_protected_content(prompt: str) -> str:
+    """Return a minimal protected block with critical patterns that must survive."""
+    return _PROTECTED_SNIPPET
 
 
 def get_compression_stats(original: str, compressed: str) -> dict:
