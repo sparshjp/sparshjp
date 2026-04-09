@@ -25,6 +25,7 @@ from reportlab.lib import colors
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 import routes_auth
+import routes_projects
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
