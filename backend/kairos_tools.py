@@ -1020,7 +1020,9 @@ async def tool_scaffold_module(args):
     with open(server_path, "r") as f:
         server_content = f.read()
 
-    marker = 'logging.info("ERP modules integrated (including 10 advanced modules)")'
+    marker = 'logging.info(f"ERP modules: {len(_erp_modules_loaded)} loaded'
+    if marker not in server_content:
+        marker = 'logging.info("ERP modules integrated (including 10 advanced modules)")'
     if marker not in server_content:
         marker = 'logging.info("ERP modules will be integrated")'
     if marker in server_content:
@@ -1172,6 +1174,42 @@ export default function {page_name}() {{
 
 
 # ═══════════════════════════════════════
+# KNOWLEDGE BASE
+# ═══════════════════════════════════════
+
+KNOWLEDGE_PATH = os.path.join(os.path.dirname(__file__), "kairos_knowledge.md")
+
+
+async def tool_read_knowledge(args):
+    """Read the Kairos knowledge repository for architecture info, debugging recipes, and tool docs."""
+    section = args.get("section", "")
+    if not os.path.isfile(KNOWLEDGE_PATH):
+        return {"status": "error", "error": "Knowledge file not found at kairos_knowledge.md"}
+    with open(KNOWLEDGE_PATH, "r") as f:
+        content = f.read()
+    if section:
+        # Extract specific section by heading
+        import re as _re
+        pattern = _re.compile(rf'^##\s+\d+\.\s+{_re.escape(section)}.*?(?=^##\s+\d+\.|\Z)', _re.MULTILINE | _re.DOTALL | _re.IGNORECASE)
+        match = pattern.search(content)
+        if match:
+            return {"status": "ok", "section": section, "content": match.group(0).strip()}
+        return {"status": "ok", "section": section, "content": f"Section '{section}' not found. Available sections in knowledge base.", "full_length": len(content)}
+    return {"status": "ok", "content": content[:15000], "full_length": len(content)}
+
+
+async def tool_update_knowledge(args):
+    """Append new knowledge to the Kairos knowledge repository."""
+    entry = args.get("entry", "")
+    if not entry:
+        return {"status": "error", "error": "entry text is required"}
+    with open(KNOWLEDGE_PATH, "a") as f:
+        f.write(f"\n\n## LEARNED — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}\n{entry}\n")
+    await _audit_file_write(KNOWLEDGE_PATH, f"Knowledge updated: {entry[:100]}", "UPDATE")
+    return {"status": "ok", "appended_chars": len(entry)}
+
+
+# ═══════════════════════════════════════
 # TOOL REGISTRY — name → handler mapping
 # ═══════════════════════════════════════
 
@@ -1220,4 +1258,7 @@ TOOL_REGISTRY = {
     # Batch & Image
     "batch_operations": tool_batch_operations,
     "generate_image": tool_generate_image,
+    # Knowledge Base
+    "read_knowledge": tool_read_knowledge,
+    "update_knowledge": tool_update_knowledge,
 }

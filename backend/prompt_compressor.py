@@ -83,8 +83,9 @@ _PROTECTED_SNIPPET = """TOOL FORMAT: ```TOOL_CALL
 {"tool":"tool_name","args":{...}}
 ``` Multiple calls=parallel. ```DONE
 summary``` when complete.
-TOOLS: read_file,create_file,write_file,patch_file,insert_lines,delete_lines,delete_file,move_file,scaffold_module,create_page,run_query,get_schema,restart_service,test_api,check_logs,install_package,run_tests,grep_search,list_files,run_command,verify_deployment,web_search,take_screenshot,crawl_url,manage_env,lint_code,git_info,call_subagent,run_test,run_test_suite,get_playbook,batch_operations,generate_image
-CODE: APIRouter+set_db pattern. uuid.uuid4() for IDs. Exclude _id:{\"_id\":0}."""
+TOOLS: read_file,create_file,write_file,patch_file,insert_lines,delete_lines,delete_file,move_file,scaffold_module,create_page,run_query,get_schema,restart_service,test_api,check_logs,install_package,run_tests,grep_search,list_files,run_command,verify_deployment,web_search,take_screenshot,crawl_url,manage_env,lint_code,git_info,call_subagent,run_test,run_test_suite,get_playbook,batch_operations,generate_image,read_knowledge,update_knowledge
+CODE: APIRouter+set_db pattern. uuid.uuid4() for IDs. Exclude _id:{\"_id\":0}.
+KNOWLEDGE: read_knowledge() loads /app/backend/kairos_knowledge.md with architecture, debugging, tool docs."""
 
 
 def _extract_protected_content(prompt: str) -> str:

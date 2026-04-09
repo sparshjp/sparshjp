@@ -1119,7 +1119,43 @@ async def download_trial_balance_excel(as_of_date: Optional[str] = None):
                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                    headers={"Content-Disposition": f"attachment; filename=trial_balance_{as_of_date}.xlsx"})
 
-# ==================== INTEGRATE NEW ERP MODULES ====================
+# ==================== KAIROS AI ENGINE (INDEPENDENT — LOADED FIRST) ====================
+# Kairos is isolated from ERP modules. If any ERP module fails, Kairos continues operating.
+_kairos_online = False
+try:
+    from routes_agents import router as agents_router, set_config as set_agents_config
+    set_agents_config(os.environ.get("EMERGENT_LLM_KEY"), db)
+    api_router.include_router(agents_router)
+    _kairos_online = True
+    logging.info("Kairos AI Engine: ONLINE (independent)")
+except Exception as e:
+    logging.critical(f"Kairos AI Engine FAILED to load: {e}")
+
+# ==================== SHARED DEPENDENCIES ====================
+try:
+    import audit_trail
+    audit_trail.set_db(db)
+except Exception as e:
+    logging.warning(f"Audit trail init failed: {e}")
+    # Create a no-op stub so ERP endpoints referencing audit_trail don't crash
+    class _AuditStub:
+        ACTION_CREATE = ACTION_POST = DOC_COA = DOC_COST_CENTER = DOC_ENTITY = DOC_MANUAL_JE = ""
+        async def log_audit(self, *a, **kw): pass
+    audit_trail = _AuditStub()
+
+# ==================== ERP MODULES (isolated from Kairos) ====================
+_erp_modules_loaded = []
+_erp_modules_failed = []
+
+def _safe_load(name, loader):
+    """Register an ERP module safely — failures are logged but don't crash the app."""
+    try:
+        loader()
+        _erp_modules_loaded.append(name)
+    except Exception as e:
+        _erp_modules_failed.append({"module": name, "error": str(e)})
+        logging.error(f"ERP module '{name}' failed to load: {e}")
+
 # Import route modules
 try:
     from routes_crm import router as crm_router, set_db as crm_set_db, set_ai_orchestrator as crm_set_ai
@@ -1135,7 +1171,6 @@ try:
     from routes_audit import router as audit_router, set_db as audit_set_db
     from routes_gst import router as gst_router, set_key as gst_set_key
     from routes_aging import router as aging_router, set_db as aging_set_db
-    import audit_trail
     from ai_orchestrator import AIOrchestrator
     
     # Initialize AI Orchestrator
@@ -1157,7 +1192,6 @@ try:
     company_set_db(db)
     company_set_key(EMERGENT_KEY)
     audit_set_db(db)
-    audit_trail.set_db(db)
     gst_set_key(EMERGENT_KEY)
     aging_set_db(db)
     
@@ -1266,7 +1300,7 @@ crm_lead:
   optional: phone, email, interest, source, est_value
 
 RULES:
-- Fuzzy match entity/item names to the closest master data entry. E.g. "Aditya Birla" → match to vendor list.
+- Fuzzy match entity/item names to the closest master data entry. E.g. "Aditya Birla" match to vendor list.
 - If an item name like "Epoxy Resin" is mentioned, find the closest item_code from master data.
 - For items array, always compute amount = qty * rate.
 - Default cost_center to the most relevant one. Default gst_rate to 18.
@@ -1322,108 +1356,135 @@ RULES:
     api_router.include_router(projects_router)
     api_router.include_router(timesheets_router)
     api_router.include_router(revenue_router)
-    
-    # AI Agents
-    from routes_agents import router as agents_router, set_config as set_agents_config
-    set_agents_config(os.environ.get("EMERGENT_LLM_KEY"), db)
-    api_router.include_router(agents_router)
-    
-    # Bank Reconciliation
-    from routes_bank_recon import router as bank_recon_router, set_db as set_bank_recon_db
-    set_bank_recon_db(db)
-    api_router.include_router(bank_recon_router)
-    
-    # Employee Analytics
-    from routes_employee_analytics import router as emp_analytics_router, set_db as set_emp_analytics_db
-    set_emp_analytics_db(db)
-    api_router.include_router(emp_analytics_router)
-    
-    
-    # Leave Management
-    from routes_leave_management import router as leave_management_router, set_db as set_leave_management_db
-    set_leave_management_db(db)
-    api_router.include_router(leave_management_router)
-    
-    # Expense Management
-    from routes_expense_management import router as expense_management_router, set_db as set_expense_management_db
-    set_expense_management_db(db)
-    api_router.include_router(expense_management_router)
-    
-    # Feedback
-    from routes_feedback import router as feedback_router, set_db as set_feedback_db
-    set_feedback_db(db)
-    api_router.include_router(feedback_router)
-    
-    # Announcements
-    from routes_announcements import router as announcements_router, set_db as set_announcements_db
-    set_announcements_db(db)
-    api_router.include_router(announcements_router)
-    
-    # Chart Of Accounts
-    from routes_chart_of_accounts import router as chart_of_accounts_router, set_db as set_chart_of_accounts_db
-    set_chart_of_accounts_db(db)
-    api_router.include_router(chart_of_accounts_router)
-    
-    # Vendors
-    from routes_vendors import router as vendors_router, set_db as set_vendors_db
-    set_vendors_db(db)
-    api_router.include_router(vendors_router)
-    
-    # Customers
-    from routes_customers import router as customers_router, set_db as set_customers_db
-    set_customers_db(db)
-    api_router.include_router(customers_router)
-    # ── Advanced Enterprise Modules ──
-    from routes_approvals import router as approvals_router, set_db as set_approvals_db
-    set_approvals_db(db)
-    api_router.include_router(approvals_router)
+    _erp_modules_loaded.extend(["crm", "sales", "stock", "hr", "purchase", "selling",
+        "financial_statements", "statutory", "manufacturing", "company", "audit",
+        "gst", "aging", "projects", "timesheets", "revenue"])
+except Exception as e:
+    _erp_modules_failed.append({"module": "core_erp", "error": str(e)})
+    logging.error(f"Core ERP modules failed: {e}")
 
-    from routes_budgets import router as budgets_router, set_db as set_budgets_db
-    set_budgets_db(db)
-    api_router.include_router(budgets_router)
+# ── Extended ERP modules (each isolated) ──
+def _load_bank_recon():
+    from routes_bank_recon import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("bank_recon", _load_bank_recon)
 
-    from routes_contracts import router as contracts_router, set_db as set_contracts_db
-    set_contracts_db(db)
-    api_router.include_router(contracts_router)
+def _load_emp_analytics():
+    from routes_employee_analytics import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("employee_analytics", _load_emp_analytics)
 
-    from routes_resources import router as resources_router, set_db as set_resources_db
-    set_resources_db(db)
-    api_router.include_router(resources_router)
+def _load_leave():
+    from routes_leave_management import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("leave_management", _load_leave)
 
-    from routes_forex import router as forex_router, set_db as set_forex_db
-    set_forex_db(db)
-    api_router.include_router(forex_router)
+def _load_expense():
+    from routes_expense_management import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("expense_management", _load_expense)
 
-    from routes_billing import router as billing_router, set_db as set_billing_db
-    set_billing_db(db)
-    api_router.include_router(billing_router)
+def _load_feedback():
+    from routes_feedback import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("feedback", _load_feedback)
 
-    from routes_documents import router as docs_router, set_db as set_docs_db
-    set_docs_db(db)
-    api_router.include_router(docs_router)
+def _load_announcements():
+    from routes_announcements import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("announcements", _load_announcements)
 
-    from routes_notifications import router as notifications_router, set_db as set_notifications_db
-    set_notifications_db(db)
-    api_router.include_router(notifications_router)
+def _load_coa_crud():
+    from routes_chart_of_accounts import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("chart_of_accounts", _load_coa_crud)
 
-    from routes_compliance import router as compliance_router, set_db as set_compliance_db
-    set_compliance_db(db)
-    api_router.include_router(compliance_router)
+def _load_vendors():
+    from routes_vendors import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("vendors", _load_vendors)
 
-    from routes_portal import router as portal_router, set_db as set_portal_db
-    set_portal_db(db)
-    api_router.include_router(portal_router)
+def _load_customers():
+    from routes_customers import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("customers", _load_customers)
 
+def _load_approvals():
+    from routes_approvals import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("approvals", _load_approvals)
+
+def _load_budgets():
+    from routes_budgets import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("budgets", _load_budgets)
+
+def _load_contracts():
+    from routes_contracts import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("contracts", _load_contracts)
+
+def _load_resources():
+    from routes_resources import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("resources", _load_resources)
+
+def _load_forex():
+    from routes_forex import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("forex", _load_forex)
+
+def _load_billing():
+    from routes_billing import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("billing", _load_billing)
+
+def _load_documents():
+    from routes_documents import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("documents", _load_documents)
+
+def _load_notifications():
+    from routes_notifications import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("notifications", _load_notifications)
+
+def _load_compliance():
+    from routes_compliance import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("compliance", _load_compliance)
+
+def _load_portal():
+    from routes_portal import router as r, set_db as s
+    s(db); api_router.include_router(r)
+_safe_load("portal", _load_portal)
+
+def _load_module_events():
     import module_events
     module_events.set_db(db)
+_safe_load("module_events", _load_module_events)
 
-    from routes_ai_entry import router as ai_entry_router, set_config as set_ai_entry_config
-    set_ai_entry_config(EMERGENT_KEY, db, os.environ.get("ANTHROPIC_API_KEY", ""), os.environ.get("OPENAI_API_KEY", ""))
-    api_router.include_router(ai_entry_router)
+def _load_ai_entry():
+    from routes_ai_entry import router as r, set_config as s
+    s(EMERGENT_KEY, db, os.environ.get("ANTHROPIC_API_KEY", ""), os.environ.get("OPENAI_API_KEY", ""))
+    api_router.include_router(r)
+_safe_load("ai_entry", _load_ai_entry)
 
-    logging.info("ERP modules integrated (including 10 advanced modules)")
-except Exception as e:
-    logging.error(f"Failed to integrate ERP modules: {e}")
+logging.info(f"ERP modules: {len(_erp_modules_loaded)} loaded, {len(_erp_modules_failed)} failed. Kairos: {'ONLINE' if _kairos_online else 'OFFLINE'}")
+if _erp_modules_failed:
+    logging.warning(f"Failed ERP modules: {[m['module'] for m in _erp_modules_failed]}")
+
+# ── System Status Endpoint ──
+@api_router.get("/system/status")
+async def system_status():
+    """Returns Kairos and ERP module health status."""
+    return {
+        "kairos": "online" if _kairos_online else "offline",
+        "erp_modules_loaded": _erp_modules_loaded,
+        "erp_modules_failed": _erp_modules_failed,
+        "total_loaded": len(_erp_modules_loaded),
+        "total_failed": len(_erp_modules_failed),
+    }
 
 # ==================== MANUAL JOURNAL ENTRIES ====================
 @api_router.post("/journal-entries/manual")

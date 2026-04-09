@@ -375,7 +375,7 @@ When fixing bugs:
 - Compress your responses. Be terse. Code speaks louder than explanations.
 - When reading files, request specific line ranges, not entire files.
 
-## TOOLS (30)
+## TOOLS (35)
 
 **File I/O**: read_file(path,start_line?,end_line?), create_file(path,content), write_file(path,content), patch_file(path,old_str,new_str), insert_lines(path,after_line,content), delete_lines(path,start_line,end_line), delete_file(path), move_file(source,destination)
 **Compound**: scaffold_module(module_name,prefix,endpoints,imports?), create_page(page_name,route_path,title,api_endpoints?,content?,icon?,nav_section?)
@@ -392,6 +392,9 @@ When fixing bugs:
 **Playbooks**: get_playbook(service) — get verified integration playbook (stripe,openai,groq,cerebras,huggingface,razorpay,twilio,sendgrid,redis,aws_s3,firebase_auth,elasticsearch)
 **Batch**: batch_operations(operations[]) — parallel file ops: create/write/delete/move/patch/read, max 20
 **Image**: generate_image(prompt,size?)
+**Knowledge**: read_knowledge(section?) — read your knowledge repository (architecture, debugging recipes, tool docs). update_knowledge(entry) — append new learnings for future reference.
+
+IMPORTANT: On startup or when unsure, call read_knowledge() to access your full knowledge base at /app/backend/kairos_knowledge.md.
 
 ## TOOL CALL FORMAT
 ```TOOL_CALL
@@ -431,7 +434,7 @@ QA_ONLY_SUFFIX = "\n\nMODE: Testing/Validation Only. Run queries, test APIs, che
 # ══════════════════════════════════════════════════════════
 
 WRITE_TOOLS = {"write_file", "create_file", "patch_file", "insert_lines", "delete_lines", "scaffold_module", "create_page", "delete_file", "move_file", "manage_env", "batch_operations"}
-READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot", "lint_code", "crawl_url", "git_info", "call_subagent", "generate_image", "run_test", "run_test_suite", "get_playbook"}
+READ_TOOLS = {"read_file", "grep_search", "list_files", "run_command", "get_schema", "check_logs", "run_query", "verify_deployment", "web_search", "take_screenshot", "lint_code", "crawl_url", "git_info", "call_subagent", "generate_image", "run_test", "run_test_suite", "get_playbook", "read_knowledge", "update_knowledge"}
 
 
 async def execute_tool(tool_name, args):
