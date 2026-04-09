@@ -37,6 +37,8 @@ def set_config(key, database):
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     CEREBRAS_KEY = os.environ.get("CEREBRAS_API_KEY", "")
     HUGGINGFACE_KEY = os.environ.get("HUGGINGFACE_API_KEY", "")
+    # Clear provider failure cache on restart so all providers get a fresh chance
+    _provider_failures.clear()
 
 # ══════════════════════════════════════════════════════════
 # MULTI-PROVIDER LLM CLIENT (Claude → Gemini → GPT-5 → Groq → OpenRouter)
@@ -45,10 +47,13 @@ def set_config(key, database):
 def _call_groq_sync(system: str, messages: list) -> str:
     from groq import Groq
     client = Groq(api_key=GROQ_KEY)
+    # Groq free tier has strict TPM limits — aggressively truncate system prompt
+    if len(system) > 4000:
+        system = system[:4000] + "\n... [system prompt truncated for Groq free tier]"
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile", messages=msgs, max_tokens=16000, temperature=0.3,
+        model="llama-3.3-70b-versatile", messages=msgs, max_tokens=4000, temperature=0.3,
     )
     return response.choices[0].message.content
 
@@ -130,21 +135,35 @@ def _call_cerebras_sync(system: str, messages: list) -> str:
     """Call Cerebras free tier — Llama 3.3 70B at ~2000 tok/s. Free: 1M tokens/day."""
     from cerebras.cloud.sdk import Cerebras
     client = Cerebras(api_key=CEREBRAS_KEY)
+    # Truncate system prompt if too long for free tier
+    if len(system) > 8000:
+        system = system[:8000] + "\n... [system prompt truncated for free tier]"
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
-    response = client.chat.completions.create(
-        model="llama-3.3-70b", messages=msgs, max_tokens=16000, temperature=0.3,
-    )
-    return response.choices[0].message.content
+    # Try llama3.3-70b first, fallback to llama-3.3-70b
+    for model in ["llama-3.3-70b", "llama3.3-70b", "llama3.1-70b"]:
+        try:
+            response = client.chat.completions.create(
+                model=model, messages=msgs, max_tokens=8000, temperature=0.3,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            if "not_found" in str(e) or "404" in str(e):
+                continue
+            raise
+    raise Exception("No available Cerebras model found")
 
 def _call_huggingface_sync(system: str, messages: list) -> str:
     """Call HuggingFace free inference — Qwen 2.5 Coder 32B. Free tier available."""
     from huggingface_hub import InferenceClient
     client = InferenceClient(api_key=HUGGINGFACE_KEY)
+    # Truncate system prompt if too long for free tier
+    if len(system) > 8000:
+        system = system[:8000] + "\n... [system prompt truncated for free tier]"
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
     response = client.chat_completion(
-        model="Qwen/Qwen2.5-Coder-32B-Instruct", messages=msgs, max_tokens=16000, temperature=0.3,
+        model="Qwen/Qwen2.5-Coder-32B-Instruct", messages=msgs, max_tokens=8000, temperature=0.3,
     )
     return response.choices[0].message.content
 
@@ -2118,6 +2137,12 @@ async def _run_engine_task(task_id, mode, message, session_id, context, preferre
                 step_record["summary"] = (readable_text[:200] + "...") if readable_text and len(readable_text) > 200 else (readable_text or "")
                 _tasks[task_id]["steps"].append(step_record)
 
+                # Safety valve: if 3+ consecutive planning steps with no tools, treat as complete
+                recent_steps = _tasks[task_id]["steps"][-3:]
+                if len(recent_steps) >= 3 and all(s.get("type") == "planning" for s in recent_steps):
+                    _tasks[task_id]["response"] = readable_text or step_record["summary"] or "Task completed."
+                    break
+
                 # Only auto-continue if we have iterations left
                 if iteration < MAX_ITERATIONS:
                     loop_messages.append({"role": "assistant", "content": response_text})
@@ -2371,6 +2396,12 @@ async def set_api_key(body: dict):
         CEREBRAS_KEY = key
     elif provider == "huggingface":
         HUGGINGFACE_KEY = key
+
+    # Also update os.environ so keys survive hot-reload
+    if key:
+        os.environ[env_var] = key
+    elif env_var in os.environ:
+        del os.environ[env_var]
 
     # Persist to .env
     env_path = "/app/backend/.env"
