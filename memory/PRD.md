@@ -7,34 +7,28 @@ Build an IT Services ERP ("Nexora IT ERP") with a Kairos AI Engine (autonomous d
 - **Backend**: FastAPI + Motor (async MongoDB)
 - **Frontend**: React + Tailwind + Shadcn UI, dark theme
 - **Auth**: No login required. Creator Mode (password-gated) for Kairos AI Engine access
-- **AI**: Kairos AI Engine v4 + Prompt Compressor + 6 LLM providers + 33 tools + 4 subagents
+- **AI**: Kairos AI Engine v4 + Prompt Compressor + 6 LLM providers + 35 tools + 4 subagents
 - **Events**: `module_events.py` — cross-module triggers
+- **Kairos Independence**: Kairos loads FIRST in server.py, ERP modules isolated via `_safe_load()`
 
 ## What's Been Implemented
 
-### Phase 1-8 — Core ERP through Free LLM Providers (Done)
-### Phase 9 — Kairos Subagent Upgrade to E1 Parity (Done)
-
-### Phase 10 — Smart Prompt Compression Agent (Done — April 9, 2026)
-- **`prompt_compressor.py`** — Algorithmic 5-stage compression pipeline with protected content preservation:
-  1. Protected Content Extraction (TOOL_CALL format, tool names, code patterns)
-  2. Section Priority Ranking (identity > tools > modules > rules > examples)
-  3. Redundancy Elimination (dedup lines)
-  4. Markdown/Syntax Stripping
-  5. Abbreviation Engine + Example Pruning
-- **Results**: 32% compression for Groq (10919→3491 chars), 42% for Cerebras/HuggingFace
-- **Benchmark**: 18 tests validating quality — all critical patterns preserved
-- **Caching**: Compressed prompts cached by hash — no re-computation
-- **Stats endpoint**: GET /api/agents/compression-stats
-
+### Phase 1-9 — Core ERP through Subagent Upgrade (Done)
+### Phase 10 — Smart Prompt Compression (Done — April 9, 2026)
 ### Phase 11 — Tool Registry Refactor (Done — April 9, 2026)
-- Extracted 750+ line `execute_tool` monolith from `routes_agents.py` into `kairos_tools.py`
-- `TOOL_REGISTRY` dict maps 33 tool names → async handler functions
-- `execute_tool` in `routes_agents.py` reduced to 6-line dispatcher
-- `routes_agents.py`: 2449 → 1292 lines (47% reduction)
-- Dependencies injected via `configure(db, is_safe_path, audit_fn)`
-- Compound tools (`scaffold_module`, `create_page`) + helpers (`_polish_generated_python`, `_auto_fix_startup_error`, `_run_test_query`) also moved
-- **Tested**: 32/32 tests passed (iteration_39)
+
+### Phase 12 — Knowledge Repository + Kairos Independence (Done — April 9, 2026)
+- **Knowledge Base** (`/app/backend/kairos_knowledge.md`): 13 sections covering architecture, file map, all 35 tools, compression pipeline, LLM providers, DB collections, common patterns, debugging recipes, security boundaries, subagents, self-repair checklist, and how to add new tools
+- **2 New Tools**: `read_knowledge(section?)` reads knowledge base, `update_knowledge(entry)` appends learnings
+- **Kairos Independence**: Restructured `server.py` so Kairos registers BEFORE all ERP modules in its own try/except. Each of the 37 ERP modules loads via `_safe_load()` — individual isolation so one failing module doesn't crash others or Kairos
+- **`audit_trail` decoupled**: Imported at module level with a no-op fallback stub, preventing NameError cascades
+- **System Status**: `GET /api/system/status` reports `kairos: online/offline`, loaded/failed module counts
+- **Tested**: 39/39 tests passed (iteration_40)
+
+## Key Architecture Decision: Kairos → ERP (one-way dependency)
+Kairos CAN modify/query ERP collections and files.
+ERP CANNOT affect Kairos availability — they're isolated at startup.
+If an ERP module crashes, Kairos remains online and can diagnose/fix it.
 
 ## LLM Provider Priority
 1. FREE (compressed): Groq → Cerebras → HuggingFace
@@ -42,11 +36,12 @@ Build an IT Services ERP ("Nexora IT ERP") with a Kairos AI Engine (autonomous d
 3. Emergent Credits (full prompt): Claude → Gemini → GPT-5
 
 ## Key Files
-- `/app/backend/kairos_tools.py` — 33 tool handlers + TOOL_REGISTRY
+- `/app/backend/kairos_knowledge.md` — Knowledge repository (35 tools, 13 sections)
+- `/app/backend/kairos_tools.py` — 35 tool handlers + TOOL_REGISTRY
 - `/app/backend/routes_agents.py` — AI Engine routes + LLM client + agentic loop
 - `/app/backend/prompt_compressor.py` — Smart compression pipeline
 - `/app/backend/kairos_subagents.py` — v2 subagents
-- `/app/backend/tests/compression_benchmark.py` — 18 quality tests
+- `/app/backend/server.py` — Kairos-first registration + isolated ERP loading
 
 ## Prioritized Backlog
 - P2: E-Way Bill generation
