@@ -15,6 +15,7 @@ import re
 import logging
 import base64
 from kairos_subagents import call_subagent, generate_image as gen_image, run_test_suite, run_playwright_test, run_api_test, VERIFIED_PLAYBOOKS
+from prompt_compressor import compress_for_tier, get_compression_stats
 
 router = APIRouter(prefix="/agents", tags=["AI Engine"])
 
@@ -47,9 +48,7 @@ def set_config(key, database):
 def _call_groq_sync(system: str, messages: list) -> str:
     from groq import Groq
     client = Groq(api_key=GROQ_KEY)
-    # Groq free tier has strict TPM limits — aggressively truncate system prompt
-    if len(system) > 4000:
-        system = system[:4000] + "\n... [system prompt truncated for Groq free tier]"
+    system = compress_for_tier(system, "groq")
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
     response = client.chat.completions.create(
@@ -135,12 +134,9 @@ def _call_cerebras_sync(system: str, messages: list) -> str:
     """Call Cerebras free tier — Llama 3.3 70B at ~2000 tok/s. Free: 1M tokens/day."""
     from cerebras.cloud.sdk import Cerebras
     client = Cerebras(api_key=CEREBRAS_KEY)
-    # Truncate system prompt if too long for free tier
-    if len(system) > 8000:
-        system = system[:8000] + "\n... [system prompt truncated for free tier]"
+    system = compress_for_tier(system, "cerebras")
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
-    # Try llama3.3-70b first, fallback to llama-3.3-70b
     for model in ["llama-3.3-70b", "llama3.3-70b", "llama3.1-70b"]:
         try:
             response = client.chat.completions.create(
@@ -157,9 +153,7 @@ def _call_huggingface_sync(system: str, messages: list) -> str:
     """Call HuggingFace free inference — Qwen 2.5 Coder 32B. Free tier available."""
     from huggingface_hub import InferenceClient
     client = InferenceClient(api_key=HUGGINGFACE_KEY)
-    # Truncate system prompt if too long for free tier
-    if len(system) > 8000:
-        system = system[:8000] + "\n... [system prompt truncated for free tier]"
+    system = compress_for_tier(system, "huggingface")
     msgs = [{"role": "system", "content": system}]
     msgs.extend(messages)
     response = client.chat_completion(
@@ -2347,6 +2341,24 @@ async def get_providers():
             "openai": bool(OPENAI_API_KEY),
         },
     }
+
+
+@router.get("/compression-stats")
+async def compression_stats():
+    """Show prompt compression stats for each free tier."""
+    from prompt_compressor import compress_for_tier, get_compression_stats, TIER_LIMITS, _compression_cache
+    original = ENGINE_SYSTEM_PROMPT
+    results = {}
+    for tier, limit in TIER_LIMITS.items():
+        compressed = compress_for_tier(original, tier)
+        stats = get_compression_stats(original, compressed)
+        stats["tier"] = tier
+        stats["target_limit"] = limit
+        stats["fits"] = stats["compressed_chars"] <= limit
+        results[tier] = stats
+    results["cache_size"] = len(_compression_cache)
+    return results
+
 
 
 @router.get("/api-keys")
